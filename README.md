@@ -1,4 +1,4 @@
-# Dream to Control
+# Sim2Real2Sim - based on the Dream to Control code base
 
 Fast and simple implementation of the Dreamer agent in TensorFlow 2.
 
