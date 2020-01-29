@@ -84,6 +84,20 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
 
+  # # DEBUG
+  # config.prefill = 7
+  # config.steps = 1005
+  # config.deter_size = 2
+  # config.stoch_size = 3
+  # config.num_units = 4
+  # config.cnn_depth = 2
+  # config.eval_every = 2
+  # config.log_every = 1
+  # config.train_every = 3
+  # config.pretrain = 3
+  # config.train_steps = 5
+  # config.time_limit = 999
+  
   return config
 
 
