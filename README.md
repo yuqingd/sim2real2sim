@@ -1,5 +1,30 @@
 # Sim2Real2Sim - based on the Dream to Control code base
 
+##
+
+To set up, create a conda env using the included environment.yml file.
+
+Note that we've been having some issues importing the conda env corectly.  Sorry!  Note that it needs mujoco200.
+
+To run, use the command
+```
+python dreamer.py --task dmc_reacher_easy --id ID_NUM
+```
+Other tasks we could use are `dmc_reacher_hard` and `dmc_manipulator_bring_ball`.
+
+
+If ID_NUM is left blank, it will fill in with `debug`, which lets you run arbitrary runs without needing new IDs each time.
+
+When running tensorboard, if you get weird errors, run it outside the conda env.
+
+To iterate fast, uncommend the DEBUG paams in the dreamer.py file.
+
+
+
+# Everything below is taken directly from dreamer
+
+
+
 Fast and simple implementation of the Dreamer agent in TensorFlow 2.
 
 <img width="100%" src="https://imgur.com/x4NUHXl.gif">
