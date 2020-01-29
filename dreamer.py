@@ -1,3 +1,4 @@
+from dm_control import suite
 import argparse
 import collections
 import functools
@@ -6,6 +7,7 @@ import os
 import pathlib
 import sys
 import time
+import shutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'egl'
@@ -80,6 +82,8 @@ def define_config():
   config.expl_amount = 0.3
   config.expl_decay = 0.0
   config.expl_min = 0.0
+  config.id = 'debug'
+
   return config
 
 
@@ -460,4 +464,13 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
-  main(parser.parse_args())
+  config = parser.parse_args()
+  path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
+  # Raise an error if this ID is already used, unless we're in debug mode.
+  if path.exists():
+    if config.id == 'debug':
+      shutil.rmtree(path)
+    else:
+      raise ValueError('ID %s already in use.' % config.id)
+  config.logdir = path
+  main(config)
