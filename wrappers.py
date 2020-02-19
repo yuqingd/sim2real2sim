@@ -9,6 +9,10 @@ import gym
 import numpy as np
 from PIL import Image
 
+from environments.reach import FetchReachEnv
+from environments.push import FetchPushEnv
+from environments.slide import FetchSlideEnv
+
 
 class DeepMindControl:
 
@@ -61,6 +65,68 @@ class DeepMindControl:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     return self._env.physics.render(*self._size, camera_id=self._camera)
+
+
+class GymControl:
+
+  def __init__(self, name, size=(64, 64), camera=None):
+    if name == "FetchReach":
+      FetchEnv = FetchReachEnv
+    elif name == "FetchSlide":
+      FetchEnv = FetchSlideEnv
+    elif name == "FetchPush":
+      FetchEnv = FetchPushEnv
+    else:
+      raise ValueError("Invalid env name " + name)
+    generate_vision = False # TODO: pass in
+    deterministic = False
+    reward_type = "dense"
+    distance_threshold = 0.1
+    self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type, distance_threshold=distance_threshold)
+    self._size = size
+    if camera is None:
+      camera = "external_camera_0" # TODO: need?
+    self._camera = camera
+
+  @property
+  def observation_space(self):
+    spaces = {}
+    for key, value in self._env.observation_space.items():
+      spaces[key] = gym.spaces.Box(
+          -np.inf, np.inf, value.shape, dtype=np.float32)
+    spaces['image'] = gym.spaces.Box(
+        0, 255, self._size + (3,), dtype=np.uint8)
+    return gym.spaces.Dict(spaces)
+
+  @property
+  def action_space(self):
+    # spec = self._env.action_space
+    # return gym.spaces.Box(spec.minimum, spec.maximum, dtype=np.float32)
+    return self._env.action_space
+
+  def step(self, action):
+    # time_step = self._env.step(action)
+    # obs = dict(time_step.observation)
+    obs, reward, done, info = self._env.step(action) # Done currently has None
+    img = self.render()
+    obs['image'] = img
+    done = int(self._env._is_success(obs["achieved_goal"], obs["desired_goal"]))
+    discount = 1 # TODO: discount?
+    info = {'discount': np.array(discount, np.float32)}
+    return obs, reward, done, info
+
+  def reset(self):
+    obs = self._env.reset()
+    # time_step = self._env.reset()
+    # obs = dict(time_step.observation)
+    obs['image'] = self.render()
+    return obs
+
+  def render(self, *args, **kwargs):
+    if kwargs.get('mode', 'rgb_array') != 'rgb_array':
+      raise ValueError("Only render mode 'rgb_array' is supported.")
+    width, height = self._size
+    return self._env.sim.render(width=width, height=height, camera_name=self._camera)[::-1]
 
 
 class Atari:

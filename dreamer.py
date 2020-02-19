@@ -97,7 +97,7 @@ def define_config():
   # config.pretrain = 3
   # config.train_steps = 5
   # config.time_limit = 999
-  
+
   return config
 
 
@@ -402,6 +402,11 @@ def make_env(config, writer, prefix, datadir, store):
         task, config.action_repeat, (64, 64), grayscale=False,
         life_done=True, sticky_actions=True)
     env = wrappers.OneHotAction(env)
+  elif suite == 'gym':
+    env = wrappers.GymControl(task)
+    env = wrappers.ActionRepeat(env, config.action_repeat)
+    env = wrappers.NormalizeActions(env)
+
   else:
     raise NotImplementedError(suite)
   env = wrappers.TimeLimit(env, config.time_limit / config.action_repeat)
