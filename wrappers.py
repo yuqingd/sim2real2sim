@@ -110,7 +110,7 @@ class GymControl:
     obs, reward, done, info = self._env.step(action) # Done currently has None
     img = self.render()
     obs['image'] = img
-    done = int(self._env._is_success(obs["achieved_goal"], obs["desired_goal"]))
+    done = False # int(self._env._is_success(obs["achieved_goal"], obs["desired_goal"]))
     discount = 1 # TODO: discount?
     info = {'discount': np.array(discount, np.float32)}
     return obs, reward, done, info
