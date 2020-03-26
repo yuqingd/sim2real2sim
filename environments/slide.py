@@ -10,7 +10,7 @@ FETCH_PATH = os.path.dirname(robotics.__file__)
 MODEL_XML_PATH = os.path.join(FETCH_PATH, 'assets/fetch/slide.xml')
 
 class FetchSlideEnv(fetch_env.FetchEnv, utils.EzPickle):
-    def __init__(self, use_vision=False, reward_type='sparse', deterministic=False, distance_threshold=0.1):
+    def __init__(self, use_vision=False, reward_type='dense', deterministic=False, distance_threshold=0.1):
         initial_qpos = {
             'robot0:slide0': 0.05,
             'robot0:slide1': 0.48,
