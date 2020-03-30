@@ -13,7 +13,7 @@ MODEL_XML_PATH = os.path.join(FETCH_PATH, 'assets/fetch/reach.xml')
 
 
 class FetchReachEnv(fetch_env.FetchEnv, utils.EzPickle):
-    def __init__(self, use_vision=False, reward_type='dense', deterministic=True, distance_threshold=0.05):
+    def __init__(self, use_vision=True, reward_type='dense', deterministic=True, distance_threshold=0.05):
         initial_qpos = {
             'robot0:slide0': 0.4049,
             'robot0:slide1': 0.48,
