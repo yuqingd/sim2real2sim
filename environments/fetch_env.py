@@ -44,6 +44,7 @@ class FetchEnv(robot_env.RobotEnv):
         self.reward_type = reward_type
         self.use_vision = use_vision
         self.deterministic = deterministic
+        self.reach_obj = False
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -52,13 +53,21 @@ class FetchEnv(robot_env.RobotEnv):
     # GoalEnv methods
     # ----------------------------
 
-    def compute_reward(self, achieved_goal, goal, info):
+    def compute_reward(self, grip_pos, obj_pos, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
-        d = goal_distance(achieved_goal, goal)
         if self.reward_type == 'sparse':
+            d = goal_distance(achieved_goal, goal)
             return -(d > self.distance_threshold).astype(np.float32)
         else:
-            return -d
+            if self.reach_obj is False:
+                d = -goal_distance(grip_pos, obj_pos)
+                if d < self.distance_threshold:
+                    self.reach_obj = True
+                # shift d so the reward always increases
+                d -= 500
+            else:
+                d = -goal_distance(obj_pos, goal)
+            return d
 
     # RobotEnv methods
     # ----------------------------
@@ -126,6 +135,8 @@ class FetchEnv(robot_env.RobotEnv):
                 "state": state,
                 "pixels": img,
                 'observation': state,
+                'grip_pos': grip_pos.copy(),
+                'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
             }
