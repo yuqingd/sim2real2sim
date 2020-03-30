@@ -44,7 +44,6 @@ class FetchEnv(robot_env.RobotEnv):
         self.reward_type = reward_type
         self.use_vision = use_vision
         self.deterministic = deterministic
-        self.reach_obj = False
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
