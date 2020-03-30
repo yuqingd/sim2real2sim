@@ -85,7 +85,7 @@ class RobotEnv(gym.GoalEnv):
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
-        reward = self.compute_reward(obs['achieved_goal'], self.goal, info)
+        reward = self.compute_reward(obs['grip_pos'], obs['obj_pos'], obs['achieved_goal'], self.goal, info)
         return obs, reward, done, info
 
     def reset(self):
