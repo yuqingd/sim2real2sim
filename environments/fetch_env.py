@@ -54,6 +54,9 @@ class FetchEnv(robot_env.RobotEnv):
 
     def compute_reward(self, grip_pos, obj_pos, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
+        if not self.has_object:
+            d = goal_distance(achieved_goal, goal)
+            return -d
         if self.reward_type == 'sparse':
             d = goal_distance(achieved_goal, goal)
             return -(d > self.distance_threshold).astype(np.float32)
