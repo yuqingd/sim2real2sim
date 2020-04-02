@@ -84,19 +84,24 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
 
-  # # DEBUG
-  # config.prefill = 7
-  # config.steps = 1005
-  # config.deter_size = 2
-  # config.stoch_size = 3
-  # config.num_units = 4
-  # config.cnn_depth = 2
-  # config.eval_every = 2
-  # config.log_every = 1
-  # config.train_every = 3
-  # config.pretrain = 3
-  # config.train_steps = 5
-  # config.time_limit = 999
+
+
+  return config
+
+def config_debug(config):
+  # DEBUG
+  config.prefill = 7
+  config.steps = 1005
+  config.deter_size = 2
+  config.stoch_size = 3
+  config.num_units = 4
+  config.cnn_depth = 2
+  config.eval_every = 2
+  config.log_every = 1
+  config.train_every = 3
+  config.pretrain = 3
+  config.train_steps = 5
+  config.time_limit = 999
 
   return config
 
@@ -487,10 +492,12 @@ if __name__ == '__main__':
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
+
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
   # Raise an error if this ID is already used, unless we're in debug mode.
   if path.exists():
     if config.id == 'debug':
+      config = config_debug(config)
       shutil.rmtree(path)
     else:
       raise ValueError('ID %s already in use.' % config.id)
