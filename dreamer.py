@@ -180,8 +180,6 @@ class Dreamer(tools.Module):
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
       embed = self._encode(data)
-      import pdb;
-      pdb.set_trace()
       embed = tf.concat([data['state'], embed], axis=2)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
