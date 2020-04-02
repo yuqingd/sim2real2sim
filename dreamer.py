@@ -159,7 +159,7 @@ class Dreamer(tools.Module):
     else:
       latent, action = state
     embed = self._encode(preprocess(obs, self._c))
-    state = tf.dtypes.cast(obs['state'], tf.float16)
+    state = tf.dtypes.cast(obs['state'], embed.dtype)
     embed = tf.concat([state, embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
