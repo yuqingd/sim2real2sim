@@ -159,8 +159,8 @@ class Dreamer(tools.Module):
     else:
       latent, action = state
     embed = self._encode(preprocess(obs, self._c))
-    tf.dtypes.cast(embed, tf.float64)
-    embed = tf.concat([obs['state'], embed], axis=2)
+    embed = tf.dtypes.cast(embed, tf.float64)
+    embed = tf.concat([obs['state'], embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
     if training:
@@ -182,7 +182,7 @@ class Dreamer(tools.Module):
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
       embed = self._encode(data)
-      embed = tf.concat([data['state'], embed], axis=2)
+      embed = tf.concat([data['state'], embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
