@@ -64,7 +64,7 @@ class FetchEnv(robot_env.RobotEnv):
             import pdb; pdb.set_trace()
             if self.reach_obj is False:
                 d = -goal_distance(grip_pos, obj_pos)
-                if d < self.distance_threshold:
+                if abs(d) < self.distance_threshold:
                     self.reach_obj = True
                 # shift d so the reward always increases
                 d -= 500
