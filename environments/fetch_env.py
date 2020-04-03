@@ -61,6 +61,7 @@ class FetchEnv(robot_env.RobotEnv):
             d = goal_distance(achieved_goal, goal)
             return -(d > self.distance_threshold).astype(np.float32)
         else:
+            import pdb; pdb.set_trace()
             if self.reach_obj is False:
                 d = -goal_distance(grip_pos, obj_pos)
                 if d < self.distance_threshold:
