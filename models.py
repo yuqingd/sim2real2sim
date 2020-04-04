@@ -27,11 +27,14 @@ class RSSM(tools.Module):
 
   def combine(self, batch_size, orig_state):
     dtype = prec.global_policy().compute_dtype
+    import pdb; pdb.set_trace()
+    self._stoch_size = orig_state.shape[-1]
     return dict(
       mean=tf.zeros([batch_size, self._stoch_size], dtype),
       std=tf.zeros([batch_size, self._stoch_size], dtype),
-      stoch=tf.zeros([batch_size, self._stoch_size], dtype),
-      deter=tf.cast(orig_state, dtype))
+      stoch=tf.cast(orig_state, dtype),
+      deter=self._cell.get_initial_state(None, batch_size, dtype))
+
 
   @tf.function
   def observe(self, embed, action, state=None):
