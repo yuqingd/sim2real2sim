@@ -137,6 +137,7 @@ class FetchEnv(robot_env.RobotEnv):
                 "state": state,
                 "pixels": img,
                 'flatten_state': state.flatten(),
+                'observation': state,
                 'grip_pos': grip_pos.copy(),
                 'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
