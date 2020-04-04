@@ -136,7 +136,7 @@ class FetchEnv(robot_env.RobotEnv):
             state = {
                 "state": state,
                 "pixels": img,
-                'observation': state,
+                'flatten_state': np.flatten(state),
                 'grip_pos': grip_pos.copy(),
                 'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
