@@ -38,6 +38,7 @@ class RSSM(tools.Module):
 
   @tf.function
   def observe(self, embed, action, state=None):
+    import pdb; pdb.set_trace()
     if state is None:
       state = self.initial(tf.shape(action)[0])
     elif not isinstance(state, dict):
