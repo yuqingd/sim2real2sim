@@ -82,10 +82,11 @@ class RobotEnv(gym.GoalEnv):
         self._step_callback()
         obs = self._get_obs()
 
-        done = False
+
         info = {
             'is_success': self._is_success(obs['achieved_goal'], self.goal),
         }
+        done = info['is_success']
         reward = self.compute_reward(obs['grip_pos'], obs['obj_pos'], obs['achieved_goal'], self.goal, info)
         return obs, reward, done, info
 
