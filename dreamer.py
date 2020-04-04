@@ -326,6 +326,7 @@ class Dreamer(tools.Module):
   def _image_summaries(self, data, embed, image_pred):
     truth = data['image'][:6] + 0.5
     recon = image_pred.mode()[:6]
+    import pdb; pdb.set_trace()
     init, _ = self._dynamics.observe(embed[:6, :5], data['action'][:6, :5], data['state'][:6, :5])
     init = {k: v[:, -1] for k, v in init.items()}
     prior = self._dynamics.imagine(data['action'][:6, 5:], init)
