@@ -66,7 +66,7 @@ class FetchEnv(robot_env.RobotEnv):
                 if abs(d) < self.distance_threshold:
                     self.reach_obj = True
                 # shift d so the reward always increases
-                d -= 500
+                d -= 50
             else:
                 d = -goal_distance(obj_pos, goal)
             return d
