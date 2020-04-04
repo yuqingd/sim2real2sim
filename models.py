@@ -85,6 +85,7 @@ class RSSM(tools.Module):
 
   @tf.function
   def img_step(self, prev_state, prev_action):
+    import pdb; pdb.set_trace()
     x = tf.concat([prev_state['stoch'], prev_action], -1)
     x = self.get('img1', tfkl.Dense, self._hidden_size, self._activation)(x)
     x, deter = self._cell(x, [prev_state['deter']])
