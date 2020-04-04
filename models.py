@@ -28,7 +28,7 @@ class RSSM(tools.Module):
   def combine(self, batch_size, orig_state):
     dtype = prec.global_policy().compute_dtype
     orig_state = tf.reshape(orig_state, (batch_size, -1))
-    self._stoch_size = orig_state.shape[1:]
+    self._stoch_size = orig_state.shape[-1]
     return dict(
       mean=tf.zeros([batch_size, self._stoch_size], dtype),
       std=tf.zeros([batch_size, self._stoch_size], dtype),
@@ -84,7 +84,6 @@ class RSSM(tools.Module):
 
   @tf.function
   def img_step(self, prev_state, prev_action):
-    import pdb; pdb.set_trace()
     x = tf.concat([prev_state['stoch'], prev_action], -1)
     x = self.get('img1', tfkl.Dense, self._hidden_size, self._activation)(x)
     x, deter = self._cell(x, [prev_state['deter']])
