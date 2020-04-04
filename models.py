@@ -25,10 +25,21 @@ class RSSM(tools.Module):
         stoch=tf.zeros([batch_size, self._stoch_size], dtype),
         deter=self._cell.get_initial_state(None, batch_size, dtype))
 
+  def combine(self, batch_size, orig_state):
+    dtype = prec.global_policy().compute_dtype
+    return dict(
+      mean=tf.zeros([batch_size, self._stoch_size], dtype),
+      std=tf.zeros([batch_size, self._stoch_size], dtype),
+      stoch=tf.zeros([batch_size, self._stoch_size], dtype),
+      deter=tf.cast(orig_state, dtype))
+
   @tf.function
   def observe(self, embed, action, state=None):
     if state is None:
       state = self.initial(tf.shape(action)[0])
+    elif not isinstance(state, dict):
+      state = self.combine(tf.shape(action)[0], state)
+
     embed = tf.transpose(embed, [1, 0, 2])
     action = tf.transpose(action, [1, 0, 2])
     post, prior = tools.static_scan(
@@ -42,6 +53,8 @@ class RSSM(tools.Module):
   def imagine(self, action, state=None):
     if state is None:
       state = self.initial(tf.shape(action)[0])
+    elif not isinstance(state, dict):
+      state = self.combine(tf.shape(action)[0], state)
     assert isinstance(state, dict), state
     action = tf.transpose(action, [1, 0, 2])
     prior = tools.static_scan(self.img_step, action, state)
