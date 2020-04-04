@@ -183,6 +183,7 @@ class Dreamer(tools.Module):
     with tf.GradientTape() as model_tape:
       embed = self._encode(data)
       #embed = tf.concat([data['state'], embed], axis=-1)
+      import pdb; pdb.set_trace()
       post, prior = self._dynamics.observe(embed, data['action'], data['flatten_state'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
