@@ -27,7 +27,6 @@ class RSSM(tools.Module):
 
   def combine(self, batch_size, orig_state):
     dtype = prec.global_policy().compute_dtype
-    import pdb; pdb.set_trace()
     orig_state = tf.reshape(orig_state, (batch_size, -1))
     self._stoch_size = orig_state.shape[-1]
     return dict(
