@@ -184,7 +184,7 @@ class Dreamer(tools.Module):
       embed = self._encode(data)
       #embed = tf.concat([data['state'], embed], axis=-1)
       import pdb; pdb.set_trace()
-      post, prior = self._dynamics.observe(embed, data['action'], data['flatten_state'])
+      post, prior = self._dynamics.observe(embed, data['action'], data['state'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
@@ -329,7 +329,7 @@ class Dreamer(tools.Module):
     recon = image_pred.mode()[:6]
     init, _ = self._dynamics.observe(embed[:6, :5], data['action'][:6, :5])
     init = {k: v[:, -1] for k, v in init.items()}
-    prior = self._dynamics.imagine(data['action'][:6, 5:], init, data['flatten_state'])
+    prior = self._dynamics.imagine(data['action'][:6, 5:], init, data['state'])
     openl = self._decode(self._dynamics.get_feat(prior)).mode()
     model = tf.concat([recon[:, :5] + 0.5, openl + 0.5], 1)
     error = (model - truth + 1) / 2
