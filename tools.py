@@ -402,7 +402,6 @@ def static_scan(fn, inputs, start, reverse=False, orig_state=None):
   for index in indices:
     inp = tf.nest.map_structure(lambda x: x[index], inputs)
     if orig_state is not None:
-      import pdb; pdb.set_trace()
       state_dim = orig_state.shape[-1]
       last[0]['stoch'] = tf.concat([last[0]['stoch'][:,:-state_dim],-orig_state[index]], -1)
       last[1]['stoch'] = tf.concat([last[1]['stoch'][:,:-state_dim],-orig_state[index]], -1)
