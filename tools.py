@@ -401,7 +401,8 @@ def static_scan(fn, inputs, start, reverse=False, orig_state=None):
   for index in indices:
     inp = tf.nest.map_structure(lambda x: x[index], inputs)
     if orig_state is not None:
-      last['deter'] = tf.concat([last['deter'], orig_state[index]], -1)
+      last[0]['deter'] = tf.concat([last['deter'], orig_state[index]], -1)
+      last[1]['deter'] = tf.concat([last['deter'], orig_state[index]], -1)
     last = fn(last, inp)
     [o.append(l) for o, l in zip(outputs, tf.nest.flatten(last))]
   if reverse:
