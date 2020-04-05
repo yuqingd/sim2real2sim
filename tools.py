@@ -394,8 +394,6 @@ def args_type(default):
 
 def static_scan(fn, inputs, start, reverse=False, orig_state=None):
   last = start
-  import pdb;
-  pdb.set_trace()
 
   outputs = [[] for _ in tf.nest.flatten(start)]
   indices = range(len(tf.nest.flatten(inputs)[0]))
@@ -404,8 +402,10 @@ def static_scan(fn, inputs, start, reverse=False, orig_state=None):
   for index in indices:
     inp = tf.nest.map_structure(lambda x: x[index], inputs)
     if orig_state is not None:
-      last[0]['stoch'] = tf.concat([last[0]['stoch'], orig_state[index]], -1)
-      last[1]['stoch'] = tf.concat([last[0]['stoch'], orig_state[index]], -1)
+      import pdb; pdb.set_trace()
+      state_dim = orig_state.shape[-1]
+      last[0]['stoch'][-state_dim:] = orig_state[index]
+      last[1]['stoch'][-state_dim:] = orig_state[index]
     last = fn(last, inp)
     [o.append(l) for o, l in zip(outputs, tf.nest.flatten(last))]
   if reverse:
