@@ -31,7 +31,7 @@ class RSSM(tools.Module):
   def observe(self, embed, action, state=None):
     orig_state = None
     import pdb; pdb.set_trace()
-    if len(state.size()) == 3:
+    if len(state.shape) == 3:
       dtype = prec.global_policy().compute_dtype
       orig_state = tf.cast(deepcopy(state), dtype)
       orig_state = tf.transpose(orig_state, [1, 0, 2]) #L, B, D
