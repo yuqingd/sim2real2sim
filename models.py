@@ -33,7 +33,7 @@ class RSSM(tools.Module):
     import pdb; pdb.set_trace()
     if len(state.shape) == 3:
       dtype = prec.global_policy().compute_dtype
-      orig_state = tf.cast(deepcopy(state), dtype)
+      orig_state = tf.cast(state, dtype)
       orig_state = tf.transpose(orig_state, [1, 0, 2]) #L, B, D
       state = None
     if state is None:
