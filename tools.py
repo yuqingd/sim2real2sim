@@ -404,8 +404,8 @@ def static_scan(fn, inputs, start, reverse=False, orig_state=None):
     if orig_state is not None:
       import pdb; pdb.set_trace()
       state_dim = orig_state.shape[-1]
-      last[0]['stoch'][-state_dim:] = orig_state[index]
-      last[1]['stoch'][-state_dim:] = orig_state[index]
+      last[0]['stoch'][:,:-state_dim] = tf.concat([last[0]['stoch'][:,:-state_dim],-orig_state[index]], -1)
+      last[1]['stoch'][:,:-state_dim] = tf.concat([last[1]['stoch'][:,:-state_dim],-orig_state[index]], -1)
     last = fn(last, inp)
     [o.append(l) for o, l in zip(outputs, tf.nest.flatten(last))]
   if reverse:
