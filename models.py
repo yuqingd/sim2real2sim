@@ -30,7 +30,6 @@ class RSSM(tools.Module):
   @tf.function
   def observe(self, embed, action, state=None):
     orig_state = None
-    import pdb; pdb.set_trace()
     if len(state.shape) == 3:
       dtype = prec.global_policy().compute_dtype
       orig_state = tf.cast(state, dtype)
@@ -48,17 +47,18 @@ class RSSM(tools.Module):
         lambda prev, inputs: self.obs_step(prev[0], *inputs),
         (action, embed), (state, state))
     post = {k: tf.transpose(v, [1, 0, 2]) for k, v in post.items()}
+
+
     if orig_state is None:
       prior = {k: tf.transpose(v, [1, 0, 2]) for k, v in prior.items()}
     else:
       new_prior = {}
       for (k,v) in prior.items():
-
         if k == 'deter':
           v = tf.concat([v, orig_state], -1)
         v = tf.transpose(v, [1, 0, 2])
-
         new_prior[k] = v
+    import pdb; pdb.set_trace()
 
     return post, prior
 
