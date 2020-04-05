@@ -34,6 +34,7 @@ class RSSM(tools.Module):
       dtype = prec.global_policy().compute_dtype
       orig_state = tf.cast(state, dtype)
       orig_state = tf.transpose(orig_state, [1, 0, 2]) #L, B, D
+      self._stoch_size += orig_state.shape[-1]
       state = self.initial(tf.shape(action)[0])
     elif state is None:
       state = self.initial(tf.shape(action)[0])
