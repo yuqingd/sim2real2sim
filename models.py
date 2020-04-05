@@ -13,6 +13,7 @@ class RSSM(tools.Module):
   def __init__(self, stoch=30, deter=200, hidden=200, act=tf.nn.elu):
     super().__init__()
     self._activation = act
+    self._input_stoch_size = stoch
     self._stoch_size = stoch
     self._deter_size = deter
     self._hidden_size = hidden
@@ -34,7 +35,7 @@ class RSSM(tools.Module):
       dtype = prec.global_policy().compute_dtype
       orig_state = tf.cast(state, dtype)
       orig_state = tf.transpose(orig_state, [1, 0, 2]) #L, B, D
-      self._stoch_size += orig_state.shape[-1]
+      self._stoch_size = self._input_stoch_size + orig_state.shape[-1]
       state = self.initial(tf.shape(action)[0])
     elif state is None:
       state = self.initial(tf.shape(action)[0])
