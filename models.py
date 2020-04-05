@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.keras import layers as tfkl
 from tensorflow_probability import distributions as tfd
 from tensorflow.keras.mixed_precision import experimental as prec
+from copy import deepcopy
 
 import tools
 
@@ -25,31 +26,38 @@ class RSSM(tools.Module):
         stoch=tf.zeros([batch_size, self._stoch_size], dtype),
         deter=self._cell.get_initial_state(None, batch_size, dtype))
 
-  def combine(self, batch_size, orig_state):
-    dtype = prec.global_policy().compute_dtype
-    orig_state = tf.reshape(orig_state, (batch_size, -1))
-    self._stoch_size = orig_state.shape[-1]
-    return dict(
-      mean=tf.zeros([batch_size, self._stoch_size], dtype),
-      std=tf.zeros([batch_size, self._stoch_size], dtype),
-      stoch=tf.cast(orig_state, dtype),
-      deter=self._cell.get_initial_state(None, batch_size, dtype))
-
 
   @tf.function
   def observe(self, embed, action, state=None):
+    orig_state = None
+    import pdb; pdb.set_trace()
+    if len(state.size() == 3):
+      dtype = prec.global_policy().compute_dtype
+      orig_state = tf.cast(deepcopy(state), dtype)
+      orig_state = tf.transpose(orig_state, [1, 0, 2]) #L, B, D
+      state = None
     if state is None:
       state = self.initial(tf.shape(action)[0])
-    elif not isinstance(state, dict):
-      state = self.combine(tf.shape(action)[0], state)
+
 
     embed = tf.transpose(embed, [1, 0, 2])
     action = tf.transpose(action, [1, 0, 2])
+
+
     post, prior = tools.static_scan(
         lambda prev, inputs: self.obs_step(prev[0], *inputs),
         (action, embed), (state, state))
     post = {k: tf.transpose(v, [1, 0, 2]) for k, v in post.items()}
-    prior = {k: tf.transpose(v, [1, 0, 2]) for k, v in prior.items()}
+    if orig_state is None:
+      prior = {k: tf.transpose(v, [1, 0, 2]) for k, v in prior.items()}
+    else:
+      new_prior = {}
+      for (k,v), s in zip(prior.items(), state):
+        v = tf.transpose(v, [1, 0, 2])
+
+        v['deter'] = tf.concat([v['deter'], s])
+        new_prior[k] = v
+
     return post, prior
 
   @tf.function
