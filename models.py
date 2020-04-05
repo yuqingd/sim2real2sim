@@ -53,10 +53,11 @@ class RSSM(tools.Module):
     else:
       new_prior = {}
       for (k,v) in prior.items():
-        v = tf.transpose(v, [1, 0, 2])
 
         if k == 'deter':
           v = tf.concat([v, orig_state], -1)
+        v = tf.transpose(v, [1, 0, 2])
+
         new_prior[k] = v
 
     return post, prior
