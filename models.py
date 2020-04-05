@@ -58,8 +58,7 @@ class RSSM(tools.Module):
           v = tf.concat([v, orig_state], -1)
         v = tf.transpose(v, [1, 0, 2])
         new_prior[k] = v
-    import pdb; pdb.set_trace()
-
+      prior = new_prior
     return post, prior
 
   @tf.function
