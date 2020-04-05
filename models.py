@@ -46,19 +46,27 @@ class RSSM(tools.Module):
     post, prior = tools.static_scan(
         lambda prev, inputs: self.obs_step(prev[0], *inputs),
         (action, embed), (state, state))
-    post = {k: tf.transpose(v, [1, 0, 2]) for k, v in post.items()}
 
 
     if orig_state is None:
+
+      post = {k: tf.transpose(v, [1, 0, 2]) for k, v in post.items()}
       prior = {k: tf.transpose(v, [1, 0, 2]) for k, v in prior.items()}
     else:
       new_prior = {}
+      new_post = {}
       for (k,v) in prior.items():
         if k == 'deter':
           v = tf.concat([v, orig_state], -1)
         v = tf.transpose(v, [1, 0, 2])
         new_prior[k] = v
+      for (k, v) in post.items():
+        if k == 'deter':
+          v = tf.concat([v, orig_state], -1)
+        v = tf.transpose(v, [1, 0, 2])
+        new_post[k] = v
       prior = new_prior
+      post = new_post
     return post, prior
 
   @tf.function
