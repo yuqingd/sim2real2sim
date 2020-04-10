@@ -61,14 +61,14 @@ class FetchEnv(robot_env.RobotEnv):
             d = goal_distance(achieved_goal, goal)
             return -(d > self.distance_threshold).astype(np.float32)
         else:
-            if self.reach_obj is False:
-                d = -goal_distance(grip_pos, obj_pos)
-                if abs(d) < 0.1:
-                    self.reach_obj = True
+            if self.reach_obj == -1:
+                d = goal_distance(grip_pos, obj_pos)
+                if d < 0.1:
+                    self.reach_obj = 1/d
+                d = 1/d
                 # shift d so the reward always increases
-                d -= 50
             else:
-                d = -goal_distance(obj_pos, goal)
+                d = 1/goal_distance(obj_pos, goal) + self.reach_obj
             return d
 
     # RobotEnv methods
