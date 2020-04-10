@@ -63,7 +63,7 @@ def define_config():
   config.weight_decay_pattern = r'.*'
   # Training.
   config.batch_size = 256 #50
-  config.batch_length = 50
+  config.batch_length = 25
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
