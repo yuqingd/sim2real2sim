@@ -62,7 +62,7 @@ class RobotEnv(gym.GoalEnv):
         #    observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
         #))
         self.observation_space = convert_observation_to_space(obs)
-        self.reach_obj = False
+        self.reach_obj = -1
 
     @property
     def dt(self):
@@ -102,7 +102,7 @@ class RobotEnv(gym.GoalEnv):
             did_reset_sim = self._reset_sim()
         self.goal = self._sample_goal().copy()
         obs = self._get_obs()
-        self.reach_obj = False
+        self.reach_obj = -1
         return obs
 
     def close(self):
