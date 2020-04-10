@@ -127,6 +127,9 @@ class FetchEnv(robot_env.RobotEnv):
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
+        obs_noobj = np.concatenate([
+            grip_pos, gripper_state, grip_velp, gripper_vel, self.goal.copy()
+        ])
 
         state = np.concatenate([obs.copy(), self.goal.copy()])
         # state = obs.copy() # TODO: consider adding concatenate back in
@@ -134,7 +137,7 @@ class FetchEnv(robot_env.RobotEnv):
             img_size = 64
             img = self.sim.render(width=img_size, height=img_size, camera_name="external_camera_0")[::-1]
             state = {
-                "state": state,
+                "state": obs_noobj,
                 "pixels": img,
                 'observation': state,
                 'grip_pos': grip_pos.copy(),
