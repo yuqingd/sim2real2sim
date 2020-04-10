@@ -63,7 +63,7 @@ class FetchEnv(robot_env.RobotEnv):
         else:
             if self.reach_obj == -1:
                 d = goal_distance(grip_pos, obj_pos)
-                if d < 0.1:
+                if d < 0.05:
                     self.reach_obj = 1/d
                 d = 1/d
                 # shift d so the reward always increases
@@ -178,7 +178,7 @@ class FetchEnv(robot_env.RobotEnv):
         if self.has_object:
             object_xpos = self.initial_gripper_xpos[:2].copy()
             if self.deterministic:
-                object_xpos +=0.15
+                object_xpos +=0.1
             else:
                 while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
                     object_xpos = self.initial_gripper_xpos[:2].copy() + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
