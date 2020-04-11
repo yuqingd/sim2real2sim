@@ -66,6 +66,7 @@ class FetchEnv(robot_env.RobotEnv):
                 if d < 0.08:
                     self.reach_obj = 1/d
                 d = 1/d
+                print("Reached object")
                 # shift d so the reward always increases
             else:
                 d = 1/goal_distance(obj_pos, goal) + self.reach_obj
