@@ -128,8 +128,8 @@ class GymControl:
     width, height = self._size
     return self._env.sim.render(width=width, height=height, camera_name=self._camera)[::-1]
 
-  def compute_rewards_tf(self, achieved_goals, desired_goals, info):
-    return self._env.compute_reward_tf(achieved_goals, desired_goals, info)
+  def compute_rewards_tf(self, obs):
+    return self._env.compute_reward_tf(obs)
 
   def sample_goals(self, num_samples):
     return np.stack([self._env._sample_goal() for _ in range(num_samples)])

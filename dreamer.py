@@ -181,14 +181,16 @@ class Dreamer(tools.Module):
     self._should_pretrain()
 
     # @tf.function
-  def her_relabel(self, achieved_goals, desired_goals):
+  def her_relabel(self, data):
     """
     Relabel a subset of a batch with new goals, sampled either randomly or from the future goals achieved
-    on the trajectory..
-    :param achieved_goals:
-    :param desired_goals:
-    :return:
+    on the trajectory.
+    :param data: dictionary containing a batch of data
+    :return: (desired_goals, rewards), both shape (batch, horizon, vector_dimension)
     """
+    achieved_goals = data["achieved_goal"]
+    desired_goals = data["desired_goal"]
+
     orig_goals = desired_goals
     batch, horizon, goal_len = desired_goals.shape
     indices = tf.random.uniform(shape=(batch, horizon, 1), minval=0, maxval=1)  # Uniform [0-1]
@@ -212,7 +214,9 @@ class Dreamer(tools.Module):
     future_goals = tf.reshape(tf.stack(goals_list, axis=0), orig_goals.shape)
     desired_goals = future_goals * future_goal_indices + desired_goals * (1 - future_goal_indices)
 
-    rewards = self._env.compute_rewards_tf(achieved_goals, desired_goals, None)
+    data['desired_goal'] = desired_goals
+
+    rewards = self._env.compute_rewards_tf(data)
     return desired_goals, rewards
 
   @tf.function()
@@ -223,9 +227,9 @@ class Dreamer(tools.Module):
     with tf.GradientTape() as model_tape:
 
       if self._c.her:
-        desired_goals, reward = self.her_relabel(data["achieved_goal"], data["desired_goal"])
+        desired_goals, reward = self.her_relabel(data)
         state = tf.concat([data["state"][:, :, :-3], desired_goals], axis=2)
-        assert reward.shape != data["reward"].shape, (reward.shape, data["reward"].shape)
+        assert reward.shape == data["reward"].shape, (reward.shape, data["reward"].shape)
         assert state.shape == data["state"].shape, (state.shape, data["state"].shape)
       else:
         state = data["state"]

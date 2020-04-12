@@ -76,13 +76,27 @@ class FetchEnv(robot_env.RobotEnv):
                 d = 1/goal_distance(obj_pos, goal) + self.reach_obj
             return d
 
-    def compute_reward_tf(self, achieved_goals, goals, info):
+    def compute_reward_tf(self, obs):
+        grip_pos = obs['grip_pos']
+        obj_pos = obs['obj_pos']
+        achieved_goal = obs['achieved_goal']
+        goal = obs['desired_goal']
+        reach_obj = obs['reach_obj']
+
         # Compute distance between goal and the achieved goal.
-        d = goal_distance_tf(achieved_goals, goals)
+        if not self.has_object:
+            d = goal_distance_tf(achieved_goal, goal)
+            return -d
         if self.reward_type == 'sparse':
+            d = goal_distance(achieved_goal, goal)
             return -tf.cast(d > self.distance_threshold, tf.float32)
         else:
-            return -d
+            already_reached_obj = tf.cast(reach_obj == -1, tf.float32)
+            pre_reach_reward = (1/goal_distance_tf(grip_pos, obj_pos))
+            post_reach_reward = 1 / goal_distance_tf(obj_pos, goal) + reach_obj
+            d = already_reached_obj * pre_reach_reward + (1 - already_reached_obj) * post_reach_reward
+            return d
+
 
     # RobotEnv methods
     # ----------------------------
@@ -157,6 +171,7 @@ class FetchEnv(robot_env.RobotEnv):
                 'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
+                'reach_obj': np.array(self.reach_obj, dtype=np.float),
             }
         else:
             state = {
@@ -164,6 +179,7 @@ class FetchEnv(robot_env.RobotEnv):
                 'observation': state,
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
+                'reach_obj': np.array(self.reach_obj, dtype=np.float),
             }
 
         return state

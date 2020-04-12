@@ -43,6 +43,7 @@ class RobotEnv(gym.GoalEnv):
         self.sim = mujoco_py.MjSim(model, nsubsteps=n_substeps)
         self.viewer = None
         self._viewers = {}
+        self.reach_obj = -1
 
         self.metadata = {
             'render.modes': ['human', 'rgb_array'],
@@ -62,7 +63,7 @@ class RobotEnv(gym.GoalEnv):
         #    observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
         #))
         self.observation_space = convert_observation_to_space(obs)
-        self.reach_obj = -1
+
 
     @property
     def dt(self):
