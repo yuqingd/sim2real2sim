@@ -83,6 +83,10 @@ def define_config():
   config.expl_decay = 0.0
   config.expl_min = 0.0
   config.id = 'debug'
+  # HER
+  config.her = True
+  config.prob_future = 0.2
+  config.prob_env = 0.2
 
 
 
@@ -108,11 +112,12 @@ def config_debug(config):
 
 class Dreamer(tools.Module):
 
-  def __init__(self, config, datadir, actspace, writer):
+  def __init__(self, config, datadir, actspace, writer, env):
     self._c = config
     self._actspace = actspace
     self._actdim = actspace.n if hasattr(actspace, 'n') else actspace.shape[0]
     self._writer = writer
+    self._env = env
     self._random = np.random.RandomState(config.seed)
     with tf.device('cpu:0'):
       self._step = tf.Variable(count_steps(datadir, config), dtype=tf.int64)
@@ -175,21 +180,69 @@ class Dreamer(tools.Module):
     super().load(filename)
     self._should_pretrain()
 
+    # @tf.function
+  def her_relabel(self, achieved_goals, desired_goals):
+    """
+    Relabel a subset of a batch with new goals, sampled either randomly or from the future goals achieved
+    on the trajectory..
+    :param achieved_goals:
+    :param desired_goals:
+    :return:
+    """
+    orig_goals = desired_goals
+    batch, horizon, goal_len = desired_goals.shape
+    indices = tf.random.uniform(shape=(batch, horizon, 1), minval=0, maxval=1)  # Uniform [0-1]
+    future_goal_indices = tf.cast(indices < self._c.prob_future, tf.float32)
+    env_goal_indices = (1 - future_goal_indices) * tf.cast(indices < self._c.prob_future + self._c.prob_env, tf.float32)
+    # All other indices are the same as usual
+
+    # Sample some goals from the environment
+    env_goals = self._env.sample_goals(batch * horizon)
+    env_goals = tf.convert_to_tensor(np.reshape(env_goals, orig_goals.shape), dtype=tf.float32)
+    desired_goals = env_goals * env_goal_indices + desired_goals * (1 - env_goal_indices)
+
+    # Sample some goals from the trajectory future.
+    goals_list = []
+    for i in range(batch):  # TODO: consider ways to batch
+      for j in range(horizon):
+        future_index = np.random.randint(j, horizon)
+        future_goal = orig_goals[i, future_index]
+        goals_list.append(future_goal)
+
+    future_goals = tf.reshape(tf.stack(goals_list, axis=0), orig_goals.shape)
+    desired_goals = future_goals * future_goal_indices + desired_goals * (1 - future_goal_indices)
+
+    rewards = self._env.compute_rewards_tf(achieved_goals, desired_goals, None)
+    return desired_goals, rewards
+
   @tf.function()
   def train(self, data, log_images=False):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
+
+      if self._c.her:
+        desired_goals, reward = self.her_relabel(data["achieved_goal"], data["desired_goal"])
+        state = tf.concat([data["state"][:, :, :-3], desired_goals], axis=2)
+        assert reward.shape != data["reward"].shape, (reward.shape, data["reward"].shape)
+        assert state.shape == data["state"].shape, (state.shape, data["state"].shape)
+      else:
+        state = data["state"]
+        reward = data["reward"]
+
       embed = self._encode(data)
-      embed = tf.concat([data['state'], embed], axis=-1)
+      embed = tf.concat([state, embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
-      image_pred = self._decode(feat)
-      reward_pred = self._reward(feat)
+
       likes = tools.AttrDict()
+      image_pred = self._decode(feat)
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
-      likes.reward = tf.reduce_mean(reward_pred.log_prob(data['reward']))
+
+      reward_pred = self._reward(feat)
+      likes.reward = tf.reduce_mean(reward_pred.log_prob(reward))
+
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -463,7 +516,7 @@ def main(config):
   # Train and regularly evaluate the agent.
   step = count_steps(datadir, config)
   print(f'Simulating agent for {config.steps-step} steps.')
-  agent = Dreamer(config, datadir, actspace, writer)
+  agent = Dreamer(config, datadir, actspace, writer, train_envs[0])
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
     agent.load(config.logdir / 'variables.pkl')

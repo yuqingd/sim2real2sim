@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 from gym.envs.robotics import rotations, utils
 from environments import robot_env
@@ -6,6 +7,10 @@ from environments import robot_env
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
     return np.linalg.norm(goal_a - goal_b, axis=-1)
+
+def goal_distance_tf(goal_a, goal_b):
+    assert goal_a.shape == goal_b.shape
+    return tf.norm(goal_a - goal_b, axis=-1)
 
 
 class FetchEnv(robot_env.RobotEnv):
@@ -70,6 +75,14 @@ class FetchEnv(robot_env.RobotEnv):
             else:
                 d = 1/goal_distance(obj_pos, goal) + self.reach_obj
             return d
+
+    def compute_reward_tf(self, achieved_goals, goals, info):
+        # Compute distance between goal and the achieved goal.
+        d = goal_distance_tf(achieved_goals, goals)
+        if self.reward_type == 'sparse':
+            return -tf.cast(d > self.distance_threshold, tf.float32)
+        else:
+            return -d
 
     # RobotEnv methods
     # ----------------------------
