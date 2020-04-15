@@ -445,14 +445,17 @@ def summarize_episode(episode, config, datadir, writer, prefix):
   episodes, steps = tools.count_episodes(datadir)
   length = (len(episode['reward']) - 1) * config.action_repeat
   ret = episode['reward'].sum()
-  success = True in episode['success']
-  success_str = "succeeded" if success == 1 else "did not succeed"
-  print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
   metrics = [
       (f'{prefix}/return', float(episode['reward'].sum())),
       (f'{prefix}/length', len(episode['reward']) - 1),
-      (f'{prefix}/success', success),
       (f'episodes', episodes)]
+  if 'success' in episode:
+    success = True in episode['success']
+    success_str = "succeeded" if success == 1 else "did not succeed"
+    print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
+    metrics.append((f'{prefix}/success', success))
+  else:
+    print(f'{prefix.title()} episode of length {length} with return {ret:.1f}.')
   step = count_steps(datadir, config)
   with (config.logdir / 'metrics.jsonl').open('a') as f:
     f.write(json.dumps(dict([('step', step)] + metrics)) + '\n')
