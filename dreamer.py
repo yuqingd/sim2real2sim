@@ -64,8 +64,8 @@ def define_config():
   # Training.
   config.batch_size = 256 #50
   config.batch_length = 25
-  config.train_every = 1000
-  config.train_steps = 100
+  config.train_every = 100
+  config.train_steps = 200
   config.pretrain = 100
   config.model_lr = 6e-4
   config.value_lr = 1e-3 #8e-5
