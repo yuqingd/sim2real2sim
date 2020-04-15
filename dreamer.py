@@ -34,7 +34,7 @@ def define_config():
   config.seed = 0
   config.steps = 5e6
   config.eval_every = 1e4
-  config.log_every = 1e3
+  config.log_every = 50
   config.log_scalars = True
   config.log_images = True
   config.gpu_growth = True
