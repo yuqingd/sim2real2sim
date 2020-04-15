@@ -181,6 +181,7 @@ class Dreamer(tools.Module):
 
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
+      success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
       embed = self._encode(data)
       embed = tf.concat([data['state'], embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
@@ -233,7 +234,7 @@ class Dreamer(tools.Module):
         self._scalar_summaries(
             data, feat, prior_dist, post_dist, likes, div,
             model_loss, value_loss, actor_loss, model_norm, value_norm,
-            actor_norm)
+            actor_norm, success_rate)
       if tf.equal(log_images, True):
         self._image_summaries(data, embed, image_pred)
 
@@ -309,7 +310,8 @@ class Dreamer(tools.Module):
   def _scalar_summaries(
       self, data, feat, prior_dist, post_dist, likes, div,
       model_loss, value_loss, actor_loss, model_norm, value_norm,
-      actor_norm):
+      actor_norm, success_rate):
+    self._metrics['success_rate'].update_state(success_rate)
     self._metrics['model_grad_norm'].update_state(model_norm)
     self._metrics['value_grad_norm'].update_state(value_norm)
     self._metrics['actor_grad_norm'].update_state(actor_norm)
@@ -384,10 +386,13 @@ def summarize_episode(episode, config, datadir, writer, prefix):
   episodes, steps = tools.count_episodes(datadir)
   length = (len(episode['reward']) - 1) * config.action_repeat
   ret = episode['reward'].sum()
-  print(f'{prefix.title()} episode of length {length} with return {ret:.1f}.')
+  success = True in episode['success']
+  success_str = "succeeded" if success == 1 else "did not succeed"
+  print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
   metrics = [
       (f'{prefix}/return', float(episode['reward'].sum())),
       (f'{prefix}/length', len(episode['reward']) - 1),
+      (f'{prefix}/success', success),
       (f'episodes', episodes)]
   step = count_steps(datadir, config)
   with (config.logdir / 'metrics.jsonl').open('a') as f:

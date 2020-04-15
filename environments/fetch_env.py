@@ -66,7 +66,7 @@ class FetchEnv(robot_env.RobotEnv):
 
             if self.reach_obj == -1:
                 d = -(d1+d2)
-                if d1 < 0.08:
+                if d1 < 0.05:
                     self.reach_obj = d1
             else:
                 d = -(self.reach_obj + d2)
@@ -139,7 +139,7 @@ class FetchEnv(robot_env.RobotEnv):
         obs_noobj = np.concatenate([
             grip_pos, gripper_state, grip_velp, gripper_vel, self.goal.copy()
         ])
-
+        success = np.array(self._is_success(achieved_goal, self.goal))
         state = np.concatenate([obs.copy(), self.goal.copy()])
         # state = obs.copy() # TODO: consider adding concatenate back in
         if self.use_vision:
@@ -153,6 +153,7 @@ class FetchEnv(robot_env.RobotEnv):
                 'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
+                'success': success
             }
         else:
             state = {
@@ -160,6 +161,7 @@ class FetchEnv(robot_env.RobotEnv):
                 'observation': state,
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
+                'success': success
             }
 
         return state
