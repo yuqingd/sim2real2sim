@@ -79,7 +79,7 @@ class GymControl:
     else:
       raise ValueError("Invalid env name " + name)
     generate_vision = True # TODO: pass in
-    deterministic = False
+    deterministic = True
     reward_type = "dense"
     distance_threshold = 0.05
     self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type, distance_threshold=distance_threshold)

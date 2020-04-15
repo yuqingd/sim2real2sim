@@ -182,7 +182,6 @@ class Dreamer(tools.Module):
     super().load(filename)
     self._should_pretrain()
 
-    # @tf.function
   def her_relabel(self, data):
     """
     Relabel a subset of a batch with new goals, sampled either randomly or from the future goals achieved
@@ -228,6 +227,7 @@ class Dreamer(tools.Module):
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
 
+      success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1] # TODO: make this show up for a full run
       if self._c.her:
         desired_goals, reward = self.her_relabel(data)
         state = tf.concat([data["state"][:, :, :-3], desired_goals], axis=2)
@@ -236,6 +236,7 @@ class Dreamer(tools.Module):
       else:
         state = data["state"]
         reward = data["reward"]
+
 
       embed = self._encode(data)
       embed = tf.concat([state, embed], axis=-1)
@@ -292,7 +293,7 @@ class Dreamer(tools.Module):
         self._scalar_summaries(
             data, feat, prior_dist, post_dist, likes, div,
             model_loss, value_loss, actor_loss, model_norm, value_norm,
-            actor_norm)
+            actor_norm, success_rate)
       if tf.equal(log_images, True):
         self._image_summaries(data, embed, image_pred)
 
@@ -368,7 +369,8 @@ class Dreamer(tools.Module):
   def _scalar_summaries(
       self, data, feat, prior_dist, post_dist, likes, div,
       model_loss, value_loss, actor_loss, model_norm, value_norm,
-      actor_norm):
+      actor_norm, success_rate):
+    self._metrics['success_rate'].update_state(success_rate)
     self._metrics['model_grad_norm'].update_state(model_norm)
     self._metrics['value_grad_norm'].update_state(value_norm)
     self._metrics['actor_grad_norm'].update_state(actor_norm)

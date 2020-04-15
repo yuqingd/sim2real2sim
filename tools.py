@@ -172,6 +172,14 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0):
     keys = list(cache.keys())
     for index in random.choice(len(keys), rescan):
       episode = cache[keys[index]]
+
+      # Make the "success" key true for all timesteps if it's true at the last timestep.
+      # This lets us accurately record the success rate.
+      new_value = episode['success'][-1]
+      success_vec = np.zeros(shape=episode['success'].shape, dtype=np.float32) + new_value
+      episode['success'] = success_vec
+
+
       if length:
         total = len(next(iter(episode.values())))
         available = total - length
@@ -183,6 +191,10 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0):
         else:
           index = int(random.randint(0, available))
         episode = {k: v[index: index + length] for k, v in episode.items()}
+
+
+
+
       yield episode
 
 
