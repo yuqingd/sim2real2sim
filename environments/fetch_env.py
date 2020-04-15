@@ -57,6 +57,26 @@ class FetchEnv(robot_env.RobotEnv):
     # GoalEnv methods
     # ----------------------------
 
+    # def compute_reward(self, grip_pos, obj_pos, achieved_goal, goal, info):
+    #     # Compute distance between goal and the achieved goal.
+    #     if not self.has_object:
+    #         d = goal_distance(achieved_goal, goal)
+    #         return -d
+    #     if self.reward_type == 'sparse':
+    #         d = goal_distance(achieved_goal, goal)
+    #         return -(d > self.distance_threshold).astype(np.float32)
+    #     else:
+    #         if self.reach_obj == -1:
+    #             d = goal_distance(grip_pos, obj_pos)
+    #             if d < 0.05:
+    #                 self.reach_obj = 1/d
+    #             d = 1/d
+    #             # shift d so the reward always increases
+    #         else:
+    #             d = 1/goal_distance(obj_pos, goal) + self.reach_obj
+    #         return d
+
+
     def compute_reward(self, grip_pos, obj_pos, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
         if not self.has_object:
@@ -66,14 +86,16 @@ class FetchEnv(robot_env.RobotEnv):
             d = goal_distance(achieved_goal, goal)
             return -(d > self.distance_threshold).astype(np.float32)
         else:
+            d1 = goal_distance(grip_pos, obj_pos)
+            d2 = goal_distance(obj_pos, goal)
+
             if self.reach_obj == -1:
-                d = goal_distance(grip_pos, obj_pos)
-                if d < 0.05:
-                    self.reach_obj = 1/d
-                d = 1/d
-                # shift d so the reward always increases
+                d = -(d1+d2)
+                if d1 < 0.08:
+                    self.reach_obj = d1
             else:
-                d = 1/goal_distance(obj_pos, goal) + self.reach_obj
+                d = -(self.reach_obj + d2)
+
             return d
 
     def compute_reward_tf(self, obs):
@@ -91,11 +113,34 @@ class FetchEnv(robot_env.RobotEnv):
             d = goal_distance(achieved_goal, goal)
             return -tf.cast(d > self.distance_threshold, tf.float32)
         else:
+            d1 = goal_distance_tf(grip_pos, obj_pos)
+            d2 = goal_distance_tf(obj_pos, goal)
             already_reached_obj = tf.cast(reach_obj == -1, tf.float32)
-            pre_reach_reward = (1/goal_distance_tf(grip_pos, obj_pos))
-            post_reach_reward = 1 / goal_distance_tf(obj_pos, goal) + reach_obj
+            pre_reach_reward = -(d1 + d2)
+            post_reach_reward = -(reach_obj + d2)
             d = already_reached_obj * pre_reach_reward + (1 - already_reached_obj) * post_reach_reward
             return d
+
+    # def compute_reward_tf(self, obs):
+    #     grip_pos = obs['grip_pos']
+    #     obj_pos = obs['obj_pos']
+    #     achieved_goal = obs['achieved_goal']
+    #     goal = obs['desired_goal']
+    #     reach_obj = obs['reach_obj']
+    #
+    #     # Compute distance between goal and the achieved goal.
+    #     if not self.has_object:
+    #         d = goal_distance_tf(achieved_goal, goal)
+    #         return -d
+    #     if self.reward_type == 'sparse':
+    #         d = goal_distance(achieved_goal, goal)
+    #         return -tf.cast(d > self.distance_threshold, tf.float32)
+    #     else:
+    #         already_reached_obj = tf.cast(reach_obj == -1, tf.float32)
+    #         pre_reach_reward = (1/goal_distance_tf(grip_pos, obj_pos))
+    #         post_reach_reward = 1 / goal_distance_tf(obj_pos, goal) + reach_obj
+    #         d = already_reached_obj * pre_reach_reward + (1 - already_reached_obj) * post_reach_reward
+    #         return d
 
 
     # RobotEnv methods
