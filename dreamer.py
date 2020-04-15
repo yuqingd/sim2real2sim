@@ -84,7 +84,7 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
   # HER
-  config.her = True
+  config.her = False
   config.prob_future = 0.2
   config.prob_env = 0.2
 
@@ -166,8 +166,9 @@ class Dreamer(tools.Module):
     else:
       latent, action = state
     embed = self._encode(preprocess(obs, self._c))
-    state = tf.dtypes.cast(obs['state'], embed.dtype)
-    embed = tf.concat([state, embed], axis=-1)
+    if 'state' in obs:
+      state = tf.dtypes.cast(obs['state'], embed.dtype)
+      embed = tf.concat([state, embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
     if training:
@@ -224,22 +225,26 @@ class Dreamer(tools.Module):
   def train(self, data, log_images=False):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
+  # @tf.function()
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
-
-      success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1] # TODO: make this show up for a full run
+      if 'success' in data:
+        success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1] # TODO: make this show up for a full run
+      else:
+        success_rate = tf.convert_to_tensor(np.array([-1]))
       if self._c.her:
         desired_goals, reward = self.her_relabel(data)
         state = tf.concat([data["state"][:, :, :-3], desired_goals], axis=2)
         assert reward.shape == data["reward"].shape, (reward.shape, data["reward"].shape)
         assert state.shape == data["state"].shape, (state.shape, data["state"].shape)
       else:
-        state = data["state"]
+        state = data["state"] if 'state' in data else None
         reward = data["reward"]
 
 
       embed = self._encode(data)
-      embed = tf.concat([state, embed], axis=-1)
+      if state is not None:
+        embed = tf.concat([state, embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
 
