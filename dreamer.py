@@ -88,6 +88,8 @@ def define_config():
   config.prob_future = 0.2
   config.prob_env = 0.2
 
+  config.override_id = False
+
 
 
   return config
@@ -556,7 +558,7 @@ if __name__ == '__main__':
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
   # Raise an error if this ID is already used, unless we're in debug mode.
   if path.exists():
-    if config.id == 'debug':
+    if config.id == 'debug' or config.override_id:
       config = config_debug(config)
       shutil.rmtree(path)
     else:
