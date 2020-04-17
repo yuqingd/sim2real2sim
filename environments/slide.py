@@ -7,7 +7,7 @@ from gym.envs import robotics
 
 # Ensure we get the path separator correct on windows
 FETCH_PATH = os.path.dirname(robotics.__file__)
-MODEL_XML_PATH = 'slide.xml'#os.path.join(FETCH_PATH, 'assets/fetch/slide.xml')
+MODEL_XML_PATH = 'fetch/slide.xml'#os.path.join(FETCH_PATH, 'assets/fetch/slide.xml')
 
 class FetchSlideEnv(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, use_vision=True, reward_type='dense', deterministic=True, distance_threshold=0.1):
