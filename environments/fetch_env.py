@@ -189,7 +189,7 @@ class FetchEnv(robot_env.RobotEnv):
         if self.has_object:
             object_xpos = self.initial_gripper_xpos[:2].copy()
             if self.deterministic:
-                object_xpos +=0.1
+                object_xpos += 0
             else:
                 while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
                     object_xpos = self.initial_gripper_xpos[:2].copy() + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
@@ -204,7 +204,7 @@ class FetchEnv(robot_env.RobotEnv):
     def _sample_goal(self):
         if self.has_object:
             if self.deterministic:
-                goal = self.initial_gripper_xpos[:3].copy()
+                goal = self.initial_gripper_xpos[:3].copy() + 0.1
             else:
                 goal = self.initial_gripper_xpos[:3].copy() + self.np_random.uniform(-self.target_range, self.target_range, size=3)
             goal += self.target_offset
