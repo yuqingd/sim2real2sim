@@ -204,7 +204,7 @@ class FetchEnv(robot_env.RobotEnv):
     def _sample_goal(self):
         if self.has_object:
             if self.deterministic:
-                goal = self.initial_gripper_xpos[:3].copy() + 0.15
+                goal = self.initial_gripper_xpos[:3].copy() + 0.2
             else:
                 goal = self.initial_gripper_xpos[:3].copy() + self.np_random.uniform(-self.target_range, self.target_range, size=3)
             goal += self.target_offset
