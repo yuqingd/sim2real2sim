@@ -38,7 +38,7 @@ def define_config():
   config.log_scalars = True
   config.log_images = True
   config.gpu_growth = True
-  config.precision = 16
+  config.precision = 32
   # Environment.
   config.task = 'dmc_walker_walk'
   config.envs = 5
@@ -88,7 +88,7 @@ def define_config():
   config.real_world_prob = 0.3
   config.envs = 10 # (n-1) number of simulated envs + 1 real env
   config.dr = 'mass'
-  config.mass_coeff = np.linspace(0.1, 10, config.envs - 1)
+  config.mass_coeff = np.linspace(0.1, 10, config.envs)
 
   return config
 
