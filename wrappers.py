@@ -69,7 +69,7 @@ class DeepMindControl:
 
 class GymControl:
 
-  def __init__(self, name, size=(64, 64), camera=None):
+  def __init__(self, name, size=(64, 64), camera=None, dr=None, dr_coeff=None):
     if name == "FetchReach":
       FetchEnv = FetchReachEnv
     elif name == "FetchSlide":
@@ -82,11 +82,22 @@ class GymControl:
     deterministic = False
     reward_type = "dense"
     distance_threshold = 0.05
-    self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type, distance_threshold=distance_threshold)
     self._size = size
     if camera is None:
       camera = "external_camera_0" # TODO: need?
     self._camera = camera
+
+    if dr is not None:
+      self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type,
+                           distance_threshold=distance_threshold, real_world=False)
+      assert dr_coeff is not None
+      if dr == 'mass':
+        self._env.sim.model.body_mass[:] = (self._env.sim.model.body_mass[:] * dr_coeff)
+      else:
+        raise NotImplementedError
+    else:
+      self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type,
+                           distance_threshold=distance_threshold, real_world=True)
 
   @property
   def observation_space(self):

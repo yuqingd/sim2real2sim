@@ -41,7 +41,7 @@ def define_config():
   config.precision = 16
   # Environment.
   config.task = 'dmc_walker_walk'
-  config.envs = 1
+  config.envs = 5
   config.parallel = 'none'
   config.action_repeat = 2
   config.time_limit = 50#1000
@@ -86,6 +86,9 @@ def define_config():
 
   # Sim2real transfer
   config.real_world_prob = 0.3
+  config.envs = 10 # (n-1) number of simulated envs + 1 real env
+  config.dr = 'mass'
+  config.mass_coeff = np.linspace(0.1, 10, config.envs - 1)
 
   return config
 
@@ -410,7 +413,7 @@ def summarize_episode(episode, config, datadir, writer, prefix):
       tools.video_summary(f'sim/{prefix}/video', episode['image'][None])
 
 
-def make_env(config, writer, prefix, datadir, store):
+def make_env(config, writer, prefix, datadir, store, index=None):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
     env = wrappers.DeepMindControl(task)
@@ -422,7 +425,12 @@ def make_env(config, writer, prefix, datadir, store):
         life_done=True, sticky_actions=True)
     env = wrappers.OneHotAction(env)
   elif suite == 'gym':
-    env = wrappers.GymControl(task)
+    if index == 0 or index is None: #first index is always real world
+      env = wrappers.GymControl(task)
+    elif config.dr == 'mass':
+      env = wrappers.GymControl(task, config.dr, config.mass_coeff[index])
+    else:
+      raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
 
@@ -456,10 +464,10 @@ def main(config):
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
   train_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'train', datadir, store=True), config.parallel)
+      config, writer, 'train', datadir, store=True, index=_), config.parallel)
       for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'test', datadir, store=False), config.parallel)
+      config, writer, 'test', datadir, store=False, index=_), config.parallel)
       for _ in range(config.envs)]
   actspace = train_envs[0].action_space
 
