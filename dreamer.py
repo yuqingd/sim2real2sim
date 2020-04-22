@@ -428,7 +428,7 @@ def make_env(config, writer, prefix, datadir, store, index=None):
     if index == 0 or index is None: #first index is always real world
       env = wrappers.GymControl(task)
     elif config.dr == 'mass':
-      env = wrappers.GymControl(task, config.dr, config.mass_coeff[index])
+      env = wrappers.GymControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
     else:
       raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
