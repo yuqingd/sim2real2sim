@@ -84,7 +84,8 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
 
-
+  # Sim2real transfer
+  config.real_world_prob = 0.3
 
   return config
 
@@ -190,7 +191,12 @@ class Dreamer(tools.Module):
       reward_pred = self._reward(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
-      likes.reward = tf.reduce_mean(reward_pred.log_prob(data['reward']))
+      reward_obj = reward_pred.log_prob(data['reward'])
+
+      # Mask out the elements which came from the real world env
+      reward_obj = reward_obj * (1 - data['real_world'])
+
+      likes.reward = tf.reduce_mean(reward_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -374,7 +380,7 @@ def load_dataset(directory, config):
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
   generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance)
+      config.dataset_balance, real_world_prob=config.real_world_prob)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
   dataset = dataset.batch(config.batch_size, drop_remainder=True)
   dataset = dataset.map(functools.partial(preprocess, config=config))

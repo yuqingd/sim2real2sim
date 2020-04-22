@@ -15,7 +15,7 @@ class FetchEnv(robot_env.RobotEnv):
     def __init__(
         self, model_path, n_substeps, gripper_extra_height, block_gripper,
         has_object, target_in_the_air, target_offset, obj_range, target_range,
-        distance_threshold, initial_qpos, reward_type, use_vision=False, deterministic=False
+        distance_threshold, initial_qpos, reward_type, use_vision=False, deterministic=False, real_world=False
     ):
         """Initializes a new Fetch environment.
 
@@ -32,6 +32,7 @@ class FetchEnv(robot_env.RobotEnv):
             distance_threshold (float): the threshold after which a goal is considered achieved
             initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
             reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
+            real_world (True or False): whether this is the real world env
         """
         self.gripper_extra_height = gripper_extra_height
         self.block_gripper = block_gripper
@@ -44,6 +45,7 @@ class FetchEnv(robot_env.RobotEnv):
         self.reward_type = reward_type
         self.use_vision = use_vision
         self.deterministic = deterministic
+        self.real_world = real_world
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -141,7 +143,7 @@ class FetchEnv(robot_env.RobotEnv):
         ])
         success = np.array(self._is_success(achieved_goal, self.goal))
         state = np.concatenate([obs.copy(), self.goal.copy()])
-        # state = obs.copy() # TODO: consider adding concatenate back in
+        real_world = 1.0 if self.real_world else 0.0
         if self.use_vision:
             img_size = 64
             img = self.sim.render(width=img_size, height=img_size, camera_name="external_camera_0")[::-1]
@@ -153,7 +155,8 @@ class FetchEnv(robot_env.RobotEnv):
                 'obj_pos': object_pos.copy(),
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
-                'success': success
+                'success': success,
+                'real_world': np.array(real_world),
             }
         else:
             state = {
@@ -161,7 +164,8 @@ class FetchEnv(robot_env.RobotEnv):
                 'observation': state,
                 'achieved_goal': achieved_goal.copy(),
                 'desired_goal': self.goal.copy(),
-                'success': success
+                'success': success,
+                'real_world': np.array(real_world),
             }
 
         return state

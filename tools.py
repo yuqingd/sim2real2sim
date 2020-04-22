@@ -154,7 +154,7 @@ def save_episodes(directory, episodes):
         f2.write(f1.read())
 
 
-def load_episodes(directory, rescan, length=None, balance=False, seed=0):
+def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=None):
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
   cache = {}
@@ -170,7 +170,21 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0):
           continue
         cache[filename] = episode
     keys = list(cache.keys())
-    for index in random.choice(len(keys), rescan):
+
+    # Weight the probability of choosing each episode by the real world by the real_world_prob argument
+    if real_world_prob and "real_world" in cache[keys[0]]:
+      num_real = sum([True in cache[key]['real_world'] for key in keys])
+      num_sim = len(keys) - num_real
+      if num_real == 0 or num_sim == 0:
+        probs = None
+      else:
+        real_prob =  real_world_prob/num_real
+        sim_prob = (1 - real_world_prob)/num_sim
+        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    else:
+      probs = None
+
+    for index in random.choice(len(keys), rescan, p=probs):
       episode = cache[keys[index]]
       # Make the "success" key true for all timesteps if it's true at the last timestep.
        # This lets us accurately record the success rate.
