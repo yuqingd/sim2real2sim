@@ -44,7 +44,7 @@ def define_config():
   config.envs = 1#5
   config.parallel = 'none'
   config.action_repeat = 2
-  config.time_limit = 1000#50
+  config.time_limit = 50#1000
   config.prefill = 5000
   config.eval_noise = 0.0
   config.clip_rewards = 'none'

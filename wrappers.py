@@ -51,6 +51,7 @@ class DeepMindControl:
   def step(self, action):
     time_step = self._env.step(action)
     obs = dict(time_step.observation)
+    obs['state'] = np.concatenate([obs['position'], obs['velocity']])  # TODO: these are specific to ball_in_cup. We should have a more general representation.  Also -- are these position and velocity of the ball or the cup?
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
@@ -63,6 +64,7 @@ class DeepMindControl:
   def reset(self):
     time_step = self._env.reset()
     obs = dict(time_step.observation)
+    obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.sparse_reward:
