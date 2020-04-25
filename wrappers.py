@@ -16,7 +16,7 @@ from environments.slide import FetchSlideEnv
 
 class DeepMindControl:
 
-  def __init__(self, name, size=(64, 64), camera=None):
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True):
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -30,6 +30,8 @@ class DeepMindControl:
     if camera is None:
       camera = dict(quadruped=2).get(domain, 0)
     self._camera = camera
+    self.real_world = real_world
+    self.sparse_reward = sparse_reward
 
   @property
   def observation_space(self):
@@ -53,12 +55,18 @@ class DeepMindControl:
     reward = time_step.reward or 0
     done = time_step.last()
     info = {'discount': np.array(time_step.discount, np.float32)}
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    if self.sparse_reward:
+      obs['success'] = 1.0 if reward > 0 else 0.0
     return obs, reward, done, info
 
   def reset(self):
     time_step = self._env.reset()
     obs = dict(time_step.observation)
     obs['image'] = self.render()
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    if self.sparse_reward:
+      obs['success'] = 0.0
     return obs
 
   def render(self, *args, **kwargs):

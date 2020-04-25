@@ -163,8 +163,9 @@ class Dreamer(tools.Module):
     else:
       latent, action = state
     embed = self._encode(preprocess(obs, self._c))
-    state = tf.dtypes.cast(obs['state'], embed.dtype)
-    embed = tf.concat([state, embed], axis=-1)
+    if 'state' in obs:
+      state = tf.dtypes.cast(obs['state'], embed.dtype)
+      embed = tf.concat([state, embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
     if training:
@@ -185,9 +186,13 @@ class Dreamer(tools.Module):
 
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
-      success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
+      if 'success' in data:
+        success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
+      else:
+        success_rate = tf.convert_to_tensor(-1)
       embed = self._encode(data)
-      embed = tf.concat([data['state'], embed], axis=-1)
+      if 'state' in data:
+        embed = tf.concat([data['state'], embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
@@ -395,14 +400,17 @@ def summarize_episode(episode, config, datadir, writer, prefix):
   episodes, steps = tools.count_episodes(datadir)
   length = (len(episode['reward']) - 1) * config.action_repeat
   ret = episode['reward'].sum()
-  success = True in episode['success']
-  success_str = "succeeded" if success == 1 else "did not succeed"
-  print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
   metrics = [
       (f'{prefix}/return', float(episode['reward'].sum())),
       (f'{prefix}/length', len(episode['reward']) - 1),
-      (f'{prefix}/success', success),
       (f'episodes', episodes)]
+  if 'success' in episode:
+    success = True in episode['success']
+    success_str = "succeeded" if success == 1 else "did not succeed"
+    metrics.append((f'{prefix}/success', success))
+    print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
+  else:
+    print(f'{prefix.title()} episode of length {length} with return {ret:.1f}.')
   step = count_steps(datadir, config)
   with (config.logdir / 'metrics.jsonl').open('a') as f:
     f.write(json.dumps(dict([('step', step)] + metrics)) + '\n')
