@@ -41,10 +41,10 @@ def define_config():
   config.precision = 32
   # Environment.
   config.task = 'dmc_walker_walk'
-  config.envs = 5
+  config.envs = 1#5
   config.parallel = 'none'
   config.action_repeat = 2
-  config.time_limit = 50#1000
+  config.time_limit = 1000#50
   config.prefill = 5000
   config.eval_noise = 0.0
   config.clip_rewards = 'none'
@@ -68,8 +68,8 @@ def define_config():
   config.train_steps = 100
   config.pretrain = 100
   config.model_lr = 6e-4
-  config.value_lr = 1e-3 #8e-5
-  config.actor_lr = 1e-3 #8e-5
+  config.value_lr = 8e-5#1e-3
+  config.actor_lr = 8e-5#1e-3
   config.grad_clip = 100.0
   config.dataset_balance = False
   # Behavior.
@@ -86,7 +86,7 @@ def define_config():
 
   # Sim2real transfer
   config.real_world_prob = 0.3
-  config.envs = 10 # (n-1) number of simulated envs + 1 real env
+  # config.envs = 10 # (n-1) number of simulated envs + 1 real env
   config.dr = 'mass'
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
 
