@@ -16,7 +16,7 @@ from environments.slide import FetchSlideEnv
 
 class DeepMindControl:
 
-  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True):
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, dr_coeff=None):
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -32,6 +32,15 @@ class DeepMindControl:
     self._camera = camera
     self.real_world = real_world
     self.sparse_reward = sparse_reward
+
+    if dr is not None:
+      assert dr_coeff is not None
+      if dr == 'mass':
+        # change the mass of the ball but not the cup
+        self._env.physics.model.body_mass[2] = (self._env.sim.model.body_mass[:] * dr_coeff)
+      else:
+        raise NotImplementedError
+
 
   @property
   def observation_space(self):

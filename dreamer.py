@@ -44,7 +44,7 @@ def define_config():
   config.envs = 1#5
   config.parallel = 'none'
   config.action_repeat = 2
-  config.time_limit = 200#1000
+  config.time_limit = 50#1000
   config.prefill = 5000
   config.eval_noise = 0.0
   config.clip_rewards = 'none'
@@ -86,7 +86,7 @@ def define_config():
 
   # Sim2real transfer
   config.real_world_prob = 0.3
-  # config.envs = 10 # (n-1) number of simulated envs + 1 real env
+  config.envs = 10 # (n-1) number of simulated envs + 1 real env
   config.dr = 'mass'
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
 
@@ -424,7 +424,7 @@ def summarize_episode(episode, config, datadir, writer, prefix):
 def make_env(config, writer, prefix, datadir, store, index=None):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
-    env = wrappers.DeepMindControl(task)
+    env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':
