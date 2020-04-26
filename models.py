@@ -144,7 +144,7 @@ class SimParamDecoder(tools.Module):
     self._shape = shape
     self._dist = dist
     self._act = act
-    self._cell = tfkl.GRUCell(units)
+    self._cell = tfkl.GRU(units)
 
   def __call__(self, features):
     x = features
