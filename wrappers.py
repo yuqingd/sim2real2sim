@@ -16,7 +16,11 @@ from environments.slide import FetchSlideEnv
 
 class DeepMindControl:
 
+<<<<<<< HEAD
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
+=======
+  def __init__(self, name, real_world, size=(64, 64), camera=None, sparse_reward=True, dr=None, dr_coeff=None):
+>>>>>>> Add sim param model to learn
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
