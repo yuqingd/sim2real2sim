@@ -150,6 +150,7 @@ class SimParamDecoder(tools.Module):
   def __call__(self, features):
     x = features
     #x, hidden = self._cell(x)
+    import pdb; pdb.set_trace()
     x = self.get('gru', tfkl.GRU, self._units, self._act)(x)
     x = self.get(f'hout', tfkl.Dense, np.prod(self._shape))(x)
     x = tf.reshape(x, tf.concat([tf.shape(features)[:-1], self._shape], 0))
