@@ -89,6 +89,7 @@ def define_config():
   config.envs = 10 # (n-1) number of simulated envs + 1 real env
   config.dr = 'mass'
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
+  config.sim_params_size = 1 #only mass
 
   return config
 
@@ -197,6 +198,7 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
+      sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
       reward_obj = reward_pred.log_prob(data['reward'])
@@ -205,6 +207,8 @@ class Dreamer(tools.Module):
       reward_obj = reward_obj * (1 - data['real_world'])
 
       likes.reward = tf.reduce_mean(reward_obj)
+      sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+      likes.sim_params = tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -263,6 +267,7 @@ class Dreamer(tools.Module):
         self._c.stoch_size, self._c.deter_size, self._c.deter_size)
     self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
+    self._sim_params = models.SimParamDecoder(self._c.sim_params_size, 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -270,7 +275,7 @@ class Dreamer(tools.Module):
     self._actor = models.ActionDecoder(
         self._actdim, 4, self._c.num_units, self._c.action_dist,
         init_std=self._c.action_init_std, act=act)
-    model_modules = [self._encode, self._dynamics, self._decode, self._reward]
+    model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
     if self._c.pcont:
       model_modules.append(self._pcont)
     Optimizer = functools.partial(

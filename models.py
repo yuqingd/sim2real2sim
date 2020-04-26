@@ -138,6 +138,25 @@ class DenseDecoder(tools.Module):
       return tfd.Independent(tfd.Bernoulli(x), len(self._shape))
     raise NotImplementedError(self._dist)
 
+class SimParamDecoder(tools.Module):
+
+  def __init__(self, shape, units, dist='normal', act=tf.nn.elu):
+    self._shape = shape
+    self._dist = dist
+    self._act = act
+    self._cell = tfkl.GRUCell(units)
+
+  def __call__(self, features):
+    x = features
+    x, hidden = self._cell(x)
+    x = self.get(f'hout', tfkl.Dense, np.prod(self._shape))(x)
+    x = tf.reshape(x, tf.concat([tf.shape(features)[:-1], self._shape], 0))
+    if self._dist == 'normal':
+      return tfd.Independent(tfd.Normal(x, 1), len(self._shape))
+    if self._dist == 'binary':
+      return tfd.Independent(tfd.Bernoulli(x), len(self._shape))
+    raise NotImplementedError(self._dist)
+
 
 class ActionDecoder(tools.Module):
 
