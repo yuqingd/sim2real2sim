@@ -47,6 +47,7 @@ class DeepMindControl:
     # ... we can add additional dr params here ...
 
 
+
   @property
   def observation_space(self):
     spaces = {}
@@ -70,7 +71,7 @@ class DeepMindControl:
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
-    info = {'discount': np.array(time_step.discount, np.float32)}
+    info = {'discount': np.array(time_step.discount, np.float32), 'sim_params': self.sim_params}
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
