@@ -432,9 +432,9 @@ def make_env(config, writer, prefix, datadir, store, index=None):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
     if index == 0 or index is None: #first index is always real world
-      env = wrappers.DeepMindControl(task)
+      env = wrappers.DeepMindControl(task, real_world=True)
     elif config.dr == 'mass':
-      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
+      env = wrappers.DeepMindControl(task, real_world=False, dr=config.dr, dr_coeff=config.mass_coeff[index])
     else:
       raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
