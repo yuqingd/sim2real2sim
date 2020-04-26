@@ -424,7 +424,12 @@ def summarize_episode(episode, config, datadir, writer, prefix):
 def make_env(config, writer, prefix, datadir, store, index=None):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
-    env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
+    if index == 0 or index is None: #first index is always real world
+      env = wrappers.DeepMindControl(task)
+    elif config.dr == 'mass':
+      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
+    else:
+      raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':

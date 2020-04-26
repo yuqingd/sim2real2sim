@@ -37,7 +37,7 @@ class DeepMindControl:
       assert dr_coeff is not None
       if dr == 'mass':
         # change the mass of the ball but not the cup
-        self._env.physics.model.body_mass[2] = (self._env.sim.model.body_mass[:] * dr_coeff)
+        self._env.physics.model.body_mass[2] = (self._env.physics.model.body_mass[2] * dr_coeff)
       else:
         raise NotImplementedError
 
