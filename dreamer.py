@@ -89,7 +89,7 @@ def define_config():
   config.envs = 10 # (n-1) number of simulated envs + 1 real env
   config.dr = 'mass'
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
-  config.sim_params_size = 1 #only mass
+  config.sim_params_size = () #only mass
 
   return config
 
