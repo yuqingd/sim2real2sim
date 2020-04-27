@@ -128,6 +128,7 @@ class DenseDecoder(tools.Module):
 
   def __call__(self, features):
     x = features
+    import pdb; pdb.set_trace()
     for index in range(self._layers):
       x = self.get(f'h{index}', tfkl.Dense, self._units, self._act)(x)
     x = self.get(f'hout', tfkl.Dense, np.prod(self._shape))(x)
