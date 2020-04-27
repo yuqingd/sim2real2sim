@@ -225,7 +225,6 @@ class Dreamer(tools.Module):
       reward_obj = reward_obj * (1 - data['real_world'])
 
       likes.reward = tf.reduce_mean(reward_obj)
-      import pdb; pdb.set_trace()
       sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
       sim_param_obj = sim_param_obj * (1 - data['real_world'])
 
