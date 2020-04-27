@@ -80,6 +80,7 @@ class DeepMindControl:
     obs = dict(time_step.observation)
     obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
+    obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.sparse_reward:
       obs['success'] = 0.0
