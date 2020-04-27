@@ -128,7 +128,6 @@ class DenseDecoder(tools.Module):
 
   def __call__(self, features):
     x = features
-    import pdb; pdb.set_trace()
     for index in range(self._layers):
       x = self.get(f'h{index}', tfkl.Dense, self._units, self._act)(x)
     x = self.get(f'hout', tfkl.Dense, np.prod(self._shape))(x)
@@ -152,7 +151,7 @@ class SimParamDecoder(tools.Module):
     x = features
     #x, hidden = self._cell(x)
     import pdb; pdb.set_trace()
-    x = self.get('gru', tfkl.GRU, self._units, self._act)(x)
+    x = self.get('gru', tfkl.GRU, self._units, self._act,return_sequences=True)(x)
     x = self.get(f'hout', tfkl.Dense, np.prod(self._shape))(x)
     x = tf.reshape(x, tf.concat([tf.shape(features)[:-1], self._shape], 0))
     if self._dist == 'normal':
