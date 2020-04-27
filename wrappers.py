@@ -32,9 +32,9 @@ class DeepMindControl:
     self._camera = camera
     self.real_world = real_world
     self.sparse_reward = sparse_reward
+    self.sim_params = []  # store DR sim parameters
 
     if dr is not None:
-      self.sim_params = [] #store DR sim parameters
       assert dr_coeff is not None
       if dr == 'mass':
         # change the mass of the ball but not the cup
@@ -66,10 +66,9 @@ class DeepMindControl:
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
-    if not self.real_world:
-      info = {'discount': np.array(time_step.discount, np.float32), 'sim_params': self.sim_params}
-    else:
-      info = {'discount': np.array(time_step.discount, np.float32), 'sim_params': None}
+    obs['sim_params'] = self.sim_params
+    info = {'discount': np.array(time_step.discount, np.float32)}
+
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
