@@ -49,7 +49,6 @@ class DeepMindControl:
 
 
 
-
   @property
   def observation_space(self):
     spaces = {}
