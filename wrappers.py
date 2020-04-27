@@ -33,7 +33,7 @@ class DeepMindControl:
     self.real_world = real_world
     self.sparse_reward = sparse_reward
     if dr_coeff is not None:
-      self.sim_params = np.asarray(dr_coeff)
+      self.sim_params = np.asarray([dr_coeff])
     else:
       self.sim_params = np.asarray([0])  # store DR sim parameters
 
