@@ -106,7 +106,9 @@ def config_debug(config):
   config.train_every = 3
   config.pretrain = 3
   config.train_steps = 5
-  config.time_limit = 999
+  config.time_limit = 50
+  config.batch_size = 50
+  config.batch_length = 10
 
   return config
 
@@ -422,13 +424,14 @@ def summarize_episode(episode, config, datadir, writer, prefix):
       tools.video_summary(f'sim/{prefix}/video', episode['image'][None])
 
 
-def make_env(config, writer, prefix, datadir, store, index=None):
+def make_env(config, writer, prefix, datadir, store, index=None, real_world=False):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
     if index == 0 or index is None: #first index is always real world
-      env = wrappers.DeepMindControl(task, use_state=config.use_state)
+      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
     elif config.dr == 'mass':
-      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index], use_state=config.use_state)
+      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index], use_state=config.use_state,
+                                     real_world=real_world)
     else:
       raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
@@ -478,10 +481,10 @@ def main(config):
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
   train_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'train', datadir, store=True, index=_), config.parallel)
-      for _ in range(config.envs)]
+      config, writer, 'train', datadir, store=True, index=i, real_world=i==0), config.parallel)
+      for i in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'test', datadir, store=False, index=_), config.parallel)
+      config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
   actspace = train_envs[0].action_space
 
