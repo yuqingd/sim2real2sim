@@ -83,6 +83,7 @@ def define_config():
   config.expl_decay = 0.0
   config.expl_min = 0.0
   config.id = 'debug'
+  config.use_state = False
 
   # Sim2real transfer
   config.real_world_prob = 0.3
@@ -425,9 +426,9 @@ def make_env(config, writer, prefix, datadir, store, index=None):
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
     if index == 0 or index is None: #first index is always real world
-      env = wrappers.DeepMindControl(task)
+      env = wrappers.DeepMindControl(task, use_state=config.use_state)
     elif config.dr == 'mass':
-      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
+      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index], use_state=config.use_state)
     else:
       raise NotImplementedError
     env = wrappers.ActionRepeat(env, config.action_repeat)
