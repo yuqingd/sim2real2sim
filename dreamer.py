@@ -488,7 +488,7 @@ def main(config):
       config, writer, 'train', datadir, store=True, index=_), config.parallel)
       for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'test', datadir, store=False, index=_), config.parallel)
+      config, writer, 'test', datadir, store=False, index=None), config.parallel)
       for _ in range(config.envs)]
   actspace = train_envs[0].action_space
 
