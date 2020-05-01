@@ -16,7 +16,7 @@ from environments.slide import FetchSlideEnv
 
 class DeepMindControl:
 
-  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, dr_coeff=None, use_state=False):
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -33,14 +33,18 @@ class DeepMindControl:
     self.real_world = real_world
     self.sparse_reward = sparse_reward
     self.use_state = use_state
+    self.dr = dr
 
-    if dr is not None:
-      assert dr_coeff is not None
-      if dr == 'mass':
-        # change the mass of the ball but not the cup
-        self._env.physics.model.body_mass[2] = (self._env.physics.model.body_mass[2] * dr_coeff)
-      else:
-        raise NotImplementedError
+    self.apply_dr()
+
+  def apply_dr(self):
+    if self.dr is None:
+      return
+    if "body_mass" in self.dr:
+      mean, std = self.dr["body_mass"]
+      eps = 1e-3
+      self._env.physics.model.body_mass[2] = np.abs(np.random.normal(mean, std)) + eps
+    # ... we can add additional dr params here ...
 
 
   @property
@@ -73,6 +77,7 @@ class DeepMindControl:
     return obs, reward, done, info
 
   def reset(self):
+    self.apply_dr()
     time_step = self._env.reset()
     obs = dict(time_step.observation)
     if self.use_state:
@@ -91,7 +96,7 @@ class DeepMindControl:
 
 class GymControl:
 
-  def __init__(self, name, size=(64, 64), camera=None, dr=None, dr_coeff=None):
+  def __init__(self, name, size=(64, 64), camera=None, dr=None):
     if name == "FetchReach":
       FetchEnv = FetchReachEnv
     elif name == "FetchSlide":
@@ -108,18 +113,23 @@ class GymControl:
     if camera is None:
       camera = "external_camera_0" # TODO: need?
     self._camera = camera
+    self.dr = dr
 
     if dr is not None:
       self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type,
                            distance_threshold=distance_threshold, real_world=False)
-      assert dr_coeff is not None
-      if dr == 'mass':
-        self._env.sim.model.body_mass[:] = (self._env.sim.model.body_mass[:] * dr_coeff)
-      else:
-        raise NotImplementedError
+      self.apply_dr()
     else:
       self._env = FetchEnv(use_vision=generate_vision, deterministic=deterministic, reward_type=reward_type,
                            distance_threshold=distance_threshold, real_world=True)
+
+  def apply_dr(self):
+    if self.dr is None:
+      return
+    if "body_mass" in self.dr:
+      mean, std = self.dr["body_mass"]
+      eps = 1e-3
+      self._env.sim.model.body_mass[32] = np.abs(np.random.normal(mean, std)) + eps
 
   @property
   def observation_space(self):
@@ -149,6 +159,7 @@ class GymControl:
     return obs, reward, done, info
 
   def reset(self):
+    self.apply_dr()
     obs = self._env.reset()
     # time_step = self._env.reset()
     # obs = dict(time_step.observation)

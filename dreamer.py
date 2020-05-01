@@ -88,10 +88,23 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = 0.3
   config.envs = 10 # (n-1) number of simulated envs + 1 real env
-  config.dr = 'mass'
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
 
   return config
+
+def config_dr(config):
+  if config.task == "dmc_cup_catch":
+    config.dr = {# (mean, std)
+      "body_mass": (0.2, 1.0) # Real parameter is .065
+    }
+  elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
+    config.dr = {
+      "body_mass": (1.0, 1.0) # Real parameter is 2.0
+    }
+  else:
+    config.dr = {}
+  return config
+
 
 def config_debug(config):
   # DEBUG
@@ -429,11 +442,9 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   if suite == 'dmc':
     if config.dr is None or index == 0 or index is None: #first index is always real world
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
-    elif config.dr == 'mass':
-      env = wrappers.DeepMindControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index], use_state=config.use_state,
-                                     real_world=real_world)
     else:
-      raise NotImplementedError
+      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
+                                     real_world=real_world)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':
@@ -444,10 +455,8 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'gym':
     if index == 0 or index is None: #first index is always real world
       env = wrappers.GymControl(task)
-    elif config.dr == 'mass':
-      env = wrappers.GymControl(task, dr=config.dr, dr_coeff=config.mass_coeff[index])
     else:
-      raise NotImplementedError
+      env = wrappers.GymControl(task, dr=config.dr)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
 
@@ -534,6 +543,7 @@ if __name__ == '__main__':
   if path.exists():
     if config.id == 'debug':
       config = config_debug(config)
+      config = config_dr(config)
       shutil.rmtree(path)
     else:
       raise ValueError('ID %s already in use.' % config.id)
