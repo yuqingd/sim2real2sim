@@ -41,7 +41,7 @@ def define_config():
   config.precision = 32
   # Environment.
   config.task = 'dmc_walker_walk'
-  config.envs = 1#5
+  config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
   config.time_limit = 1000
@@ -86,8 +86,8 @@ def define_config():
   config.use_state = False
 
   # Sim2real transfer
-  config.real_world_prob = 0.3
-  config.envs = 10 # (n-1) number of simulated envs + 1 real env
+  config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
+  config.sample_real_every = 2 # How often we should sample from the real world
   config.mass_coeff = np.linspace(0.1, 10, config.envs)
 
   return config
@@ -489,21 +489,25 @@ def main(config):
   writer = tf.summary.create_file_writer(
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
-  train_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'train', datadir, store=True, index=i, real_world=i==0), config.parallel)
+  train_sim_envs = [wrappers.Async(lambda: make_env(
+      config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
+  train_real_envs = [wrappers.Async(lambda: make_env(
+    config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
+                for i in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
-  actspace = train_envs[0].action_space
+  actspace = train_sim_envs[0].action_space
 
   # Prefill dataset with random episodes.
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
   print(f'Prefill dataset with {prefill} steps.')
   random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
-  tools.simulate(random_agent, train_envs, prefill / config.action_repeat)
+  tools.simulate(random_agent, train_sim_envs, prefill / config.action_repeat)
   writer.flush()
+  train_real_step_target = config.sample_real_every * config.time_limit
 
   # Train and regularly evaluate the agent.
   step = count_steps(datadir, config)
@@ -518,12 +522,17 @@ def main(config):
     tools.simulate(
         functools.partial(agent, training=False), test_envs, episodes=1)
     writer.flush()
-    print('Start collection.')
     steps = config.eval_every // config.action_repeat
-    state = tools.simulate(agent, train_envs, steps, state=state)
+    print('Start collection from simulator.')
+    state = tools.simulate(agent, train_sim_envs, steps, state=state)
+    if step >= train_real_step_target:
+      print("Start collection from the real world")
+      state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
+      train_real_step_target += config.sample_real_every * config.time_limit
+    old_step = step
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
-  for env in train_envs + test_envs:
+  for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
 
 
@@ -537,6 +546,7 @@ if __name__ == '__main__':
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
+  print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
   # Raise an error if this ID is already used, unless we're in debug mode.
