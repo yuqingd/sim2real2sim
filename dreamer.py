@@ -549,6 +549,10 @@ if __name__ == '__main__':
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
+
+  if config.dr:
+    config = config_dr(config)
+
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
@@ -556,7 +560,6 @@ if __name__ == '__main__':
   if path.exists():
     if config.id == 'debug':
       config = config_debug(config)
-      config = config_dr(config)
       shutil.rmtree(path)
     else:
       raise ValueError('ID %s already in use.' % config.id)
