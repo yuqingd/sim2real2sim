@@ -17,7 +17,6 @@ from environments.slide import FetchSlideEnv
 class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
-
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -46,6 +45,7 @@ class DeepMindControl:
       eps = 1e-3
       self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean-range, high=mean+range), eps)
     # ... we can add additional dr params here ...
+
 
 
 

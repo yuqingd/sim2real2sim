@@ -452,6 +452,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   if suite == 'dmc':
     if config.dr is None or index == 0 or index is None: #first index is always real world
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
+
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
                                      real_world=real_world)
