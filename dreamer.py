@@ -546,6 +546,7 @@ if __name__ == '__main__':
   except ImportError:
     pass
   parser = argparse.ArgumentParser()
+  parser.add_argument('--dr', action='store_true', help='If true, test with DR sim environments')
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
