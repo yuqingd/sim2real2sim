@@ -88,14 +88,17 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
-  config.mass_coeff = np.linspace(0.1, 10, config.envs)
+
+  #these values are for testing dmc_cup_catch
+  config.mass_mean = 0.2
+  config.mass_range = 0.01
 
   return config
 
 def config_dr(config):
   if config.task == "dmc_cup_catch":
-    config.dr = {# (mean, std)
-      "body_mass": (0.2, 1.0) # Real parameter is .065
+    config.dr = {# (mean, range)
+      "body_mass": (config.mass_mean, config.mass_range) # Real parameter is .065
     }
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
@@ -494,7 +497,7 @@ def main(config):
       for i in range(config.envs)]
   train_real_envs = [wrappers.Async(lambda: make_env(
     config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
-                for i in range(config.envs)]
+                for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
