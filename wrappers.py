@@ -38,12 +38,15 @@ class DeepMindControl:
     self.apply_dr()
 
   def apply_dr(self):
+    self.sim_params = []
     if self.dr is None:
       return
     if "body_mass" in self.dr:
       mean, range = self.dr["body_mass"]
       eps = 1e-3
       self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean-range, high=mean+range), eps)
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     # ... we can add additional dr params here ...
 
 

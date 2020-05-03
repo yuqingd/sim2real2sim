@@ -92,6 +92,7 @@ def define_config():
   #these values are for testing dmc_cup_catch
   config.mass_mean = 0.2
   config.mass_range = 0.01
+  config.sim_params_size = 2 #one for mean, one for range
 
   return config
 
