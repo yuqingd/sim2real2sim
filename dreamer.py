@@ -394,6 +394,13 @@ class Dreamer(tools.Module):
     print(f'[{step}]', ' / '.join(f'{k} {v:.1f}' for k, v in metrics))
     self._writer.flush()
 
+  def predict_sim_params(self, obs, action):
+    embed = self._encode(obs)
+    post, prior = self._dynamics.observe(embed,action)
+    feat = self._dynamics.get_feat(post)
+    sim_param_pred = self._sim_params(feat)
+    return sim_param_pred
+
 
 def preprocess(obs, config):
   dtype = prec.global_policy().compute_dtype
@@ -533,6 +540,9 @@ def main(config):
     print('Start evaluation.')
     tools.simulate(
         functools.partial(agent, training=False), test_envs, episodes=1)
+
+
+
     writer.flush()
     steps = config.eval_every // config.action_repeat
     print('Start collection from simulator.')
@@ -544,6 +554,16 @@ def main(config):
     old_step = step
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+
+
+    #after train, update sim params
+    real_pred_sim_params = tools.simulate_real(
+        functools.partial(agent, training=False), test_envs, episodes=1)
+    for env in train_sim_envs:
+      if "body_mass" in env.dr:
+        env.dr["body_mass"] = (real_pred_sim_params[0], real_pred_sim_params[1])
+      env.apply_dr()
+
   for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
 
