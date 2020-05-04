@@ -38,7 +38,7 @@ class DeepMindControl:
     self.apply_dr()
 
   def apply_dr(self):
-    if self.dr is None:
+    if self.dr is None or self.real_world:
       return
     if "body_mass" in self.dr:
       mean, range = self.dr["body_mass"]
