@@ -395,6 +395,8 @@ class Dreamer(tools.Module):
     self._writer.flush()
 
   def predict_sim_params(self, obs, action):
+    if isinstance(obs, list):
+      obs = obs[0]
     embed = self._encode(obs)
     post, prior = self._dynamics.observe(embed,action)
     feat = self._dynamics.get_feat(post)
