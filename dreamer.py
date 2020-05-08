@@ -30,6 +30,7 @@ import wrappers
 def define_config():
   config = tools.AttrDict()
   # General.
+  config.continue_run = False
   config.logdir = pathlib.Path('.')
   config.seed = 0
   config.steps = 5e6
@@ -86,6 +87,7 @@ def define_config():
   config.use_state = False
 
   # Sim2real transfer
+<<<<<<< Updated upstream
   config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
@@ -519,6 +521,10 @@ def main(config):
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
     agent.load(config.logdir / 'variables.pkl')
+  else:
+    print("checkpoint not loaded")
+    print(config.logdir / 'variables.pkl')
+    print((config.logdir / 'variables.pkl').exists())
   state = None
   while step < config.steps:
     print('Start evaluation.')
@@ -557,12 +563,15 @@ if __name__ == '__main__':
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
-  # Raise an error if this ID is already used, unless we're in debug mode.
-  if path.exists():
-    if config.id == 'debug':
-      config = config_debug(config)
-      shutil.rmtree(path)
-    else:
+  # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
+  if config.continue_run == True:
+      print("continuing past run")
+      assert path.exists()
+  elif path.exists():
+      if config.id == 'debug':
+          config = config_debug(config)
+          shutil.rmtree(path)
+  else:
       raise ValueError('ID %s already in use.' % config.id)
   config.logdir = path
   main(config)
