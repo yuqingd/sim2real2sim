@@ -588,6 +588,7 @@ def main(config):
           env.dr["body_mass"] = (new_mean, new_range)
           tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
           tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+          writer.flush()
         env.apply_dr()
 
   for env in train_sim_envs + train_real_envs + test_envs:
