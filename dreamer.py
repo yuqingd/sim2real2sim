@@ -561,7 +561,11 @@ def main(config):
         functools.partial(agent, training=False), test_envs, episodes=1)
     for env in train_sim_envs:
       if "body_mass" in env.dr:
-        env.dr["body_mass"] = (real_pred_sim_params[0], real_pred_sim_params[1])
+        prev_mean, prev_range = env.dr["body_mass"]
+        pred_mean = real_pred_sim_params[0]
+        pred_range = real_pred_sim_params[1]
+        alpha = 0.1
+        env.dr["body_mass"] = (prev_mean*(1-alpha) + alpha*pred_mean, prev_range*(1-alpha) + alpha*pred_range)
       env.apply_dr()
 
   for env in train_sim_envs + train_real_envs + test_envs:
