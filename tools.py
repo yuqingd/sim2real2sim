@@ -132,7 +132,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
   return (step - steps, episode - episodes, done, length, obs, agent_state)
 
 
-def simulate_real(agent,predict_sim_params, envs, steps=0, episodes=0, state=None):
+def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None):
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
