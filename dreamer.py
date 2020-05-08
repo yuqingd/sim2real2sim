@@ -555,7 +555,7 @@ def main(config):
 
     #after train, update sim params
     real_pred_sim_params = tools.simulate_real(
-        functools.partial(agent, training=False), test_envs, episodes=1)
+        functools.partial(agent, training=False), functools.partial(agent.predict_sim_params, training=False), test_envs, episodes=1)
     for env in train_sim_envs:
       if "body_mass" in env.dr:
         prev_mean, prev_range = env.dr["body_mass"]
