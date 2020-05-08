@@ -459,10 +459,10 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   suite, task = config.task.split('_', 1)
   if suite == 'dmc':
     if config.dr is None or index == 0 or index is None: #first index is always real world
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
+      env = wrappers.DeepMindControl(task, dr_shape=config.sim_params_size, use_state=config.use_state, real_world=real_world)
 
     else:
-      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
+      env = wrappers.DeepMindControl(task, dr_shape=config.sim_params_size, dr=config.dr, use_state=config.use_state,
                                      real_world=real_world)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
