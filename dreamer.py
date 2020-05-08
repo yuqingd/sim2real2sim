@@ -583,7 +583,7 @@ def main(config):
         pred_range = real_pred_sim_params[1]
         new_mean = prev_mean*(1-alpha) + alpha*pred_mean
         new_range = prev_range*(1-alpha) + alpha*pred_range
-        alpha = 0.1
+        alpha = 0.05
         env.dr["body_mass"] = (new_mean, new_range)
         tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
         tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
