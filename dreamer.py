@@ -93,7 +93,6 @@ def define_config():
   config.mass_mean = 0.2
   config.mass_range = 0.01
   config.sim_params_size = 2 #one for mean, one for range
-  config.update_sim_params = False
 
   return config
 
