@@ -173,7 +173,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     length *= (1 - done)
 
   # Return new state to allow resuming the simulation.
-  return np.mean(pred_sim_params_list, axis=0)
+  return np.squeeze(np.mean(pred_sim_params_list, axis=0))
 
 def count_episodes(directory):
   filenames = directory.glob('*.npz')
