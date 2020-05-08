@@ -161,7 +161,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     # Step envs.
     promises = [e.step(a, blocking=False) for e, a in zip(envs, action)]
     obs, _, done = zip(*[p()[:3] for p in promises])
-    obs = list(obs)
+    #obs = list(obs)
 
     done = np.stack(done)
     episode += int(done.sum())
