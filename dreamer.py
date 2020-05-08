@@ -93,6 +93,7 @@ def define_config():
   config.mass_mean = 0.2
   config.mass_range = 0.01
   config.sim_params_size = 2 #one for mean, one for range
+  config.update_sim_params = False
 
   return config
 
@@ -574,24 +575,25 @@ def main(config):
     agent.save(config.logdir / 'variables.pkl')
 
     #after train, update sim params
-    real_pred_sim_params = tools.simulate_real(
-        functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
-    for env in train_sim_envs:
-      if env.dr is not None:
-        if "body_mass" in env.dr:
-          prev_mean, prev_range = env.dr["body_mass"]
-          pred_mean = real_pred_sim_params[0]
-          pred_range = real_pred_sim_params[1]
-          alpha = 0.05
+    if config.update_sim_params:
+      real_pred_sim_params = tools.simulate_real(
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      for env in train_sim_envs:
+        if env.dr is not None:
+          if "body_mass" in env.dr:
+            prev_mean, prev_range = env.dr["body_mass"]
+            pred_mean = real_pred_sim_params[0]
+            pred_range = real_pred_sim_params[1]
+            alpha = 0.05
 
-          new_mean = prev_mean*(1-alpha) + alpha*pred_mean
-          new_range = prev_range*(1-alpha) + alpha*pred_range
-          env.dr["body_mass"] = (new_mean, new_range)
-          with writer.as_default():
-            tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
-            tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
-            writer.flush()
-        env.apply_dr()
+            new_mean = prev_mean*(1-alpha) + alpha*pred_mean
+            new_range = prev_range*(1-alpha) + alpha*pred_range
+            env.dr["body_mass"] = (new_mean, new_range)
+            with writer.as_default():
+              tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
+              tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+              writer.flush()
+          env.apply_dr()
 
   for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
@@ -605,6 +607,8 @@ if __name__ == '__main__':
     pass
   parser = argparse.ArgumentParser()
   parser.add_argument('--dr', action='store_true', help='If true, test with DR sim environments')
+  parser.add_argument('--update_sim_params', action='store_true', help='If true, update sim params (outer loop)')
+
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
