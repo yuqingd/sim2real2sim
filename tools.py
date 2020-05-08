@@ -154,7 +154,10 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
         obs[index] = promise()
     # Step agents.
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-    action, agent_state = agent(obs, done, agent_state)
+
+    #predict sim params
+    action, agent_state, pred_sim_params = predict_sim_params(obs, done, agent_state)
+    pred_sim_params_list.append(pred_sim_params)
     action = np.array(action)
 
     assert len(action) == len(envs)
@@ -169,9 +172,6 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     step += (done * length).sum()
     length *= (1 - done)
 
-    #predict sim params
-    pred_sim_params = predict_sim_params(obs, agent_state)
-    pred_sim_params_list.append(pred_sim_params)
   # Return new state to allow resuming the simulation.
   return np.mean(pred_sim_params_list, axis=0)
 

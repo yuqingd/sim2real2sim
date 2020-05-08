@@ -394,26 +394,32 @@ class Dreamer(tools.Module):
     print(f'[{step}]', ' / '.join(f'{k} {v:.1f}' for k, v in metrics))
     self._writer.flush()
 
-  def predict_sim_params(self, obs, state=None):
-    if isinstance(obs, tuple) or isinstance(obs, list):
-      obs = obs[0]
+  def predict_sim_params(self, obs, reset, state=None):
+    step = self._step.numpy().item()
+    tf.summary.experimental.set_step(step)
+    if state is not None and reset.any():
+      mask = tf.cast(1 - reset, self._float)[:, None]
+      state = tf.nest.map_structure(lambda x: x * mask, state)
 
     if state is None:
       latent = self._dynamics.initial(len(obs['image']))
       action = tf.zeros((len(obs['image']), self._actdim), self._float)
     else:
       latent, action = state
-
     embed = self._encode(preprocess(obs, self._c))
     if 'state' in obs:
       state = tf.dtypes.cast(obs['state'], embed.dtype)
       embed = tf.concat([state, embed], axis=-1)
-
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
 
+    action = self._actor(feat).mode()
+    action = self._exploration(action, False)
+    state = (latent, action)
+
+
     sim_param_pred = self._sim_params(feat)
-    return sim_param_pred
+    return  action, state, sim_param_pred
 
 
 def preprocess(obs, config):
