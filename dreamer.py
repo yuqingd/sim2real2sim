@@ -577,17 +577,18 @@ def main(config):
     real_pred_sim_params = tools.simulate_real(
         functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
     for env in train_sim_envs:
-      if "body_mass" in env.dr:
-        prev_mean, prev_range = env.dr["body_mass"]
-        pred_mean = real_pred_sim_params[0]
-        pred_range = real_pred_sim_params[1]
-        new_mean = prev_mean*(1-alpha) + alpha*pred_mean
-        new_range = prev_range*(1-alpha) + alpha*pred_range
-        alpha = 0.05
-        env.dr["body_mass"] = (new_mean, new_range)
-        tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
-        tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
-      env.apply_dr()
+      if env.dr is not None:
+        if "body_mass" in env.dr:
+          prev_mean, prev_range = env.dr["body_mass"]
+          pred_mean = real_pred_sim_params[0]
+          pred_range = real_pred_sim_params[1]
+          new_mean = prev_mean*(1-alpha) + alpha*pred_mean
+          new_range = prev_range*(1-alpha) + alpha*pred_range
+          alpha = 0.05
+          env.dr["body_mass"] = (new_mean, new_range)
+          tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
+          tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+        env.apply_dr()
 
   for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
