@@ -217,7 +217,7 @@ class Dreamer(tools.Module):
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
       likes = tools.AttrDict()
-      likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
+      likes.image = tf.reduce_mean(image_pred.log_prob(data['image']) * data['real_world'])  # only update dynamics model (other than reward func) with real-world data
       reward_obj = reward_pred.log_prob(data['reward'])
 
       # Mask out the elements which came from the real world env
@@ -227,7 +227,7 @@ class Dreamer(tools.Module):
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
-        likes.pcont = tf.reduce_mean(pcont_pred.log_prob(pcont_target))
+        likes.pcont = tf.reduce_mean(pcont_pred.log_prob(pcont_target) * data['real_world'])  # only update dynamics model (other than reward func) with real-world data
         likes.pcont *= self._c.pcont_scale
       prior_dist = self._dynamics.get_dist(prior)
       post_dist = self._dynamics.get_dist(post)
