@@ -288,7 +288,7 @@ class Dreamer(tools.Module):
         self._c.stoch_size, self._c.deter_size, self._c.deter_size)
     self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
-    self._sim_params = models.DenseDecoder(self._c.sim_params_size, 2, self._c.num_units, act=act)
+    self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     #self._sim_params = models.SimParamDecoder(self._c.sim_params_size, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
