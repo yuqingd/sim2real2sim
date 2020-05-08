@@ -170,7 +170,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     length *= (1 - done)
 
     #predict sim params
-    pred_sim_params = predict_sim_params(obs, action)
+    pred_sim_params = predict_sim_params(obs, agent_state)
     pred_sim_params_list.append(pred_sim_params)
   # Return new state to allow resuming the simulation.
   return np.mean(pred_sim_params_list, axis=0)
