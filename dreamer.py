@@ -194,8 +194,8 @@ class Dreamer(tools.Module):
       state = tf.dtypes.cast(obs['state'], embed.dtype)
       embed = tf.concat([state, embed], axis=-1)
     if 'mass' in obs and self._c.condition_mass:
-      mass = tf.expand_dims(tf.dtypes.cast(obs['mass'], embed.dtype), 1)
-      embed = tf.concat([mass, embed], axis=-1)
+      mass = tf.dtypes.cast(obs['mass'], embed.dtype)
+      embed = tf.concat([tf.expand_dims(mass, 1), embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
     if training:
@@ -294,8 +294,12 @@ class Dreamer(tools.Module):
       embed = self._encode(data)
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
+      mass_mean = self.learned_mass[0]
+      mass_std = self.learned_mass[1]
+      random_num = tf.random.normal(mass_mean.shape, dtype=mass_mean.dtype)
+      sampled_mass = random_num * mass_std + mass_mean
       desired_shape = (embed.shape[0], embed.shape[1], 1)
-      embed = tf.concat([tf.broadcast_to(self.learned_mass, desired_shape), embed], axis=-1)
+      embed = tf.concat([tf.broadcast_to(sampled_mass, desired_shape), embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
@@ -329,7 +333,7 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    self.learned_mass = tf.Variable([self._c.mass_mean], trainable=True)
+    self.learned_mass = tf.Variable([self._c.mass_mean, self._c.mass_range], trainable=True)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
@@ -591,15 +595,15 @@ def main(config):
           if "body_mass" in env.dr:
             prev_mean, prev_range = env.dr["body_mass"]
             pred_mean = real_pred_sim_params[0]
-            # pred_range = real_pred_sim_params[1]
+            pred_range = real_pred_sim_params[1]
             alpha = 0.05
 
             new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
-            # new_range = prev_range * (1 - alpha) + alpha * pred_range
-            env.dr["body_mass"] = (new_mean, prev_range)
+            new_range = prev_range * (1 - alpha) + alpha * pred_range
+            env.dr["body_mass"] = (new_mean, new_range)
             with writer.as_default():
               tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
-              # tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+              tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
               writer.flush()
           env.apply_dr()
 
