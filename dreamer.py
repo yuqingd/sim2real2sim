@@ -547,6 +547,11 @@ def main(config):
   print(f'Prefill dataset with {prefill} steps.')
   random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
   tools.simulate(random_agent, train_sim_envs, prefill / config.action_repeat)
+  num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
+  if num_real_prefill == 0:
+    num_real_prefill += 1
+  print(f'Prefill dataset with {num_real_prefill} real world steps.')
+  tools.simulate(random_agent, test_envs, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
 
