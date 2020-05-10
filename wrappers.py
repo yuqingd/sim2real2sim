@@ -72,6 +72,7 @@ class DeepMindControl:
     done = time_step.last()
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['mass'] = self._env.physics.model.body_mass[2]  # TODO: later generalize for multiple DR params
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
     return obs, reward, done, info
@@ -84,6 +85,7 @@ class DeepMindControl:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['mass'] = self._env.physics.model.body_mass[2]  # TODO: later generalize for multiple DR params
     if self.sparse_reward:
       obs['success'] = 0.0
     return obs

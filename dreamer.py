@@ -71,6 +71,7 @@ def define_config():
   config.model_lr = 6e-4
   config.value_lr = 8e-5
   config.actor_lr = 8e-5
+  config.dr_lr = 8e-5
   config.grad_clip = 100.0
   config.dataset_balance = False
   # Behavior.
@@ -87,13 +88,13 @@ def define_config():
   config.use_state = False
 
   # Sim2real transfer
-<<<<<<< Updated upstream
-  config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
+  config.real_world_prob = 0.0  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
   #these values are for testing dmc_cup_catch
-  config.mass_mean = 0.2
-  config.mass_range = 0.01
+  config.mass_mean = 0.02
+  config.mass_range = 0.1
+  config.condition_mass = True
 
   return config
 
@@ -151,8 +152,10 @@ class Dreamer(tools.Module):
     self._float = prec.global_policy().compute_dtype
     self._strategy = tf.distribute.MirroredStrategy()
     with self._strategy.scope():
-      self._dataset = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c)))
+      self._train_dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=True, use_real=False)))  # TODO: we can add "use_real" back once we're sure using the learned mass is a good idea.
+      self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+        load_dataset(datadir, self._c, use_sim=True, use_real=False)))
       self._build_model()
 
   def __call__(self, obs, reset, state=None, training=True):
@@ -168,9 +171,12 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          self.train(next(self._dataset), log_images)
+          self.train(next(self._train_dataset), log_images)
       if log:
         self._write_summaries()
+
+    self.update_sim_params(next(self._real_world_dataset))
+
     action, state = self.policy(obs, state, training)
     if training:
       self._step.assign_add(len(reset) * self._c.action_repeat)
@@ -187,6 +193,9 @@ class Dreamer(tools.Module):
     if 'state' in obs:
       state = tf.dtypes.cast(obs['state'], embed.dtype)
       embed = tf.concat([state, embed], axis=-1)
+    if 'mass' in obs and self._c.condition_mass:
+      mass = tf.expand_dims(tf.dtypes.cast(obs['mass'], embed.dtype), 1)
+      embed = tf.concat([mass, embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
     feat = self._dynamics.get_feat(latent)
     if training:
@@ -206,6 +215,7 @@ class Dreamer(tools.Module):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
   def _train(self, data, log_images):
+
     with tf.GradientTape() as model_tape:
       if 'success' in data:
         success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
@@ -214,6 +224,8 @@ class Dreamer(tools.Module):
       embed = self._encode(data)
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
+      if 'mass' in data and self._c.condition_mass:
+        embed = tf.concat([tf.expand_dims(data['mass'], 2), embed], axis=-1)
       post, prior = self._dynamics.observe(embed, data['action'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
@@ -273,6 +285,26 @@ class Dreamer(tools.Module):
       if tf.equal(log_images, True):
         self._image_summaries(data, embed, image_pred)
 
+  @tf.function()
+  def update_sim_params(self, data):
+    self._strategy.experimental_run_v2(self._update_sim_params, args=(data,))
+
+  def _update_sim_params(self, data):
+    with tf.GradientTape() as sim_param_tape:
+      embed = self._encode(data)
+      if 'state' in data:
+        embed = tf.concat([data['state'], embed], axis=-1)
+      desired_shape = (embed.shape[0], embed.shape[1], 1)
+      embed = tf.concat([tf.broadcast_to(self.learned_mass, desired_shape), embed], axis=-1)
+      post, prior = self._dynamics.observe(embed, data['action'])
+      feat = self._dynamics.get_feat(post)
+      image_pred = self._decode(feat)
+      sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image']))
+    sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)
+    self._metrics['sim_param_loss'].update_state(sim_param_loss)
+    self._metrics['sim_param_norm'].update_state(sim_param_norm)
+    self._metrics['learned_mass'].update_state(self.learned_mass)
+
   def _build_model(self):
     acts = dict(
         elu=tf.nn.elu, relu=tf.nn.relu, swish=tf.nn.swish,
@@ -297,13 +329,16 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
+    self.learned_mass = tf.Variable([self._c.mass_mean], trainable=True)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
+    self._dr_opt = Optimizer('dr', [self.learned_mass], self._c.dr_lr)
     # Do a train step to initialize all variables, including optimizer
     # statistics. Ideally, we would use batch size zero, but that doesn't work
     # in multi-GPU mode.
-    self.train(next(self._dataset))
+    self.train(next(self._train_dataset))
+    self.update_sim_params(next(self._real_world_dataset))
 
   def _exploration(self, action, training):
     if training:
@@ -403,13 +438,14 @@ def count_steps(datadir, config):
   return tools.count_episodes(datadir)[1] * config.action_repeat
 
 
-def load_dataset(directory, config):
-  episode = next(tools.load_episodes(directory, 1))
+def load_dataset(directory, config, use_sim=True, use_real=True):
+  assert use_sim or use_real
+  episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
   generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance, real_world_prob=config.real_world_prob)
+      config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
   dataset = dataset.batch(config.batch_size, drop_remainder=True)
   dataset = dataset.map(functools.partial(preprocess, config=config))
@@ -538,9 +574,30 @@ def main(config):
       print("Start collection from the real world")
       state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
-    old_step = step
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+
+    # after train, update sim params
+    if config.update_sim_params:
+      real_pred_sim_params = agent.learned_mass.numpy()
+      print("Learned mass", real_pred_sim_params)
+      for env in train_sim_envs:
+        if env.dr is not None:
+          if "body_mass" in env.dr:
+            prev_mean, prev_range = env.dr["body_mass"]
+            pred_mean = real_pred_sim_params[0]
+            # pred_range = real_pred_sim_params[1]
+            alpha = 0.05
+
+            new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
+            # new_range = prev_range * (1 - alpha) + alpha * pred_range
+            env.dr["body_mass"] = (new_mean, prev_range)
+            with writer.as_default():
+              tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
+              # tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+              writer.flush()
+          env.apply_dr()
+
   for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
 
@@ -553,25 +610,28 @@ if __name__ == '__main__':
     pass
   parser = argparse.ArgumentParser()
   parser.add_argument('--dr', action='store_true', help='If true, test with DR sim environments')
+  parser.add_argument('--update_sim_params', action='store_true', help='If true, update sim params (outer loop)')
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
 
   if config.dr:
     config = config_dr(config)
+  else:
+    config.dr = {}
 
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
   path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if config.continue_run == True:
-      print("continuing past run")
-      assert path.exists()
+    print("continuing past run")
+    assert path.exists()
   elif path.exists():
-      if config.id == 'debug':
-          config = config_debug(config)
-          shutil.rmtree(path)
-  else:
+    if config.id == 'debug':
+      config = config_debug(config)
+      shutil.rmtree(path)
+    else:
       raise ValueError('ID %s already in use.' % config.id)
   config.logdir = path
   main(config)
