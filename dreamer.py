@@ -307,7 +307,9 @@ class Dreamer(tools.Module):
     sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)
     self._metrics['sim_param_loss'].update_state(sim_param_loss)
     self._metrics['sim_param_norm'].update_state(sim_param_norm)
-    self._metrics['learned_mass'].update_state(self.learned_mass)
+    self._metrics['learned_mass'].update_state(mass_mean)
+    self._metrics['learned_mass'].update_state(mass_std)
+
 
   def _build_model(self):
     acts = dict(
