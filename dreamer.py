@@ -71,7 +71,7 @@ def define_config():
   config.model_lr = 6e-4
   config.value_lr = 8e-5
   config.actor_lr = 8e-5
-  config.dr_lr = 8e-5
+  config.dr_lr = 1e-3
   config.grad_clip = 100.0
   config.dataset_balance = False
   # Behavior.
@@ -86,6 +86,7 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
   config.use_state = False
+  config.num_dr_grad_steps = 100
 
   # Sim2real transfer
   config.real_world_prob = 0.0  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -175,8 +176,6 @@ class Dreamer(tools.Module):
           self.train(next(self._train_dataset), log_images)
       if log:
         self._write_summaries()
-
-    self.update_sim_params(next(self._real_world_dataset))
 
     action, state = self.policy(obs, state, training)
     if training:
@@ -589,6 +588,10 @@ def main(config):
 
     # after train, update sim params
     if config.update_sim_params:
+      for i in range(config.num_dr_grad_steps):
+        agent.update_sim_params(next(agent._real_world_dataset))
+
+
       real_pred_sim_params = agent.learned_mass.numpy()
       print("Learned mass", real_pred_sim_params)
       for env in train_sim_envs:
