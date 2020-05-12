@@ -295,7 +295,7 @@ class Dreamer(tools.Module):
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
       mass_mean = self.learned_mass[0]
-      mass_std = self.learned_mass[1]
+      mass_std = tf.clip_by_value(1e-4, 10, self.learned_mass[1])
       random_num = tf.random.normal(mass_mean.shape, dtype=mass_mean.dtype)
       sampled_mass = random_num * mass_std + mass_mean
       desired_shape = (embed.shape[0], embed.shape[1], 1)
