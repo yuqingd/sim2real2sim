@@ -87,7 +87,6 @@ def define_config():
   config.use_state = False
 
   # Sim2real transfer
-<<<<<<< Updated upstream
   config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
