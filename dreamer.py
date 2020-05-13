@@ -93,6 +93,7 @@ def define_config():
   config.mass_mean = 0.2
   config.mass_range = 0.01
   config.sim_params_size = 2 #one for mean, one for range
+  config.alpha = 0.8
 
   return config
 
@@ -583,7 +584,7 @@ def main(config):
             prev_mean, prev_range = env.dr["body_mass"]
             pred_mean = real_pred_sim_params[0]
             pred_range = real_pred_sim_params[1]
-            alpha = 0.8
+            alpha = config.alpha
 
             new_mean = prev_mean*(1-alpha) + alpha*pred_mean
             new_range = prev_range*(1-alpha) + alpha*pred_range
