@@ -33,7 +33,7 @@ def define_config():
   config.continue_run = False
   config.logdir = pathlib.Path('.')
   config.seed = 0
-  config.steps = 5e6
+  config.steps = 2e6
   config.eval_every = 1e4
   config.log_every = 1e3
   config.log_scalars = True
@@ -562,7 +562,7 @@ if __name__ == '__main__':
 
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
-  path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
+  path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if config.continue_run == True:
       print("continuing past run")
