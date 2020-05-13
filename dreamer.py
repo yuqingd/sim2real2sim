@@ -637,7 +637,7 @@ if __name__ == '__main__':
 
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
-  path = pathlib.Path('.').joinpath('logdir', config.task, 'dreamer', config.id)
+  path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if config.continue_run == True:
     print("continuing past run")
