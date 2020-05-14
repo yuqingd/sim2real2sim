@@ -1,4 +1,3 @@
-from dm_control import suite
 import argparse
 import collections
 import functools
@@ -10,7 +9,7 @@ import time
 import shutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MUJOCO_GL'] = 'egl'
+os.environ['MUJOCO_GL'] = 'osmesa'
 
 import numpy as np
 import tensorflow as tf
@@ -25,6 +24,56 @@ sys.path.append(str(pathlib.Path(__file__).parent))
 import models
 import tools
 import wrappers
+
+
+# FB Cluster SBatch ======================================================
+import signal
+MAIN_PID = os.getpid()
+SIGNAL_RECEIVED = False
+
+
+def SIGTERMHandler(a, b):
+    print('received sigterm')
+    pass
+
+
+def signalHandler(a, b):
+    global SIGNAL_RECEIVED
+    print('Signal received', a, time.time(), flush=True)
+    SIGNAL_RECEIVED = True
+    trigger_job_requeue()
+    return
+
+
+def trigger_job_requeue():
+    ''' Submit a new job to resume from checkpoint.
+    '''
+    if os.environ['SLURM_PROCID'] == '0' and \
+       os.getpid() == MAIN_PID:
+        ''' BE AWARE OF subprocesses that your program spawns.
+        Only the main process on slurm procID = 0 resubmits the job.
+        In pytorch imagenet example, by default it spawns 4
+        (specified in -j) subprocesses for data loading process,
+        both parent process and child processes will receive the signal.
+        Please only submit the job in main process,
+        otherwise the job queue will be filled up exponentially.
+        Command below can be used to check the pid of running processes.
+        print('pid: ', os.getpid(), ' ppid: ', os.getppid(), flush=True)
+        '''
+        print('time is up, back to slurm queue', flush=True)
+        command = 'scontrol requeue ' + os.environ['SLURM_JOB_ID']
+        print(command)
+        if os.system(command):
+            raise RuntimeError('requeue failed')
+        print('New job submitted to the queue', flush=True)
+    exit(0)
+
+
+# Install signal handler
+signal.signal(signal.SIGUSR1, signalHandler)
+signal.signal(signal.SIGTERM, SIGTERMHandler)
+print('Signal handler installed', flush=True)
+# ========================================================================
 
 
 def define_config():
@@ -173,6 +222,7 @@ class Dreamer(tools.Module):
     action, state = self.policy(obs, state, training)
     if training:
       self._step.assign_add(len(reset) * self._c.action_repeat)
+    sys.stdout.flush()
     return action, state
 
   @tf.function
@@ -385,6 +435,7 @@ class Dreamer(tools.Module):
       f.write(json.dumps({'step': step, **dict(metrics)}) + '\n')
     [tf.summary.scalar('agent/' + k, m) for k, m in metrics]
     print(f'[{step}]', ' / '.join(f'{k} {v:.1f}' for k, v in metrics))
+    sys.stdout.flush()
     self._writer.flush()
 
 
@@ -431,6 +482,7 @@ def summarize_episode(episode, config, datadir, writer, prefix):
     print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
   else:
     print(f'{prefix.title()} episode of length {length} with return {ret:.1f}.')
+  sys.stdout.flush()
   step = count_steps(datadir, config)
   with (config.logdir / 'metrics.jsonl').open('a') as f:
     f.write(json.dumps(dict([('step', step)] + metrics)) + '\n')
