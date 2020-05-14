@@ -40,7 +40,7 @@ def define_config():
   config.gpu_growth = True
   config.precision = 32
   # Environment.
-  config.task = 'dmc_walker_walk'
+  config.task = 'dmc_cup_catch'
   config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
