@@ -1,4 +1,3 @@
-from dm_control import suite
 import atexit
 import functools
 import sys
@@ -21,7 +20,7 @@ class DeepMindControl:
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
     if isinstance(domain, str):
-      # from dm_control import suite
+      from dm_control import suite
       self._env = suite.load(domain, task)
     else:
       assert task is None
