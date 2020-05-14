@@ -570,7 +570,7 @@ if __name__ == '__main__':
       if config.id == 'debug':
           config = config_debug(config)
           shutil.rmtree(path)
-  else:
-      raise ValueError('ID %s already in use.' % config.id)
+      else:
+          raise ValueError('ID %s already in use.' % config.id)
   config.logdir = path
   main(config)
