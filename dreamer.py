@@ -548,9 +548,12 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  train_real_envs = [wrappers.Async(lambda: make_env(
-    config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
-                for _ in range(config.envs)]
+  if config.real_world_prob > 0:
+    train_real_envs = [wrappers.Async(lambda: make_env(
+      config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
+                  for _ in range(config.envs)]
+  else:
+    train_real_envs = None
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
@@ -585,15 +588,18 @@ def main(config):
     steps = config.eval_every // config.action_repeat
     print('Start collection from simulator.')
     state = tools.simulate(agent, train_sim_envs, steps, state=state)
-    if step >= train_real_step_target:
+    if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
       state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
     old_step = step
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
-  for env in train_sim_envs + train_real_envs + test_envs:
+  for env in train_sim_envs + test_envs:
     env.close()
+  if train_real_envs is not None:
+    for env in train_real_envs:
+      env.close()
 
 
 if __name__ == '__main__':
