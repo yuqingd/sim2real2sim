@@ -136,7 +136,7 @@ def define_config():
   config.use_state = False
 
   # Sim2real transfer
-  config.real_world_prob = 0.3  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
+  config.real_world_prob = None  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
   #these values are for testing dmc_cup_catch
@@ -548,7 +548,7 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0:
+  if config.real_world_prob is None or config.real_world_prob > 0:
     train_real_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                   for _ in range(config.envs)]
