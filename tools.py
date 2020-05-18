@@ -172,7 +172,7 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
     keys = list(cache.keys())
 
     # Weight the probability of choosing each episode by the real world by the real_world_prob argument
-    if real_world_prob and "real_world" in cache[keys[0]]:
+    if real_world_prob >= 0 and "real_world" in cache[keys[0]]:
       num_real = sum([True in cache[key]['real_world'] for key in keys])
       num_sim = len(keys) - num_real
       if num_real == 0 or num_sim == 0:
