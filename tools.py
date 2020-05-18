@@ -154,7 +154,7 @@ def save_episodes(directory, episodes):
         f2.write(f1.read())
 
 
-def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=None):
+def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1):
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
   cache = {}
