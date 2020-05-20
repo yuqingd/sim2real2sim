@@ -621,9 +621,12 @@ if __name__ == '__main__':
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if path.exists() and config.id == 'debug':
+    print("Path exists")
     config = config_debug(config)
     shutil.rmtree(path)
   elif path.exists():
-    print("continuing past run")
+    print("continuing past run", config.id)
+  else:
+    print("New run", config.id)
   config.logdir = path
   main(config)
