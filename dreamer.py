@@ -294,8 +294,8 @@ class Dreamer(tools.Module):
       embed = self._encode(data)
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
-      mass_mean = self.learned_mass[0]
-      mass_std = tf.clip_by_value(1e-4, 10, self.learned_mass[1])
+      mass_mean = tf.exp(self.learned_mass_mean)
+      mass_std = tf.exp(self.learned_mass_std)
       random_num = tf.random.normal(mass_mean.shape, dtype=mass_mean.dtype)
       sampled_mass = random_num * mass_std + mass_mean
       desired_shape = (embed.shape[0], embed.shape[1], 1)
@@ -308,7 +308,7 @@ class Dreamer(tools.Module):
     self._metrics['sim_param_loss'].update_state(sim_param_loss)
     self._metrics['sim_param_norm'].update_state(sim_param_norm)
     self._metrics['learned_mass'].update_state(mass_mean)
-    self._metrics['learned_mass'].update_state(mass_std)
+    self._metrics['learned_std'].update_state(mass_std)
 
 
   def _build_model(self):
@@ -335,11 +335,12 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    self.learned_mass = tf.Variable([self._c.mass_mean, self._c.mass_range], trainable=True)
+    self.learned_mass_mean = tf.Variable(self._c.mass_mean, trainable=True)
+    self.learned_mass_std = tf.Variable(self._c.mass_range, trainable=True)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
-    self._dr_opt = Optimizer('dr', [self.learned_mass], self._c.dr_lr)
+    self._dr_opt = Optimizer('dr', [self.learned_mass_mean, self.learned_mass_std], self._c.dr_lr)
     # Do a train step to initialize all variables, including optimizer
     # statistics. Ideally, we would use batch size zero, but that doesn't work
     # in multi-GPU mode.
@@ -594,14 +595,13 @@ def main(config):
         agent.update_sim_params(next(agent._real_world_dataset))
 
 
-      real_pred_sim_params = agent.learned_mass.numpy()
-      print("Learned mass", real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
           if "body_mass" in env.dr:
             prev_mean, prev_range = env.dr["body_mass"]
-            pred_mean = real_pred_sim_params[0]
-            pred_range = real_pred_sim_params[1]
+            pred_mean = np.exp(agent.learned_mass_mean.numpy())
+            pred_range = np.exp(agent.learned_mass_std.numpy())
+            print("Learned mass", pred_mean, pred_range)
             alpha = config.alpha
 
             new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
