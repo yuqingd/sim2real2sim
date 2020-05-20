@@ -1,4 +1,3 @@
-from dm_control import suite
 import argparse
 import collections
 import functools
@@ -10,7 +9,7 @@ import time
 import shutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MUJOCO_GL'] = 'egl'
+os.environ['MUJOCO_GL'] = 'osmesa'
 
 import numpy as np
 import tensorflow as tf
@@ -27,13 +26,63 @@ import tools
 import wrappers
 
 
+# FB Cluster SBatch ======================================================
+import signal
+MAIN_PID = os.getpid()
+SIGNAL_RECEIVED = False
+
+
+def SIGTERMHandler(a, b):
+    print('received sigterm')
+    pass
+
+
+def signalHandler(a, b):
+    global SIGNAL_RECEIVED
+    print('Signal received', a, time.time(), flush=True)
+    SIGNAL_RECEIVED = True
+    trigger_job_requeue()
+    return
+
+
+def trigger_job_requeue():
+    ''' Submit a new job to resume from checkpoint.
+    '''
+    if os.environ['SLURM_PROCID'] == '0' and \
+       os.getpid() == MAIN_PID:
+        ''' BE AWARE OF subprocesses that your program spawns.
+        Only the main process on slurm procID = 0 resubmits the job.
+        In pytorch imagenet example, by default it spawns 4
+        (specified in -j) subprocesses for data loading process,
+        both parent process and child processes will receive the signal.
+        Please only submit the job in main process,
+        otherwise the job queue will be filled up exponentially.
+        Command below can be used to check the pid of running processes.
+        print('pid: ', os.getpid(), ' ppid: ', os.getppid(), flush=True)
+        '''
+        print('time is up, back to slurm queue', flush=True)
+        command = 'scontrol requeue ' + os.environ['SLURM_JOB_ID']
+        print(command)
+        if os.system(command):
+            raise RuntimeError('requeue failed')
+        print('New job submitted to the queue', flush=True)
+    exit(0)
+
+
+# Install signal handler
+signal.signal(signal.SIGUSR1, signalHandler)
+signal.signal(signal.SIGTERM, SIGTERMHandler)
+print('Signal handler installed', flush=True)
+# ========================================================================
+
+
 def define_config():
   config = tools.AttrDict()
   # General.
   config.continue_run = False
   config.logdir = pathlib.Path('.')
   config.seed = 0
-  config.steps = 5e6
+  config.steps = 2e6
   config.eval_every = 1e4
   config.log_every = 1e3
   config.log_scalars = True
@@ -89,7 +138,7 @@ def define_config():
   config.num_dr_grad_steps = 100
 
   # Sim2real transfer
-  config.real_world_prob = 0.0  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
+  config.real_world_prob = -1  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
   #these values are for testing dmc_cup_catch
@@ -180,6 +229,7 @@ class Dreamer(tools.Module):
     action, state = self.policy(obs, state, training)
     if training:
       self._step.assign_add(len(reset) * self._c.action_repeat)
+    sys.stdout.flush()
     return action, state
 
   @tf.function
@@ -428,6 +478,7 @@ class Dreamer(tools.Module):
       f.write(json.dumps({'step': step, **dict(metrics)}) + '\n')
     [tf.summary.scalar('agent/' + k, m) for k, m in metrics]
     print(f'[{step}]', ' / '.join(f'{k} {v:.1f}' for k, v in metrics))
+    sys.stdout.flush()
     self._writer.flush()
 
 
@@ -475,6 +526,7 @@ def summarize_episode(episode, config, datadir, writer, prefix):
     print(f'{prefix.title()} episode of length {length} with return {ret:.1f}, which {success_str}.')
   else:
     print(f'{prefix.title()} episode of length {length} with return {ret:.1f}.')
+  sys.stdout.flush()
   step = count_steps(datadir, config)
   with (config.logdir / 'metrics.jsonl').open('a') as f:
     f.write(json.dumps(dict([('step', step)] + metrics)) + '\n')
@@ -540,9 +592,12 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  train_real_envs = [wrappers.Async(lambda: make_env(
-    config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
-                for _ in range(config.envs)]
+  if config.real_world_prob > 0:
+    train_real_envs = [wrappers.Async(lambda: make_env(
+      config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
+                  for _ in range(config.envs)]
+  else:
+    train_real_envs = None
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
@@ -582,7 +637,7 @@ def main(config):
     steps = config.eval_every // config.action_repeat
     print('Start collection from simulator.')
     state = tools.simulate(agent, train_sim_envs, steps, state=state)
-    if step >= train_real_step_target:
+    if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
       state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
@@ -613,8 +668,11 @@ def main(config):
               writer.flush()
           env.apply_dr()
 
-  for env in train_sim_envs + train_real_envs + test_envs:
+  for env in train_sim_envs + test_envs:
     env.close()
+  if train_real_envs is not None:
+    for env in train_real_envs:
+      env.close()
 
 
 if __name__ == '__main__':
