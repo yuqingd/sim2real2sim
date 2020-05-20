@@ -79,7 +79,6 @@ print('Signal handler installed', flush=True)
 def define_config():
   config = tools.AttrDict()
   # General.
-  config.continue_run = False
   config.logdir = pathlib.Path('.')
   config.seed = 0
   config.steps = 2e6
@@ -697,14 +696,13 @@ if __name__ == '__main__':
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
-  if config.continue_run == True:
-    print("continuing past run")
-    assert path.exists()
+  if path.exists() and config.id == 'debug':
+    print("Path exists")
+    config = config_debug(config)
+    shutil.rmtree(path)
   elif path.exists():
-    if config.id == 'debug':
-      config = config_debug(config)
-      shutil.rmtree(path)
-    else:
-      raise ValueError('ID %s already in use.' % config.id)
+    print("continuing past run", config.id)
+  else:
+    print("New run", config.id)
   config.logdir = path
   main(config)
