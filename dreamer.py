@@ -119,7 +119,7 @@ def define_config():
   config.model_lr = 6e-4
   config.value_lr = 8e-5
   config.actor_lr = 8e-5
-  config.dr_lr = 1e-3
+  config.dr_lr = 5e-3
   config.grad_clip = 100.0
   config.dataset_balance = False
   # Behavior.
@@ -144,7 +144,7 @@ def define_config():
   config.mass_mean = 0.02
   config.mass_range = 0.1
   config.condition_mass = True
-  config.alpha = 0.1
+  config.alpha = 0.5
 
   return config
 
@@ -205,7 +205,7 @@ class Dreamer(tools.Module):
       self._train_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=True, use_real=False)))  # TODO: we can add "use_real" back once we're sure using the learned mass is a good idea.
       self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-        load_dataset(datadir, self._c, use_sim=True, use_real=False)))
+        load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model()
 
   def __call__(self, obs, reset, state=None, training=True):
@@ -335,10 +335,10 @@ class Dreamer(tools.Module):
         self._image_summaries(data, embed, image_pred)
 
   @tf.function()
-  def update_sim_params(self, data):
-    self._strategy.experimental_run_v2(self._update_sim_params, args=(data,))
+  def update_sim_params(self, data, update=True):
+    return self._strategy.experimental_run_v2(self._update_sim_params, args=(data, update))
 
-  def _update_sim_params(self, data):
+  def _update_sim_params(self, data, update):
     with tf.GradientTape() as sim_param_tape:
       embed = self._encode(data)
       if 'state' in data:
@@ -353,11 +353,13 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image']))
-    sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)
-    self._metrics['sim_param_loss'].update_state(sim_param_loss)
-    self._metrics['sim_param_norm'].update_state(sim_param_norm)
-    self._metrics['learned_mass'].update_state(mass_mean)
-    self._metrics['learned_std'].update_state(mass_std)
+    if update:
+      sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)
+      self._metrics['sim_param_loss'].update_state(sim_param_loss)
+      self._metrics['sim_param_norm'].update_state(sim_param_norm)
+      self._metrics['learned_mass'].update_state(mass_mean)
+      self._metrics['learned_std'].update_state(mass_std)
+    return sim_param_loss
 
 
   def _build_model(self):
@@ -466,7 +468,7 @@ class Dreamer(tools.Module):
 
   def _write_summaries(self):
     step = int(self._step.numpy())
-    metrics = [(k, float(v.result())) for k, v in self._metrics.items()]
+    metrics = [(k, float(v.result())) for k, v in self._metrics.items() if v.count > 0]
     if self._last_log is not None:
       duration = time.time() - self._last_time
       self._last_time += duration
@@ -591,7 +593,7 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0:
+  if config.real_world_prob > 0 or config.update_sim_params:
     train_real_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                   for _ in range(config.envs)]
@@ -605,14 +607,15 @@ def main(config):
   # Prefill dataset with random episodes.
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
-  print(f'Prefill dataset with {prefill} steps.')
   random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
+  print(f'Prefill dataset with {prefill} steps.')
   tools.simulate(random_agent, train_sim_envs, prefill / config.action_repeat)
-  num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
-  if num_real_prefill == 0:
-    num_real_prefill += 1
-  print(f'Prefill dataset with {num_real_prefill} real world steps.')
-  tools.simulate(random_agent, test_envs, num_real_prefill)
+  if train_real_envs is not None:
+    num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
+    if num_real_prefill == 0:
+      num_real_prefill += 1
+    print(f'Prefill dataset with {num_real_prefill} real world steps.')
+    tools.simulate(random_agent, train_real_envs, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
 
@@ -645,8 +648,22 @@ def main(config):
 
     # after train, update sim params
     if config.update_sim_params:
+      mass_mean = tf.exp(agent.learned_mass_mean)
+      mass_std = tf.exp(agent.learned_mass_std)
+      loss = agent.update_sim_params(next(agent._real_world_dataset), update=False)
+      tf.summary.scalar('agent/sim_param/before_update/learned_mean', mass_mean, step)
+      tf.summary.scalar('agent/sim_param/before_update/learned_std', mass_std, step)
+      tf.summary.scalar('agent/sim_param/before_update/loss', loss, step)
+
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
+
+      mass_mean = tf.exp(agent.learned_mass_mean)
+      mass_std = tf.exp(agent.learned_mass_std)
+      loss = agent.update_sim_params(next(agent._real_world_dataset), update=False)
+      tf.summary.scalar('agent/sim_param/after_update/learned_mean', mass_mean, step)
+      tf.summary.scalar('agent/sim_param/after_update/learned_std', mass_std, step)
+      tf.summary.scalar('agent/sim_param/after_update/loss', loss, step)
 
 
       for env in train_sim_envs:
