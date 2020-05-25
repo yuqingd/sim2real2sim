@@ -386,8 +386,8 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    self.learned_mass_mean = tf.Variable(np.log(self._c.mass_mean), trainable=True)
-    self.learned_mass_std = tf.Variable(np.log(self._c.mass_range), trainable=True)
+    self.learned_mass_mean = tf.Variable(np.log(self._c.mass_mean), trainable=True, dtype=tf.float32)
+    self.learned_mass_std = tf.Variable(np.log(self._c.mass_range), trainable=True, dtype=tf.float32)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
