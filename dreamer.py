@@ -560,7 +560,13 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.GymControl(task, dr=config.dr)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
-
+  elif suite == 'dummy':
+    if config.dr is None or real_world: #first index is always real world
+      env = wrappers.Dummy(task, use_state=config.use_state, real_world=real_world)
+    else:
+      env = wrappers.Dummy(task, dr=config.dr, use_state=config.use_state,
+                                     real_world=real_world)
+    env = wrappers.ActionRepeat(env, config.action_repeat)
   else:
     raise NotImplementedError(suite)
   env = wrappers.TimeLimit(env, config.time_limit / config.action_repeat)

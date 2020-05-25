@@ -95,6 +95,74 @@ class DeepMindControl:
     return self._env.physics.render(*self._size, camera_id=self._camera)
 
 
+class Dummy:
+
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
+    self.mass = 3.0
+    self._size = size
+    self.real_world = real_world
+    self.left_half = np.random.uniform(low=-3., high=0.)
+    self.right_half = np.random.uniform(low=-3., high=0.)
+    self.dr = dr
+    self.apply_dr()
+
+  def apply_dr(self):
+    if self.dr is None or self.real_world:
+      return
+    if "body_mass" in self.dr:
+      mean, range = self.dr["body_mass"]
+      eps = 1e-3
+      self.mass = max(np.random.uniform(low=mean-range, high=mean+range), eps)
+
+
+  @property
+  def observation_space(self):
+    spaces = {}
+    # for key, value in self._env.observation_spec().items():
+    #   spaces[key] = gym.spaces.Box(
+    #       -np.inf, np.inf, value.shape, dtype=np.float32)
+    spaces['image'] = gym.spaces.Box(
+        0, 255, self._size + (3,), dtype=np.uint8)
+    return gym.spaces.Dict(spaces)
+
+  @property
+  def action_space(self):
+    return gym.spaces.Box(np.array([-5, -5]), np.array([5, 5]), dtype=np.float32)
+
+  def step(self, action):
+    self.left_half += action[0] * .05
+    self.right_half += self.mass * .01
+    obs = {}
+    obs['image'] = self.render()
+    if np.abs(self.left_half - self.right_half) < .05:
+      reward = 1.0
+    else:
+      reward = 0.0
+    done = False
+    info = {}
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['mass'] = self.mass
+    obs['success'] = 1.0 if reward > 0 else 0.0
+    return obs, reward, done, info
+
+  def reset(self):
+    self.apply_dr()
+    self.left_half = np.random.uniform(low=-3., high=0.)
+    self.right_half = np.random.uniform(low=-3., high=0.)
+    obs = {}
+    obs['image'] = self.render()
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['mass'] = self.mass
+    obs['success'] = 0.0
+    return obs
+
+  def render(self, *args, **kwargs):
+    rgb_array = np.zeros((64, 64, 3))
+    rgb_array[:32] = self.left_half
+    rgb_array[32:] = self.right_half
+    return rgb_array
+
+
 class GymControl:
 
   def __init__(self, name, size=(64, 64), camera=None, dr=None):
