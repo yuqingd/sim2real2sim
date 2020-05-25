@@ -386,8 +386,8 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    self.learned_mass_mean = tf.Variable(self._c.mass_mean, trainable=True)
-    self.learned_mass_std = tf.Variable(self._c.mass_range, trainable=True)
+    self.learned_mass_mean = tf.Variable(np.log(self._c.mass_mean), trainable=True)
+    self.learned_mass_std = tf.Variable(np.log(self._c.mass_range), trainable=True)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
@@ -654,22 +654,19 @@ def main(config):
 
     # after train, update sim params
     if config.update_sim_params:
-      mass_mean = tf.exp(agent.learned_mass_mean)
-      mass_std = tf.exp(agent.learned_mass_std)
-      loss = agent.update_sim_params(next(agent._real_world_dataset), update=False)
-      tf.summary.scalar('agent/sim_param/before_update/learned_mean', mass_mean, step)
-      tf.summary.scalar('agent/sim_param/before_update/learned_std', mass_std, step)
-      tf.summary.scalar('agent/sim_param/before_update/loss', loss, step)
+      mass_mean_old = tf.exp(agent.learned_mass_mean)
+      mass_std_old = tf.exp(agent.learned_mass_std)
+      loss_old = agent.update_sim_params(next(agent._real_world_dataset), update=False)\
 
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
 
-      mass_mean = tf.exp(agent.learned_mass_mean)
-      mass_std = tf.exp(agent.learned_mass_std)
-      loss = agent.update_sim_params(next(agent._real_world_dataset), update=False)
-      tf.summary.scalar('agent/sim_param/after_update/learned_mean', mass_mean, step)
-      tf.summary.scalar('agent/sim_param/after_update/learned_std', mass_std, step)
-      tf.summary.scalar('agent/sim_param/after_update/loss', loss, step)
+      mass_mean_new = tf.exp(agent.learned_mass_mean)
+      mass_std_new = tf.exp(agent.learned_mass_std)
+      loss_new = agent.update_sim_params(next(agent._real_world_dataset), update=False)
+      tf.summary.scalar('agent/sim_param/after_update/learned_mean', mass_mean_new - mass_mean_old, step)
+      tf.summary.scalar('agent/sim_param/after_update/learned_std', mass_std_new - mass_std_old, step)
+      tf.summary.scalar('agent/sim_param/after_update/loss', loss_new - loss_old, step)
 
 
       for env in train_sim_envs:
