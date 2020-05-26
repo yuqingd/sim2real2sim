@@ -7,6 +7,7 @@ import pathlib
 import sys
 import time
 import shutil
+import psutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -580,6 +581,13 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   return env
 
 
+def log_memory(step):
+  process = psutil.Process(os.getpid())
+  memory_use = process.memory_info().rss / float(2 ** 20)
+  print("Memory Use MiB", memory_use)
+  tf.summary.scalar('agent/sim_param/after_update/memory_mib', memory_use, step)
+
+
 def main(config):
   if config.gpu_growth:
     for gpu in tf.config.experimental.list_physical_devices('GPU'):
@@ -651,6 +659,9 @@ def main(config):
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+
+    # Log memory usage
+    log_memory(step)
 
     # after train, update sim params
     if config.update_sim_params:
