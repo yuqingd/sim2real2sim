@@ -149,7 +149,7 @@ def define_config():
   return config
 
 def config_dr(config):
-  if config.task == "dmc_cup_catch":
+  if config.task in ["dmc_cup_catch", "dummy_dummy"]:
     config.dr = {# (mean, range)
       "body_mass": (config.mass_mean, config.mass_range) # Real parameter is .065
     }
@@ -664,9 +664,9 @@ def main(config):
       mass_mean_new = tf.exp(agent.learned_mass_mean)
       mass_std_new = tf.exp(agent.learned_mass_std)
       loss_new = agent.update_sim_params(next(agent._real_world_dataset), update=False)
-      tf.summary.scalar('agent/sim_param/after_update/learned_mean', mass_mean_new - mass_mean_old, step)
-      tf.summary.scalar('agent/sim_param/after_update/learned_std', mass_std_new - mass_std_old, step)
-      tf.summary.scalar('agent/sim_param/after_update/loss', loss_new - loss_old, step)
+      tf.summary.scalar('agent/sim_param/after_update/learned_mean_delta', mass_mean_new - mass_mean_old, step)
+      tf.summary.scalar('agent/sim_param/after_update/learned_std_delta', mass_std_new - mass_std_old, step)
+      tf.summary.scalar('agent/sim_param/after_update/loss_delta', loss_new - loss_old, step)
 
 
       for env in train_sim_envs:
