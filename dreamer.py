@@ -7,6 +7,7 @@ import pathlib
 import sys
 import time
 import shutil
+import psutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -527,6 +528,12 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   env = wrappers.RewardObs(env)
   return env
 
+def log_memory(step):
+  process = psutil.Process(os.getpid())
+  memory_use = process.memory_info().rss / float(2 ** 20)
+  print("Memory Use MiB", memory_use)
+  tf.summary.scalar('general/memory_mib', memory_use, step)
+
 
 def main(config):
   if config.gpu_growth:
@@ -591,9 +598,9 @@ def main(config):
       print("Start collection from the real world")
       state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
-    old_step = step
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+    log_memory(step)
   for env in train_sim_envs + test_envs:
     env.close()
   if train_real_envs is not None:
