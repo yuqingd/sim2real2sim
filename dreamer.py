@@ -205,8 +205,9 @@ class Dreamer(tools.Module):
     with self._strategy.scope():
       self._train_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=True, use_real=False)))  # TODO: we can add "use_real" back once we're sure using the learned mass is a good idea.
-      self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-        load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+      if config.update_sim_params:
+        self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model()
 
   def __call__(self, obs, reset, state=None, training=True):
@@ -397,7 +398,8 @@ class Dreamer(tools.Module):
     # statistics. Ideally, we would use batch size zero, but that doesn't work
     # in multi-GPU mode.
     self.train(next(self._train_dataset))
-    self.update_sim_params(next(self._real_world_dataset))
+    if self._c.update_sim_params:
+      self.update_sim_params(next(self._real_world_dataset))
 
   def _exploration(self, action, training):
     if training:
@@ -622,7 +624,7 @@ def main(config):
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
   random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
-  print(f'Prefill dataset with {prefill} steps.')
+  print(f'Prefill dataset with {prefill} simulated steps.')
   tools.simulate(random_agent, train_sim_envs, prefill / config.action_repeat)
   if train_real_envs is not None:
     num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
