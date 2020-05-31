@@ -139,17 +139,76 @@ def define_config():
   config.real_world_prob = -1  # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2 # How often we should sample from the real world
 
-  #these values are for testing dmc_cup_catch
-  config.mass_mean = 0.2
-  config.mass_range = 0.01
-
   return config
 
-def config_dr(config):
+def config_dr(config,):
+  dr_option = config.dr_option
   if config.task == "dmc_cup_catch":
-    config.dr = {# (mean, range)
-      "body_mass": (config.mass_mean, config.mass_range) # Real parameter is .065
-    }
+    real_body_mass = .065
+    real_actuator_gain = 1
+    real_damping = 3
+    real_friction = 1
+    real_string_length = .292
+    real_string_stiffness = 0
+    real_ball_size = .025
+    if dr_option == 'accurate_small_range':
+      range_scale = 0.05
+      config.dr = {  # (mean, range)
+        "body_mass": (real_body_mass, real_body_mass * range_scale),
+        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+        "damping": (real_damping, real_damping * range_scale),
+        "friction": (real_friction, real_friction * range_scale),
+        "string_length": (real_string_length, real_string_length * range_scale),
+        "string_stiffness": (real_string_stiffness, 0.001),
+        "ball_size": (real_ball_size, real_ball_size * range_scale),
+      }
+    elif dr_option == 'accurate_large_range':
+      range_scale = 5
+      config.dr = {  # (mean, range)
+        "body_mass": (real_body_mass, real_body_mass * range_scale),
+        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+        "damping": (real_damping, real_damping * range_scale),
+        "friction": (real_friction, real_friction * range_scale),
+        "string_length": (real_string_length, real_string_length * range_scale),
+        "string_stiffness": (real_string_stiffness, .1),
+        "ball_size": (real_ball_size, real_ball_size * range_scale),
+      }
+    elif dr_option == 'inaccurate_easy_small_range':
+      range_scale = .05
+      scale_factor_low = 0.5
+      scale_factor_high = 1 / scale_factor_low
+      config.dr = {  # (mean, range)
+        "body_mass": (real_body_mass * scale_factor_low, real_body_mass * range_scale),
+        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+        "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+        "string_stiffness": (real_string_stiffness + .01, .1),
+        "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+      }
+    elif dr_option == 'inaccurate_easy_large_covering_range':
+      range_scale = 2
+      scale_factor_low = 0.5
+      scale_factor_high = 1 / scale_factor_low
+      config.dr = {  # (mean, range)
+        "body_mass": (real_body_mass * scale_factor_low, real_body_mass * range_scale),
+        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+        "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+        "string_stiffness": (real_string_stiffness + .01, .1),
+        "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+      }
+    elif dr_option == 'inaccurate_easy_large_noncovering_range':
+      raise NotImplementedError
+    elif dr_option == 'inaccurate_hard_small_range':
+      raise NotImplementedError
+    elif dr_option == 'inaccurate_hard_large_covering_range':
+      raise NotImplementedError
+    elif dr_option == 'inaccurate_hard_large_noncovering_range':
+      raise NotImplementedError
+    else:
+      raise ValueError("invalid dr option")
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
       "body_mass": (1.0, 1.0) # Real parameter is 2.0
@@ -616,6 +675,7 @@ if __name__ == '__main__':
     pass
   parser = argparse.ArgumentParser()
   parser.add_argument('--dr', action='store_true', help='If true, test with DR sim environments')
+  parser.add_argument('--dr_option', type=str, help='Which DR option to use')
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
