@@ -203,14 +203,16 @@ class Dreamer(tools.Module):
     self._float = prec.global_policy().compute_dtype
     self._strategy = tf.distribute.MirroredStrategy()
     with self._strategy.scope():
-      self._train_dataset = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=True, use_real=False)))  # TODO: we can add "use_real" back once we're sure using the learned mass is a good idea.
+      self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=True, use_real=False)))
+      # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+      #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
       if config.update_sim_params:
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model()
 
-  def __call__(self, obs, reset, state=None, training=True):
+  def __call__(self, obs, reset, dataset, state=None, training=True):
     step = self._step.numpy().item()
     tf.summary.experimental.set_step(step)
     if state is not None and reset.any():
@@ -223,7 +225,7 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          self.train(next(self._train_dataset), log_images)
+          self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
 
@@ -397,7 +399,8 @@ class Dreamer(tools.Module):
     # Do a train step to initialize all variables, including optimizer
     # statistics. Ideally, we would use batch size zero, but that doesn't work
     # in multi-GPU mode.
-    self.train(next(self._train_dataset))
+    self.train(next(self._train_dataset_sim_only))
+    # self.train(next(self._train_dataset_combined))
     if self._c.update_sim_params:
       self.update_sim_params(next(self._real_world_dataset))
 
@@ -589,6 +592,9 @@ def log_memory(step):
   print("Memory Use MiB", memory_use)
   tf.summary.scalar('agent/sim_param/after_update/memory_mib', memory_use, step)
 
+def check_train_with_real():
+  return False
+
 
 def main(config):
   if config.gpu_growth:
@@ -647,20 +653,33 @@ def main(config):
     print(config.logdir / 'variables.pkl')
     print((config.logdir / 'variables.pkl').exists())
   state = None
+
+  # Initially, don't use the real world samples to train the model since we don't know their sim params.
+  # Once the sim params converge, we can change this to True
+  dataset = agent._train_dataset_sim_only
+
   while step < config.steps:
     print('Start evaluation.')
     tools.simulate(
-        functools.partial(agent, training=False), test_envs, episodes=1)
+        functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
     steps = config.eval_every // config.action_repeat
     print('Start collection from simulator.')
-    state = tools.simulate(agent, train_sim_envs, steps, state=state)
+    state = tools.simulate(agent, train_sim_envs, dataset, steps, state=state)
     if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
-      state = tools.simulate(agent, train_real_envs, episodes=1, state=state)
+      state = tools.simulate(agent, train_real_envs, dataset, episodes=1, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+
+    train_with_real = check_train_with_real()
+    if train_with_real:
+      dataset = agent._train_dataset_combined
+      tf.summary.scalar('sim/train_with_real', 1, step)
+    else:
+      dataset = agent._train_dataset_sim_only
+      tf.summary.scalar('sim/train_with_real', 0, step)
 
     # Log memory usage
     log_memory(step)
@@ -669,7 +688,7 @@ def main(config):
     if config.update_sim_params:
       mass_mean_old = tf.exp(agent.learned_mass_mean)
       mass_std_old = tf.exp(agent.learned_mass_std)
-      loss_old = agent.update_sim_params(next(agent._real_world_dataset), update=False)\
+      loss_old = agent.update_sim_params(next(agent._real_world_dataset), update=False)
 
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
