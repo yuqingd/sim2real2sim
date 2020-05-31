@@ -116,7 +116,11 @@ def simulate(agent, envs, dataset, steps=0, episodes=0, state=None):
         obs[index] = promise()
     # Step agents.
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-    action, agent_state = agent(obs, done, dataset, agent_state)
+    if dataset is None:
+      # We'll only visit this case when using the random agent
+      action, agent_state = agent(obs, done, agent_state)
+    else:
+      action, agent_state = agent(obs, done, dataset, agent_state)
     action = np.array(action)
     assert len(action) == len(envs)
     # Step envs.
@@ -154,7 +158,7 @@ def save_episodes(directory, episodes):
         f2.write(f1.read())
 
 
-def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=None, use_sim=True, use_real=True):
+def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1, use_sim=True, use_real=True):
   assert use_sim or use_real
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
@@ -185,8 +189,8 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
       probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
     elif num_real == 0 or num_sim == 0:
       probs = None
-    elif real_world_prob and "real_world" in cache[keys[0]]:
-      real_prob =  real_world_prob/num_real
+    elif not real_world_prob == -1 and "real_world" in cache[keys[0]]:
+      real_prob = real_world_prob/num_real
       sim_prob = (1 - real_world_prob)/num_sim
       probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
     else:

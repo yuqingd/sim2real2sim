@@ -205,8 +205,8 @@ class Dreamer(tools.Module):
     with self._strategy.scope():
       self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=True, use_real=False)))
-      # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
-      #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
+      self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+        load_dataset(datadir, self._c, use_sim=True, use_real=True)))
       if config.update_sim_params:
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=False, use_real=True)))
@@ -400,7 +400,7 @@ class Dreamer(tools.Module):
     # statistics. Ideally, we would use batch size zero, but that doesn't work
     # in multi-GPU mode.
     self.train(next(self._train_dataset_sim_only))
-    # self.train(next(self._train_dataset_combined))
+    self.train(next(self._train_dataset_combined))
     if self._c.update_sim_params:
       self.update_sim_params(next(self._real_world_dataset))
 
@@ -592,8 +592,18 @@ def log_memory(step):
   print("Memory Use MiB", memory_use)
   tf.summary.scalar('agent/sim_param/after_update/memory_mib', memory_use, step)
 
-def check_train_with_real():
-  return False
+def check_train_with_real(mass_list):
+  # TODO: this currently won't scale to more dr params. It's just a proof of concept showing we can do this.
+  range_ = .02
+  duration = 25
+  std_cutoff = .01
+  timestep_cutoff = 100
+  if len(mass_list) < timestep_cutoff:
+    return False
+  segment = mass_list[-duration:]
+  observed_range = np.max(segment) - np.min(segment)
+  observed_std = np.std(segment)
+  return observed_std <= std_cutoff and observed_range <= range_
 
 
 def main(config):
@@ -630,14 +640,15 @@ def main(config):
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
   random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
+  dataset = None
   print(f'Prefill dataset with {prefill} simulated steps.')
-  tools.simulate(random_agent, train_sim_envs, prefill / config.action_repeat)
+  tools.simulate(random_agent, train_sim_envs, dataset, prefill / config.action_repeat)
   if train_real_envs is not None:
     num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
     if num_real_prefill == 0:
       num_real_prefill += 1
     print(f'Prefill dataset with {num_real_prefill} real world steps.')
-    tools.simulate(random_agent, train_real_envs, num_real_prefill)
+    tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
 
@@ -657,6 +668,7 @@ def main(config):
   # Initially, don't use the real world samples to train the model since we don't know their sim params.
   # Once the sim params converge, we can change this to True
   dataset = agent._train_dataset_sim_only
+  mass_list = []
 
   while step < config.steps:
     print('Start evaluation.')
@@ -673,7 +685,7 @@ def main(config):
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
 
-    train_with_real = check_train_with_real()
+    train_with_real = check_train_with_real(mass_list)
     if train_with_real:
       dataset = agent._train_dataset_combined
       tf.summary.scalar('sim/train_with_real', 1, step)
@@ -713,6 +725,7 @@ def main(config):
             new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             new_range = prev_range * (1 - alpha) + alpha * pred_range
             env.dr["body_mass"] = (new_mean, new_range)
+            mass_list.append(new_mean)
             with writer.as_default():
               tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
               tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
