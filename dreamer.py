@@ -176,7 +176,7 @@ def config_dr(config,):
         "damping": (real_damping, real_damping * range_scale),
         "friction": (real_friction, real_friction * range_scale),
         "string_length": (real_string_length, real_string_length * range_scale),
-        "string_stiffness": (real_string_stiffness, .1),
+        "string_stiffness": (1e-6, .1),
       }
     elif dr_option == 'inaccurate_easy_small_range':
       range_scale = .05
