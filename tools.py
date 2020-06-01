@@ -97,7 +97,7 @@ def encode_gif(frames, fps):
   return out
 
 
-def simulate(agent, envs, steps=0, episodes=0, state=None):
+def simulate(agent, envs, dataset, steps=0, episodes=0, state=None):
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
@@ -116,7 +116,11 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         obs[index] = promise()
     # Step agents.
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-    action, agent_state = agent(obs, done, agent_state)
+    if dataset is None:
+      # We'll only visit this case when using the random agent
+      action, agent_state = agent(obs, done, agent_state)
+    else:
+      action, agent_state = agent(obs, done, dataset, agent_state)
     action = np.array(action)
     assert len(action) == len(envs)
     # Step envs.
@@ -129,7 +133,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
     step += (done * length).sum()
     length *= (1 - done)
   # Return new state to allow resuming the simulation.
-  return (step - steps, episode - episodes, done, length, obs, agent_state)
+  return step - steps, episode - episodes, done, length, obs, agent_state
 
 
 def count_episodes(directory):
@@ -154,7 +158,8 @@ def save_episodes(directory, episodes):
         f2.write(f1.read())
 
 
-def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1):
+def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1, use_sim=True, use_real=True):
+  assert use_sim or use_real
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
   cache = {}
@@ -172,15 +177,22 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
     keys = list(cache.keys())
 
     # Weight the probability of choosing each episode by the real world by the real_world_prob argument
-    if real_world_prob >= 0 and "real_world" in cache[keys[0]]:
-      num_real = sum([True in cache[key]['real_world'] for key in keys])
-      num_sim = len(keys) - num_real
-      if num_real == 0 or num_sim == 0:
-        probs = None
-      else:
-        real_prob =  real_world_prob/num_real
-        sim_prob = (1 - real_world_prob)/num_sim
-        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    num_real = sum([True in cache[key]['real_world'] for key in keys])
+    num_sim = len(keys) - num_real
+    if not use_real:
+      real_prob = 0
+      sim_prob = 1 / num_sim
+      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    elif not use_sim:
+      real_prob = 1 / num_real
+      sim_prob = 0
+      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    elif num_real == 0 or num_sim == 0:
+      probs = None
+    elif not real_world_prob == -1 and "real_world" in cache[keys[0]]:
+      real_prob = real_world_prob/num_real
+      sim_prob = (1 - real_world_prob)/num_sim
+      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
     else:
       probs = None
 
@@ -375,10 +387,13 @@ class Adam(tf.Module):
   def variables(self):
     return self._opt.variables()
 
-  def __call__(self, tape, loss):
+  def __call__(self, tape, loss, module=True):
     if self._variables is None:
-      variables = [module.variables for module in self._modules]
-      self._variables = tf.nest.flatten(variables)
+      if module:
+        variables = [module.variables for module in self._modules]
+        self._variables = tf.nest.flatten(variables)
+      else:
+        self._variables = self._modules
       count = sum(np.prod(x.shape) for x in self._variables)
       print(f'Found {count} {self._name} parameters.')
     assert len(loss.shape) == 0, loss.shape
