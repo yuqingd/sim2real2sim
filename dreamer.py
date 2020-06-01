@@ -771,23 +771,13 @@ def main(config):
 
     # after train, update sim params
     if config.outer_loop_version == 2:
-      dr_mean_old = tf.exp(agent.learned_dr_mean)
-      dr_std_old = tf.exp(agent.learned_dr_std)
-      loss_old = agent.update_sim_params(next(agent._real_world_dataset), update=False)
 
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
 
-      dr_mean_new = tf.exp(agent.learned_dr_mean)
-      dr_std_new = tf.exp(agent.learned_dr_std)
-      loss_new = agent.update_sim_params(next(agent._real_world_dataset), update=False)
-      tf.summary.scalar('agent/sim_param/after_update/learned_mean_delta', dr_mean_new - dr_mean_old, step)
-      tf.summary.scalar('agent/sim_param/after_update/learned_std_delta', dr_std_new - dr_std_old, step)
-      tf.summary.scalar('agent/sim_param/after_update/loss_delta', loss_new - loss_old, step)
-
-
       for env in train_sim_envs:
         for i, param in enumerate(sorted(config.dr.keys())):
+
           prev_mean, prev_range = env.dr[param]
           pred_mean = np.exp(agent.learned_dr_mean.numpy())
           pred_range = np.exp(agent.learned_dr_std.numpy())
@@ -799,8 +789,8 @@ def main(config):
           env.dr[param] = (new_mean, new_range)
           # dr_list.append(new_mean)
           with writer.as_default():
-            tf.summary.scalar(f'agent/sim_param/{param}/mean', new_mean, step)
-            tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
+            tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
+            tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
             writer.flush()
         env.apply_dr()
 
