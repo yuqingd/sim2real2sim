@@ -779,8 +779,8 @@ def main(config):
         for i, param in enumerate(sorted(config.dr.keys())):
 
           prev_mean, prev_range = env.dr[param]
-          pred_mean = np.exp(agent.learned_dr_mean.numpy())
-          pred_range = np.exp(agent.learned_dr_std.numpy())
+          pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
+          pred_range = np.exp(agent.learned_dr_std.numpy())[i]
           print(f"Learned {param}", pred_mean, pred_range)
           alpha = config.alpha
 
