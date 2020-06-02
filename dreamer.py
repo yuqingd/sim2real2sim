@@ -594,10 +594,10 @@ def log_memory(step):
 
 def check_train_with_real(mass_list):
   # TODO: this currently won't scale to more dr params. It's just a proof of concept showing we can do this.
-  range_ = .02
+  range_ = .2
   duration = 25
-  std_cutoff = .01
-  timestep_cutoff = 100
+  std_cutoff = .2
+  timestep_cutoff = 25
   if len(mass_list) < timestep_cutoff:
     return False
   segment = mass_list[-duration:]
