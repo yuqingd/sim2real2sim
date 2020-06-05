@@ -47,10 +47,10 @@ class DeepMindControl:
       mean, range = self.dr["ball_mass"]
       eps = 1e-3
       self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "ball_size" in self.dr:
-      mean, range = self.dr["ball_size"]
-      eps = 1e-3
-      self._env.physics.model.geom_rbound[-1] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+    # if "ball_size" in self.dr:
+    #   mean, range = self.dr["ball_size"]
+    #   eps = 1e-3
+    #   self._env.physics.model.geom_rbound[-1] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
     if "damping" in self.dr:
       mean, range = self.dr["damping"]
       eps = 1e-3
@@ -60,14 +60,14 @@ class DeepMindControl:
       eps = 1e-6
       # Only adjust sliding friction
       self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "string_length" in self.dr:
-      mean, range = self.dr["string_length"]
-      eps = 1e-2
-      self._env.physics.model.tendon_length0[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "string_stiffness" in self.dr:
-      mean, range = self.dr["string_stiffness"]
-      eps = 0
-      self._env.physics.model.tendon_stiffness[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+    # if "string_length" in self.dr:
+    #   mean, range = self.dr["string_length"]
+    #   eps = 1e-2
+    #   self._env.physics.model.tendon_length0[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+    # if "string_stiffness" in self.dr:
+    #   mean, range = self.dr["string_stiffness"]
+    #   eps = 0
+    #   self._env.physics.model.tendon_stiffness[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
 
 
   @property
