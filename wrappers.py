@@ -89,11 +89,11 @@ class DeepMindControl:
     return np.array([
       self._env.physics.model.actuator_gainprm[0, 0],
       self._env.physics.model.body_mass[2],
-      self._env.physics.model.geom_rbound[-1],
+      # self._env.physics.model.geom_rbound[-1],
       self._env.physics.model.dof_damping[0],
       self._env.physics.model.geom_friction[0, 0],
-      self._env.physics.model.tendon_length0[0],
-      self._env.physics.model.tendon_stiffness[0],
+      # self._env.physics.model.tendon_length0[0],
+      # self._env.physics.model.tendon_stiffness[0],
     ])
 
   def step(self, action):
