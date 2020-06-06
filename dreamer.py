@@ -90,7 +90,7 @@ def define_config():
   config.gpu_growth = True
   config.precision = 32
   # Environment.
-  config.task = 'dmc_cup_catch'
+  config.task = 'metaworld_sweep'
   config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
@@ -148,7 +148,9 @@ def define_config():
 
 def config_dr(config,):
   dr_option = config.dr_option
-  if config.task == "dmc_cup_catch":
+  if config.task == 'metaworld_reach':
+    return {}
+  elif config.task == "dmc_cup_catch":
     real_ball_mass = .065
     real_actuator_gain = 1
     real_damping = 3
@@ -627,8 +629,14 @@ def summarize_episode(episode, config, datadir, writer, prefix):
 
 def make_env(config, writer, prefix, datadir, store, index=None, real_world=False):
   suite, task = config.task.split('_', 1)
-  if suite == 'dmc':
-    if config.dr is None or real_world: #first index is always real world
+  if suite == 'metaworld':
+    if config.dr is None or real_world:
+      env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
+    else:
+      env = wrappers.MetaWorld(task, dr=config.dr, use_state=config.use_state,
+                                     real_world=real_world)
+  elif suite == 'dmc':
+    if config.dr is None or real_world:
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
