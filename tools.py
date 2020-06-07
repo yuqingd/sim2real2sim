@@ -97,7 +97,7 @@ def encode_gif(frames, fps):
   return out
 
 
-def simulate(agent, envs, dataset, steps=0, episodes=0, state=None):
+def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
@@ -201,8 +201,7 @@ def save_episodes(directory, episodes):
         f2.write(f1.read())
 
 
-def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1, use_sim=True, use_real=True):
-  assert use_sim or use_real
+def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1, use_sim=None, use_real=None):
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
   cache = {}
@@ -222,11 +221,11 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
     # Weight the probability of choosing each episode by the real world by the real_world_prob argument
     num_real = sum([True in cache[key]['real_world'] for key in keys])
     num_sim = len(keys) - num_real
-    if not use_real:
+    if use_real is not None and not use_real:
       real_prob = 0
       sim_prob = 1 / num_sim
       probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
-    elif not use_sim:
+    elif use_sim is not None and not use_sim:
       real_prob = 1 / num_real
       sim_prob = 0
       probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
