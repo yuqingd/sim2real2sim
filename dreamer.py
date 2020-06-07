@@ -507,13 +507,13 @@ class Dreamer(tools.Module):
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
-    self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
-    # Do a train step to initialize all variables, including optimizer
-    # statistics. Ideally, we would use batch size zero, but that doesn't work
-    # in multi-GPU mode.
-    self.train(next(self._train_dataset_sim_only))
-    self.train(next(self._train_dataset_combined))
     if self._c.outer_loop_version == 2:
+      self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
+      # Do a train step to initialize all variables, including optimizer
+      # statistics. Ideally, we would use batch size zero, but that doesn't work
+      # in multi-GPU mode.
+      self.train(next(self._train_dataset_sim_only))
+      self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
 
   def _exploration(self, action, training):
