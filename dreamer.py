@@ -295,13 +295,14 @@ class Dreamer(tools.Module):
     self._float = prec.global_policy().compute_dtype
     self._strategy = tf.distribute.MirroredStrategy()
     with self._strategy.scope():
-      self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=True, use_real=False)))
-      self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
-        load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-      if config.outer_loop_version == 2:
-        self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+      if self._c.outer_loop_version == 2:
+        self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
+            load_dataset(datadir, self._c, use_sim=True, use_real=False)))
+        self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=True, use_real=True)))
+        if config.outer_loop_version == 2:
+          self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+            load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       elif config.outer_loop_version == 1:
         self._dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c)))
@@ -326,7 +327,6 @@ class Dreamer(tools.Module):
             self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
-
     action, state = self.policy(obs, state, training)
     if training:
       self._step.assign_add(len(reset) * self._c.action_repeat)
@@ -367,7 +367,6 @@ class Dreamer(tools.Module):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
   def _train(self, data, log_images):
-
     with tf.GradientTape() as model_tape:
       if 'success' in data:
         success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
@@ -383,7 +382,6 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
-
       if self._c.outer_loop_version == 1:
         sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
