@@ -490,7 +490,6 @@ class Dreamer(tools.Module):
     self._actor = models.ActionDecoder(
         self._actdim, 4, self._c.num_units, self._c.action_dist,
         init_std=self._c.action_init_std, act=act)
-    if self._sim_params is not None:
     if self._c.outer_loop_version == 1:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
     elif self._c.outer_loop_version == 2:
