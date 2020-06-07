@@ -318,7 +318,7 @@ class Dreamer(tools.Module):
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
           if self._c.outer_loop_version == 1:
-            self.train(next(self._dataset), log_images)
+            self.train(next(self._train_dataset_combined), log_images)
           elif self._c.outer_loop_version == 2:
             self.train(next(dataset), log_images)
       if log:
