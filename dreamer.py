@@ -828,6 +828,8 @@ def main(config):
     # Once the sim params converge, we can change this to True
     dataset = agent._train_dataset_sim_only
     dr_list = []
+  else:
+    dataset = None
 
   while step < config.steps:
     print('Start evaluation.')

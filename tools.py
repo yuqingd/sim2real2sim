@@ -117,7 +117,6 @@ def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
     # Step agents.
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
     if dataset is None:
-      # We'll only visit this case when using the random agent
       action, agent_state = agent(obs, done, agent_state)
     else:
       action, agent_state = agent(obs, done, dataset, agent_state)
@@ -133,7 +132,10 @@ def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
     step += (done * length).sum()
     length *= (1 - done)
   # Return new state to allow resuming the simulation.
-  return step - steps, episode - episodes, done, length, obs, agent_state
+  if dataset is not None:
+    return step - steps, episode - episodes, done, length, obs, agent_state
+  else:
+    return (step - steps, episode - episodes, done, length, obs, agent_state)
 
 
 def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None):
