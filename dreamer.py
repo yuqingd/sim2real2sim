@@ -304,7 +304,7 @@ class Dreamer(tools.Module):
           load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model()
 
-  def __call__(self, obs, reset, dataset, state=None, training=True):
+  def __call__(self, obs, reset, dataset=None, state=None, training=True):
     step = self._step.numpy().item()
     tf.summary.experimental.set_step(step)
     if state is not None and reset.any():
@@ -317,7 +317,10 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          self.train(next(dataset), log_images)
+          if self._c.outer_loop_version == 1:
+            self.train(next(self._dataset), log_images)
+          elif self._c.outer_loop_version == 2:
+            self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
 
