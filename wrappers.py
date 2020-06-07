@@ -76,7 +76,8 @@ class MetaWorld:
 
 class DeepMindControl:
 
-  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
+                                     simple_randomization=False):
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -94,12 +95,17 @@ class DeepMindControl:
     self.sparse_reward = sparse_reward
     self.use_state = use_state
     self.dr = dr
+    self.simple_randomization = simple_randomization
 
     self.apply_dr()
 
   def apply_dr(self):
     if self.dr is None or self.real_world:
       return
+    if self.simple_randomization:
+      mean, range = self.dr["ball_mass"]
+      eps = 1e-3
+      self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean - range, high=mean + range), eps)
     if "actuator_gain" in self.dr:
       mean, range = self.dr["actuator_gain"]
       eps = 1e-3
@@ -147,6 +153,8 @@ class DeepMindControl:
     return gym.spaces.Box(spec.minimum, spec.maximum, dtype=np.float32)
 
   def get_dr(self):
+    if self.simple_randomization:
+      return np.array([self._env.physics.model.body_mass[2]])
     return np.array([
       self._env.physics.model.actuator_gainprm[0, 0],
       self._env.physics.model.body_mass[2],

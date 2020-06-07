@@ -90,7 +90,7 @@ def define_config():
   config.gpu_growth = True
   config.precision = 32
   # Environment.
-  config.task = 'metaworld_sweep'
+  config.task = 'dmc_cup_catch'
   config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
@@ -140,91 +140,105 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2  # How often we should sample from the real world
+  config.simple_randomization = False
+
+  # these values are for testing dmc_cup_catch
+  config.mass_mean = 0.2
+  config.mass_range = 0.01
 
   config.outer_loop_version = 2  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.5
 
   return config
 
-def config_dr(config,):
+def config_dr(config):
   dr_option = config.dr_option
   if config.task == 'metaworld_reach':
     return {}
   elif config.task == "dmc_cup_catch":
-    real_ball_mass = .065
-    real_actuator_gain = 1
-    real_damping = 3
-    real_friction = 1
-    # real_string_length = .292
-    # real_string_stiffness = 0
-    # real_ball_size = .025
-    config.dr_real_params = {
-      "actuator_gain": real_actuator_gain,
-      "ball_mass": real_ball_mass,
-      # "ball_size": real_ball_size,
-      "damping": real_damping,
-      "friction": real_friction,
-      # "string_length": real_string_length,
-      # "string_stiffness": real_string_stiffness,
-    }
-    if dr_option == 'accurate_small_range':
-      range_scale = 0.05
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size, real_ball_size * range_scale),
-        "damping": (real_damping, real_damping * range_scale),
-        "friction": (real_friction, real_friction * range_scale),
-        # "string_length": (real_string_length, real_string_length * range_scale),
-        # "string_stiffness": (1e-6, 0.001),
+    print(type(config.simple_randomization))
+    if config.simple_randomization:
+      config.dr_real_params = {
+        "ball_mass": .065
       }
-    elif dr_option == 'accurate_large_range':
-      range_scale = 5
       config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size, real_ball_size * range_scale),
-        "damping": (real_damping, real_damping * range_scale),
-        "friction": (real_friction, real_friction * range_scale),
-        # "string_length": (real_string_length, real_string_length * range_scale),
-        # "string_stiffness": (1e-6, .1),
+        "ball_mass": (config.mass_mean, config.mass_range)  # Real parameter is .065
       }
-    elif dr_option == 'inaccurate_easy_small_range':
-      range_scale = .05
-      scale_factor_low = 0.5
-      scale_factor_high = 1 / scale_factor_low
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
-        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
-        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
-        # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
-        # "string_stiffness": (real_string_stiffness + .01, .1),
-      }
-    elif dr_option == 'inaccurate_easy_large_covering_range':
-      range_scale = 2
-      scale_factor_low = 0.5
-      scale_factor_high = 1 / scale_factor_low
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
-        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
-        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
-        # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
-        # "string_stiffness": (real_string_stiffness + .01, .1),
-      }
-    elif dr_option == 'inaccurate_easy_large_noncovering_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_small_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_large_covering_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_large_noncovering_range':
-      raise NotImplementedError
     else:
-      raise ValueError("invalid dr option")
+      real_ball_mass = .065
+      real_actuator_gain = 1
+      real_damping = 3
+      real_friction = 1
+      # real_string_length = .292
+      # real_string_stiffness = 0
+      # real_ball_size = .025
+      config.dr_real_params = {
+        "actuator_gain": real_actuator_gain,
+        "ball_mass": real_ball_mass,
+        # "ball_size": real_ball_size,
+        "damping": real_damping,
+        "friction": real_friction,
+        # "string_length": real_string_length,
+        # "string_stiffness": real_string_stiffness,
+      }
+      if dr_option == 'accurate_small_range':
+        range_scale = 0.05
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size, real_ball_size * range_scale),
+          "damping": (real_damping, real_damping * range_scale),
+          "friction": (real_friction, real_friction * range_scale),
+          # "string_length": (real_string_length, real_string_length * range_scale),
+          # "string_stiffness": (1e-6, 0.001),
+        }
+      elif dr_option == 'accurate_large_range':
+        range_scale = 5
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size, real_ball_size * range_scale),
+          "damping": (real_damping, real_damping * range_scale),
+          "friction": (real_friction, real_friction * range_scale),
+          # "string_length": (real_string_length, real_string_length * range_scale),
+          # "string_stiffness": (1e-6, .1),
+        }
+      elif dr_option == 'inaccurate_easy_small_range':
+        range_scale = .05
+        scale_factor_low = 0.5
+        scale_factor_high = 1 / scale_factor_low
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+          "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+          "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+          # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+          # "string_stiffness": (real_string_stiffness + .01, .1),
+        }
+      elif dr_option == 'inaccurate_easy_large_covering_range':
+        range_scale = 2
+        scale_factor_low = 0.5
+        scale_factor_high = 1 / scale_factor_low
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+          "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+          "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+          # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+          # "string_stiffness": (real_string_stiffness + .01, .1),
+        }
+      elif dr_option == 'inaccurate_easy_large_noncovering_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_small_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_large_covering_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_large_noncovering_range':
+        raise NotImplementedError
+      else:
+        raise ValueError("invalid dr option " + str(dr_option))
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
       "body_mass": (1.0, 1.0) # Real parameter is 2.0
@@ -637,10 +651,11 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                                      real_world=real_world)
   elif suite == 'dmc':
     if config.dr is None or real_world:
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
+      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world,
+                                     simple_randomization=config.simple_randomization)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
-                                     real_world=real_world)
+                                     real_world=real_world, simple_randomization=config.simple_randomization)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':
