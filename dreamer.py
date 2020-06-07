@@ -709,10 +709,10 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'dmc':
     if config.dr is None or real_world:
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
-                                     simple_randomization=config.simple_randomization)
+                                     simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size,
-                                     real_world=real_world, simple_randomization=config.simple_randomization)
+                                     real_world=real_world, simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':

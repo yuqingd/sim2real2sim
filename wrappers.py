@@ -77,7 +77,7 @@ class MetaWorld:
 class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
-                                     simple_randomization=False, dr_shape=None):
+                                     simple_randomization=False, dr_shape=None, outer_loop_type=0):
 
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
@@ -99,6 +99,7 @@ class DeepMindControl:
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
     self.sim_params = []
+    self.outer_loop_version = outer_loop_type
 
     self.apply_dr()
 
@@ -190,7 +191,7 @@ class DeepMindControl:
     obs['sim_params'] = self.sim_params
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    if self.dr_shape is None:
+    if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
@@ -205,7 +206,7 @@ class DeepMindControl:
     obs['image'] = self.render()
     obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    if self.dr_shape is None:
+    if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 0.0
