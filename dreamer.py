@@ -647,9 +647,11 @@ def count_steps(datadir, config):
   return tools.count_episodes(datadir)[1] * config.action_repeat
 
 
-def load_dataset(directory, config, use_sim=True, use_real=True):
-  assert use_sim or use_real
-  episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
+def load_dataset(directory, config, use_sim=None, use_real=None):
+  if config.outer_loop_version == 1:
+    episode = next(tools.load_episodes(directory, 1))
+  else:
+    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
   if config.outer_loop_version == 1:
