@@ -190,7 +190,8 @@ class DeepMindControl:
     obs['sim_params'] = self.sim_params
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if self.dr_shape is None:
+      obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
     return obs, reward, done, info
@@ -204,7 +205,8 @@ class DeepMindControl:
     obs['image'] = self.render()
     obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if self.dr_shape is None:
+      obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 0.0
     return obs
