@@ -647,7 +647,12 @@ def load_dataset(directory, config, use_sim=True, use_real=True):
   episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
-  generator = lambda: tools.load_episodes(
+  if config.outer_loop_version == 1:
+    generator = lambda: tools.load_episodes(
+      directory, config.train_steps, config.batch_length,
+      config.dataset_balance, real_world_prob=config.real_world_prob)
+  else:
+    generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
       config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
