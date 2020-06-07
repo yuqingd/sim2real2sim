@@ -300,8 +300,7 @@ class Dreamer(tools.Module):
             load_dataset(datadir, self._c, use_sim=True, use_real=False)))
         self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-        if config.outer_loop_version == 2:
-          self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+        self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       elif config.outer_loop_version == 1:
         self._dataset = iter(self._strategy.experimental_distribute_dataset(
@@ -517,9 +516,13 @@ class Dreamer(tools.Module):
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
+    if self._c.outer_loop_version == 1:
+      self.train(next(self._dataset))
+    else:
       self.train(next(self._train_dataset_sim_only))
       self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
+
 
   def _exploration(self, action, training):
     if training:
