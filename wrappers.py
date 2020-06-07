@@ -77,7 +77,8 @@ class MetaWorld:
 class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
-                                     simple_randomization=False):
+                                     simple_randomization=False, dr_shape=None):
+
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -96,24 +97,33 @@ class DeepMindControl:
     self.use_state = use_state
     self.dr = dr
     self.simple_randomization = simple_randomization
+    self.dr_shape = dr_shape
+    self.sim_params = []
 
     self.apply_dr()
 
   def apply_dr(self):
     if self.dr is None or self.real_world:
+      self.sim_params = np.zeros(self.dr_shape)
       return
     if self.simple_randomization:
       mean, range = self.dr["ball_mass"]
       eps = 1e-3
       self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean - range, high=mean + range), eps)
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     if "actuator_gain" in self.dr:
       mean, range = self.dr["actuator_gain"]
       eps = 1e-3
       self._env.physics.model.actuator_gainprm[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     if "ball_mass" in self.dr:
       mean, range = self.dr["ball_mass"]
       eps = 1e-3
       self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     # if "ball_size" in self.dr:
     #   mean, range = self.dr["ball_size"]
     #   eps = 1e-3
@@ -122,11 +132,15 @@ class DeepMindControl:
       mean, range = self.dr["damping"]
       eps = 1e-3
       self._env.physics.model.dof_damping[:2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     if "friction" in self.dr:
       mean, range = self.dr["friction"]
       eps = 1e-6
       # Only adjust sliding friction
       self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
     # if "string_length" in self.dr:
     #   mean, range = self.dr["string_length"]
     #   eps = 1e-2
@@ -173,6 +187,7 @@ class DeepMindControl:
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
+    obs['sim_params'] = self.sim_params
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -187,6 +202,7 @@ class DeepMindControl:
     if self.use_state:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
+    obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
     if self.sparse_reward:

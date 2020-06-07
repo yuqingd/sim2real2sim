@@ -164,6 +164,7 @@ def config_dr(config):
       config.dr = {  # (mean, range)
         "ball_mass": (config.mass_mean, config.mass_range)  # Real parameter is .065
       }
+      config.sim_params_size = 2
     else:
       real_ball_mass = .065
       real_actuator_gain = 1
@@ -181,6 +182,7 @@ def config_dr(config):
         # "string_length": real_string_length,
         # "string_stiffness": real_string_stiffness,
       }
+      config.sim_params_size = 2 * 4
       if dr_option == 'accurate_small_range':
         range_scale = 0.05
         config.dr = {  # (mean, range)
@@ -375,6 +377,9 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
+
+      if self._c.outer_loop_version == 1:
+        sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
       reward_obj = reward_pred.log_prob(data['reward'])
@@ -383,6 +388,11 @@ class Dreamer(tools.Module):
       reward_obj = reward_obj * (1 - data['real_world'])
 
       likes.reward = tf.reduce_mean(reward_obj)
+      if self._c.outer_loop_version == 1:
+        sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+        sim_param_obj = sim_param_obj * (1 - data['real_world'])
+
+        likes.sim_params = tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -471,6 +481,8 @@ class Dreamer(tools.Module):
         self._c.stoch_size, self._c.deter_size, self._c.deter_size)
     self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
+    if self._c.outer_loop_version == 1:
+      self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -478,7 +490,11 @@ class Dreamer(tools.Module):
     self._actor = models.ActionDecoder(
         self._actdim, 4, self._c.num_units, self._c.action_dist,
         init_std=self._c.action_init_std, act=act)
-    model_modules = [self._encode, self._dynamics, self._decode, self._reward]
+    if self._sim_params is not None:
+    if self._c.outer_loop_version == 1:
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
+    elif self._c.outer_loop_version == 2:
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward]
     if self._c.pcont:
       model_modules.append(self._pcont)
     Optimizer = functools.partial(
@@ -585,6 +601,33 @@ class Dreamer(tools.Module):
     sys.stdout.flush()
     self._writer.flush()
 
+  def predict_sim_params(self, obs, reset, state=None):
+    step = self._step.numpy().item()
+    tf.summary.experimental.set_step(step)
+    if state is not None and reset.any():
+      mask = tf.cast(1 - reset, self._float)[:, None]
+      state = tf.nest.map_structure(lambda x: x * mask, state)
+
+    if state is None:
+      latent = self._dynamics.initial(len(obs['image']))
+      action = tf.zeros((len(obs['image']), self._actdim), self._float)
+    else:
+      latent, action = state
+    embed = self._encode(preprocess(obs, self._c))
+    if 'state' in obs:
+      state = tf.dtypes.cast(obs['state'], embed.dtype)
+      embed = tf.concat([state, embed], axis=-1)
+    latent, _ = self._dynamics.obs_step(latent, action, embed)
+    feat = self._dynamics.get_feat(latent)
+
+    action = self._actor(feat).mode()
+    action = self._exploration(action, False)
+    state = (latent, action)
+
+
+    sim_param_pred = self._sim_params(feat)
+    return  action, state, sim_param_pred
+
 
 def preprocess(obs, config):
   dtype = prec.global_policy().compute_dtype
@@ -654,7 +697,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world,
                                      simple_randomization=config.simple_randomization)
     else:
-      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
+      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size,
                                      real_world=real_world, simple_randomization=config.simple_randomization)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
@@ -831,7 +874,28 @@ def main(config):
             writer.flush()
         env.apply_dr()
 
-  for env in train_sim_envs + test_envs:
+    #after train, update sim params
+    elif config.outer_loop_version == 1:
+      real_pred_sim_params = tools.simulate_real(
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      for env in train_sim_envs:
+        if env.dr is not None:
+          if "body_mass" in env.dr:
+            prev_mean, prev_range = env.dr["body_mass"]
+            pred_mean = real_pred_sim_params[0]
+            pred_range = real_pred_sim_params[1]
+            alpha = config.alpha
+
+            new_mean = prev_mean*(1-alpha) + alpha*pred_mean
+            new_range = prev_range*(1-alpha) + alpha*pred_range
+            env.dr["body_mass"] = (new_mean, new_range)
+            with writer.as_default():
+              tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
+              tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+              writer.flush()
+          env.apply_dr()
+
+  for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
   if train_real_envs is not None:
     for env in train_real_envs:
