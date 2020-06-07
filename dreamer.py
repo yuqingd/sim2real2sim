@@ -299,9 +299,12 @@ class Dreamer(tools.Module):
           load_dataset(datadir, self._c, use_sim=True, use_real=False)))
       self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
         load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-      if config.outer_loop_version in [1, 2]:
+      if config.outer_loop_version == 2:
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+      elif config.outer_loop_version == 1:
+        self._dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c)))
       self._build_model()
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
@@ -318,7 +321,7 @@ class Dreamer(tools.Module):
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
           if self._c.outer_loop_version == 1:
-            self.train(next(self._train_dataset_combined), log_images)
+            self.train(next(self._dataset), log_images)
           elif self._c.outer_loop_version == 2:
             self.train(next(dataset), log_images)
       if log:
@@ -502,11 +505,12 @@ class Dreamer(tools.Module):
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
-    dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+    if self._c.outer_loop_version == 2:
+      dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+      dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
 
-    self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
-    self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
+      self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
+      self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
@@ -798,12 +802,13 @@ def main(config):
   dataset = None
   print(f'Prefill dataset with {prefill} simulated steps.')
   tools.simulate(random_agent, train_sim_envs, dataset, prefill / config.action_repeat)
-  if train_real_envs is not None:
-    num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
-    if num_real_prefill == 0:
-      num_real_prefill += 1
-    print(f'Prefill dataset with {num_real_prefill} real world steps.')
-    tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
+  if config.outer_loop_version == 2:
+    if train_real_envs is not None:
+      num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
+      if num_real_prefill == 0:
+        num_real_prefill += 1
+      print(f'Prefill dataset with {num_real_prefill} real world steps.')
+      tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
 
@@ -820,10 +825,11 @@ def main(config):
     print((config.logdir / 'variables.pkl').exists())
   state = None
 
-  # Initially, don't use the real world samples to train the model since we don't know their sim params.
-  # Once the sim params converge, we can change this to True
-  dataset = agent._train_dataset_sim_only
-  dr_list = []
+  if config.outer_loop_version == 2:
+    # Initially, don't use the real world samples to train the model since we don't know their sim params.
+    # Once the sim params converge, we can change this to True
+    dataset = agent._train_dataset_sim_only
+    dr_list = []
 
   while step < config.steps:
     print('Start evaluation.')
@@ -840,13 +846,14 @@ def main(config):
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
 
-    train_with_real = check_train_with_real(dr_list)
-    if train_with_real:
-      dataset = agent._train_dataset_combined
-      tf.summary.scalar('sim/train_with_real', 1, step)
-    else:
-      dataset = agent._train_dataset_sim_only
-      tf.summary.scalar('sim/train_with_real', 0, step)
+    if config.outer_loop_version == 2:
+      train_with_real = check_train_with_real(dr_list)
+      if train_with_real:
+        dataset = agent._train_dataset_combined
+        tf.summary.scalar('sim/train_with_real', 1, step)
+      else:
+        dataset = agent._train_dataset_sim_only
+        tf.summary.scalar('sim/train_with_real', 0, step)
 
     # Log memory usage
     log_memory(step)
