@@ -708,7 +708,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                                      real_world=real_world)
   elif suite == 'dmc':
     if config.dr is None or real_world:
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world,
+      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
                                      simple_randomization=config.simple_randomization)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size,
