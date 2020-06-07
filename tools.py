@@ -220,23 +220,33 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
         cache[filename] = episode
     keys = list(cache.keys())
 
-    # Weight the probability of choosing each episode by the real world by the real_world_prob argument
-    num_real = sum([True in cache[key]['real_world'] for key in keys])
-    num_sim = len(keys) - num_real
-    if use_real is not None and not use_real:
-      real_prob = 0
-      sim_prob = 1 / num_sim
-      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
-    elif use_sim is not None and not use_sim:
-      real_prob = 1 / num_real
-      sim_prob = 0
-      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
-    elif num_real == 0 or num_sim == 0:
-      probs = None
-    elif not real_world_prob == -1 and "real_world" in cache[keys[0]]:
-      real_prob = real_world_prob/num_real
-      sim_prob = (1 - real_world_prob)/num_sim
-      probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    if use_sim is not None or use_real is not None:
+      # Weight the probability of choosing each episode by the real world by the real_world_prob argument
+      num_real = sum([True in cache[key]['real_world'] for key in keys])
+      num_sim = len(keys) - num_real
+      if use_real is not None and not use_real:
+        real_prob = 0
+        sim_prob = 1 / num_sim
+        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+      elif use_sim is not None and not use_sim:
+        real_prob = 1 / num_real
+        sim_prob = 0
+        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+      elif num_real == 0 or num_sim == 0:
+        probs = None
+      elif not real_world_prob == -1 and "real_world" in cache[keys[0]]:
+        real_prob = real_world_prob/num_real
+        sim_prob = (1 - real_world_prob)/num_sim
+        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
+    elif real_world_prob and "real_world" in cache[keys[0]]:
+      num_real = sum([True in cache[key]['real_world'] for key in keys])
+      num_sim = len(keys) - num_real
+      if num_real == 0 or num_sim == 0:
+        probs = None
+      else:
+        real_prob =  real_world_prob/num_real
+        sim_prob = (1 - real_world_prob)/num_sim
+        probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
     else:
       probs = None
 
