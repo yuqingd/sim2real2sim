@@ -105,7 +105,8 @@ class DeepMindControl:
 
   def apply_dr(self):
     if self.dr is None or self.real_world:
-      self.sim_params = np.zeros(self.dr_shape)
+      if self.outer_loop_version == 1:
+        self.sim_params = np.zeros(self.dr_shape)
       return
     if self.simple_randomization:
       mean, range = self.dr["ball_mass"]
@@ -189,7 +190,8 @@ class DeepMindControl:
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
-    obs['sim_params'] = self.sim_params
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 2:
@@ -205,7 +207,8 @@ class DeepMindControl:
     if self.use_state:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
-    obs['sim_params'] = self.sim_params
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
