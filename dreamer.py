@@ -899,7 +899,7 @@ def main(config):
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
       for env in train_sim_envs:
         if env.dr is not None:
-          if config.simple_randomiziton:
+          if config.simple_randomization:
             prev_mean, prev_range = env.dr["ball_mass"]
             pred_mean = real_pred_sim_params[0]
             pred_range = real_pred_sim_params[1]
