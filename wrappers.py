@@ -98,12 +98,12 @@ class DeepMindControl:
     self.dr = dr
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
-    self.sim_params = []
     self.outer_loop_version = outer_loop_type
 
     self.apply_dr()
 
   def apply_dr(self):
+    self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
