@@ -158,7 +158,7 @@ def config_dr(config):
   elif config.task == "dmc_cup_catch":
     print(type(config.simple_randomization))
     if config.simple_randomization:
-      config.dr_real_params = {
+      config.real_dr_params = {
         "ball_mass": .065
       }
       config.dr = {  # (mean, range)
@@ -173,7 +173,7 @@ def config_dr(config):
       # real_string_length = .292
       # real_string_stiffness = 0
       # real_ball_size = .025
-      config.dr_real_params = {
+      config.real_dr_params = {
         "actuator_gain": real_actuator_gain,
         "ball_mass": real_ball_mass,
         # "ball_size": real_ball_size,
