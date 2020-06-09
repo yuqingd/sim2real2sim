@@ -11,11 +11,74 @@ from PIL import Image
 from environments.reach import FetchReachEnv
 from environments.push import FetchPushEnv
 from environments.slide import FetchSlideEnv
+from metaworld.benchmarks import ML1
 
+class MetaWorld:
+  def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
+    self._env = ML1.get_train_tasks(name + "-v1")
+    self._size = size
+    self.real_world = real_world
+    self.use_state = use_state
+    self.dr = dr
+
+    self.apply_dr()
+
+  def apply_dr(self):
+    pass
+
+  @property
+  def observation_space(self):
+    spaces = {}
+    if self.use_state:
+      spaces['state'] = self._env.observation_space
+    spaces['image'] = gym.spaces.Box(
+      0, 255, self._size + (3,), dtype=np.uint8)
+    return gym.spaces.Dict(spaces)
+
+  @property
+  def action_space(self):
+    return self._env.action_space
+
+  def step(self, action):
+    state_obs, reward, done, info = self._env.step(action)
+    time_out = self._env.active_env.curr_path_length == self._env.active_env.max_path_length
+    done = done or time_out
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs[:3]  # Only include robot state
+    obs['image'] = self.render()
+    info['discount'] = 1.0
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 1.0 if info['success'] else 0.0
+    return obs, reward, done, info
+
+  def get_dr(self):
+    return np.array([0])  # TODO: add this!
+
+  def reset(self):
+    self.apply_dr()
+    state_obs = self._env.reset()
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs[:3]  # Only include robot state
+    obs['image'] = self.render()
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 0.0
+    return obs
+
+  def render(self, *args, **kwargs):
+    if kwargs.get('mode', 'rgb_array') != 'rgb_array':
+      raise ValueError("Only render mode 'rgb_array' is supported.")
+    width, height = self._size
+    return self._env.active_env.sim.render(mode='offscreen', width=width, height=height)
 
 class DeepMindControl:
 
-  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
+  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
+                                     simple_randomization=False, dr_shape=None, outer_loop_type=0):
+
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -33,41 +96,67 @@ class DeepMindControl:
     self.sparse_reward = sparse_reward
     self.use_state = use_state
     self.dr = dr
+    self.simple_randomization = simple_randomization
+    self.dr_shape = dr_shape
+    self.outer_loop_version = outer_loop_type
 
     self.apply_dr()
 
   def apply_dr(self):
+    self.sim_params = []
     if self.dr is None or self.real_world:
+      if self.outer_loop_version == 1:
+        self.sim_params = np.zeros(self.dr_shape)
       return
-    if "actuator_gain" in self.dr:
-      mean, range = self.dr["actuator_gain"]
-      eps = 1e-3
-      self._env.physics.model.actuator_gainprm[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "ball_mass" in self.dr:
+    if self.simple_randomization:
       mean, range = self.dr["ball_mass"]
       eps = 1e-3
-      self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    # if "ball_size" in self.dr:
-    #   mean, range = self.dr["ball_size"]
-    #   eps = 1e-3
-    #   self._env.physics.model.geom_rbound[-1] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "damping" in self.dr:
-      mean, range = self.dr["damping"]
-      eps = 1e-3
-      self._env.physics.model.dof_damping[:2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    if "friction" in self.dr:
-      mean, range = self.dr["friction"]
-      eps = 1e-6
-      # Only adjust sliding friction
-      self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    # if "string_length" in self.dr:
-    #   mean, range = self.dr["string_length"]
-    #   eps = 1e-2
-    #   self._env.physics.model.tendon_length0[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-    # if "string_stiffness" in self.dr:
-    #   mean, range = self.dr["string_stiffness"]
-    #   eps = 0
-    #   self._env.physics.model.tendon_stiffness[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      range = max(range, eps)
+      self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean - range, high=mean + range), eps)
+      self.sim_params.append(mean)
+      self.sim_params.append(range)
+    else:
+      if "actuator_gain" in self.dr:
+        mean, range = self.dr["actuator_gain"]
+        eps = 1e-3
+        range = max(range, eps)
+        self._env.physics.model.actuator_gainprm[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+        self.sim_params.append(mean)
+        self.sim_params.append(range)
+      if "ball_mass" in self.dr:
+        mean, range = self.dr["ball_mass"]
+        eps = 1e-3
+        range = max(range, eps)
+        self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+        self.sim_params.append(mean)
+        self.sim_params.append(range)
+      # if "ball_size" in self.dr:
+      #   mean, range = self.dr["ball_size"]
+      #   eps = 1e-3
+      #   self._env.physics.model.geom_rbound[-1] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      if "damping" in self.dr:
+        mean, range = self.dr["damping"]
+        eps = 1e-3
+        range = max(range, eps)
+        self._env.physics.model.dof_damping[:2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+        self.sim_params.append(mean)
+        self.sim_params.append(range)
+      if "friction" in self.dr:
+        mean, range = self.dr["friction"]
+        eps = 1e-6
+        range = max(range, eps)
+        # Only adjust sliding friction
+        self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+        self.sim_params.append(mean)
+        self.sim_params.append(range)
+      # if "string_length" in self.dr:
+      #   mean, range = self.dr["string_length"]
+      #   eps = 1e-2
+      #   self._env.physics.model.tendon_length0[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+      # if "string_stiffness" in self.dr:
+      #   mean, range = self.dr["string_stiffness"]
+      #   eps = 0
+      #   self._env.physics.model.tendon_stiffness[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
 
 
   @property
@@ -86,6 +175,8 @@ class DeepMindControl:
     return gym.spaces.Box(spec.minimum, spec.maximum, dtype=np.float32)
 
   def get_dr(self):
+    if self.simple_randomization:
+      return np.array([self._env.physics.model.body_mass[2]])
     return np.array([
       self._env.physics.model.actuator_gainprm[0, 0],
       self._env.physics.model.body_mass[2],
@@ -104,9 +195,12 @@ class DeepMindControl:
     obs['image'] = self.render()
     reward = time_step.reward or 0
     done = time_step.last()
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     info = {'discount': np.array(time_step.discount, np.float32)}
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if self.outer_loop_version == 2:
+      obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 1.0 if reward > 0 else 0.0
     return obs, reward, done, info
@@ -118,8 +212,11 @@ class DeepMindControl:
     if self.use_state:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if self.outer_loop_version == 2:
+      obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 0.0
     return obs

@@ -140,91 +140,107 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2  # How often we should sample from the real world
+  config.simple_randomization = False
+
+  # these values are for testing dmc_cup_catch
+  config.mass_mean = 0.2
+  config.mass_range = 0.01
 
   config.outer_loop_version = 2  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.5
 
   return config
 
-def config_dr(config,):
+def config_dr(config):
   dr_option = config.dr_option
-  print("CONFIG DR", config.task)
-  if config.task == "dmc_cup_catch":
-    real_ball_mass = .065
-    real_actuator_gain = 1
-    real_damping = 3
-    real_friction = 1
-    # real_string_length = .292
-    # real_string_stiffness = 0
-    # real_ball_size = .025
-    print("SETTING REAL DR PARAMS")
-    config.real_dr_params = {
-      "actuator_gain": real_actuator_gain,
-      "ball_mass": real_ball_mass,
-      # "ball_size": real_ball_size,
-      "damping": real_damping,
-      "friction": real_friction,
-      # "string_length": real_string_length,
-      # "string_stiffness": real_string_stiffness,
-    }
-    if dr_option == 'accurate_small_range':
-      range_scale = 0.05
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size, real_ball_size * range_scale),
-        "damping": (real_damping, real_damping * range_scale),
-        "friction": (real_friction, real_friction * range_scale),
-        # "string_length": (real_string_length, real_string_length * range_scale),
-        # "string_stiffness": (1e-6, 0.001),
+  if config.task == 'metaworld_reach':
+      return {}
+  elif config.task == "dmc_cup_catch":
+    print(type(config.simple_randomization))
+    if config.simple_randomization:
+      config.real_dr_params = {
+        "ball_mass": .065
       }
-    elif dr_option == 'accurate_large_range':
-      range_scale = 5
       config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size, real_ball_size * range_scale),
-        "damping": (real_damping, real_damping * range_scale),
-        "friction": (real_friction, real_friction * range_scale),
-        # "string_length": (real_string_length, real_string_length * range_scale),
-        # "string_stiffness": (1e-6, .1),
+        "ball_mass": (config.mass_mean, config.mass_range)  # Real parameter is .065
       }
-    elif dr_option == 'inaccurate_easy_small_range':
-      range_scale = .05
-      scale_factor_low = 0.5
-      scale_factor_high = 1 / scale_factor_low
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
-        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
-        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
-        # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
-        # "string_stiffness": (real_string_stiffness + .01, .1),
-      }
-    elif dr_option == 'inaccurate_easy_large_covering_range':
-      range_scale = 2
-      scale_factor_low = 0.5
-      scale_factor_high = 1 / scale_factor_low
-      config.dr = {  # (mean, range)
-        "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
-        "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
-        # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
-        "damping": (real_damping * scale_factor_low, real_damping * range_scale),
-        "friction": (real_friction * scale_factor_high, real_friction * range_scale),
-        # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
-        # "string_stiffness": (real_string_stiffness + .01, .1),
-      }
-    elif dr_option == 'inaccurate_easy_large_noncovering_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_small_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_large_covering_range':
-      raise NotImplementedError
-    elif dr_option == 'inaccurate_hard_large_noncovering_range':
-      raise NotImplementedError
+      config.sim_params_size = 2
     else:
-      raise ValueError("invalid dr option")
+      real_ball_mass = .065
+      real_actuator_gain = 1
+      real_damping = 3
+      real_friction = 1
+      # real_string_length = .292
+      # real_string_stiffness = 0
+      # real_ball_size = .025
+      config.real_dr_params = {
+        "actuator_gain": real_actuator_gain,
+        "ball_mass": real_ball_mass,
+        # "ball_size": real_ball_size,
+        "damping": real_damping,
+        "friction": real_friction,
+        # "string_length": real_string_length,
+        # "string_stiffness": real_string_stiffness,
+      }
+      config.sim_params_size = 2 * 4
+      if dr_option == 'accurate_small_range':
+        range_scale = 0.05
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size, real_ball_size * range_scale),
+          "damping": (real_damping, real_damping * range_scale),
+          "friction": (real_friction, real_friction * range_scale),
+          # "string_length": (real_string_length, real_string_length * range_scale),
+          # "string_stiffness": (1e-6, 0.001),
+        }
+      elif dr_option == 'accurate_large_range':
+        range_scale = 5
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size, real_ball_size * range_scale),
+          "damping": (real_damping, real_damping * range_scale),
+          "friction": (real_friction, real_friction * range_scale),
+          # "string_length": (real_string_length, real_string_length * range_scale),
+          # "string_stiffness": (1e-6, .1),
+        }
+      elif dr_option == 'inaccurate_easy_small_range':
+        range_scale = .05
+        scale_factor_low = 0.5
+        scale_factor_high = 1 / scale_factor_low
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+          "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+          "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+          # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+          # "string_stiffness": (real_string_stiffness + .01, .1),
+        }
+      elif dr_option == 'inaccurate_easy_large_covering_range':
+        range_scale = 2
+        scale_factor_low = 0.5
+        scale_factor_high = 1 / scale_factor_low
+        config.dr = {  # (mean, range)
+          "actuator_gain": (real_actuator_gain * scale_factor_high, real_actuator_gain * range_scale),
+          "ball_mass": (real_ball_mass * scale_factor_low, real_ball_mass * range_scale),
+          # "ball_size": (real_ball_size * scale_factor_high, real_ball_size * range_scale),
+          "damping": (real_damping * scale_factor_low, real_damping * range_scale),
+          "friction": (real_friction * scale_factor_high, real_friction * range_scale),
+          # "string_length": (real_string_length * scale_factor_low, real_string_length * range_scale),
+          # "string_stiffness": (real_string_stiffness + .01, .1),
+        }
+      elif dr_option == 'inaccurate_easy_large_noncovering_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_small_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_large_covering_range':
+        raise NotImplementedError
+      elif dr_option == 'inaccurate_hard_large_noncovering_range':
+        raise NotImplementedError
+      else:
+        raise ValueError("invalid dr option " + str(dr_option))
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
       "body_mass": (1.0, 1.0) # Real parameter is 2.0
@@ -279,16 +295,19 @@ class Dreamer(tools.Module):
     self._float = prec.global_policy().compute_dtype
     self._strategy = tf.distribute.MirroredStrategy()
     with self._strategy.scope():
-      self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=True, use_real=False)))
-      self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
-        load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-      if config.outer_loop_version in [1, 2]:
+      if self._c.outer_loop_version == 2:
+        self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
+            load_dataset(datadir, self._c, use_sim=True, use_real=False)))
+        self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=True, use_real=True)))
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+            load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+      elif config.outer_loop_version == 1:
+        self._dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c)))
       self._build_model()
 
-  def __call__(self, obs, reset, dataset, state=None, training=True):
+  def __call__(self, obs, reset, dataset=None, state=None, training=True):
     step = self._step.numpy().item()
     tf.summary.experimental.set_step(step)
     if state is not None and reset.any():
@@ -301,10 +320,12 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          self.train(next(dataset), log_images)
+          if self._c.outer_loop_version == 1:
+            self.train(next(self._dataset), log_images)
+          elif self._c.outer_loop_version == 2:
+            self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
-
     action, state = self.policy(obs, state, training)
     if training:
       self._step.assign_add(len(reset) * self._c.action_repeat)
@@ -345,7 +366,6 @@ class Dreamer(tools.Module):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
   def _train(self, data, log_images):
-
     with tf.GradientTape() as model_tape:
       if 'success' in data:
         success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
@@ -361,6 +381,8 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
+      if self._c.outer_loop_version == 1:
+        sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
       reward_obj = reward_pred.log_prob(data['reward'])
@@ -369,6 +391,11 @@ class Dreamer(tools.Module):
       reward_obj = reward_obj * (1 - data['real_world'])
 
       likes.reward = tf.reduce_mean(reward_obj)
+      if self._c.outer_loop_version == 1:
+        sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+        sim_param_obj = sim_param_obj * (1 - data['real_world'])
+
+        likes.sim_params = tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -457,6 +484,8 @@ class Dreamer(tools.Module):
         self._c.stoch_size, self._c.deter_size, self._c.deter_size)
     self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
+    if self._c.outer_loop_version == 1:
+      self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -464,28 +493,36 @@ class Dreamer(tools.Module):
     self._actor = models.ActionDecoder(
         self._actdim, 4, self._c.num_units, self._c.action_dist,
         init_std=self._c.action_init_std, act=act)
-    model_modules = [self._encode, self._dynamics, self._decode, self._reward]
+    if self._c.outer_loop_version == 1:
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
+    elif self._c.outer_loop_version == 2:
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward]
     if self._c.pcont:
       model_modules.append(self._pcont)
     Optimizer = functools.partial(
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
-    dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
-    dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+    if self._c.outer_loop_version == 2:
+      dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+      dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
 
-    self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
-    self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
+      self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
+      self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
-    self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
-    # Do a train step to initialize all variables, including optimizer
-    # statistics. Ideally, we would use batch size zero, but that doesn't work
-    # in multi-GPU mode.
-    self.train(next(self._train_dataset_sim_only))
-    self.train(next(self._train_dataset_combined))
     if self._c.outer_loop_version == 2:
+      self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
+      # Do a train step to initialize all variables, including optimizer
+      # statistics. Ideally, we would use batch size zero, but that doesn't work
+      # in multi-GPU mode.
+    if self._c.outer_loop_version == 1:
+      self.train(next(self._dataset))
+    else:
+      self.train(next(self._train_dataset_sim_only))
+      self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
+
 
   def _exploration(self, action, training):
     if training:
@@ -571,6 +608,33 @@ class Dreamer(tools.Module):
     sys.stdout.flush()
     self._writer.flush()
 
+  def predict_sim_params(self, obs, reset, state=None):
+    step = self._step.numpy().item()
+    tf.summary.experimental.set_step(step)
+    if state is not None and reset.any():
+      mask = tf.cast(1 - reset, self._float)[:, None]
+      state = tf.nest.map_structure(lambda x: x * mask, state)
+
+    if state is None:
+      latent = self._dynamics.initial(len(obs['image']))
+      action = tf.zeros((len(obs['image']), self._actdim), self._float)
+    else:
+      latent, action = state
+    embed = self._encode(preprocess(obs, self._c))
+    if 'state' in obs:
+      state = tf.dtypes.cast(obs['state'], embed.dtype)
+      embed = tf.concat([state, embed], axis=-1)
+    latent, _ = self._dynamics.obs_step(latent, action, embed)
+    feat = self._dynamics.get_feat(latent)
+
+    action = self._actor(feat).mode()
+    action = self._exploration(action, False)
+    state = (latent, action)
+
+
+    sim_param_pred = self._sim_params(feat)
+    return  action, state, sim_param_pred
+
 
 def preprocess(obs, config):
   dtype = prec.global_policy().compute_dtype
@@ -586,12 +650,19 @@ def count_steps(datadir, config):
   return tools.count_episodes(datadir)[1] * config.action_repeat
 
 
-def load_dataset(directory, config, use_sim=True, use_real=True):
-  assert use_sim or use_real
-  episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
+def load_dataset(directory, config, use_sim=None, use_real=None):
+  if config.outer_loop_version == 1:
+    episode = next(tools.load_episodes(directory, 1))
+  else:
+    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
-  generator = lambda: tools.load_episodes(
+  if config.outer_loop_version == 1:
+    generator = lambda: tools.load_episodes(
+      directory, config.train_steps, config.batch_length,
+      config.dataset_balance, real_world_prob=config.real_world_prob)
+  else:
+    generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
       config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
@@ -629,12 +700,19 @@ def summarize_episode(episode, config, datadir, writer, prefix):
 
 def make_env(config, writer, prefix, datadir, store, index=None, real_world=False):
   suite, task = config.task.split('_', 1)
-  if suite == 'dmc':
-    if config.dr is None or real_world: #first index is always real world
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world)
+  if suite == 'metaworld':
+    if config.dr is None or real_world:
+      env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
     else:
-      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state,
+      env = wrappers.MetaWorld(task, dr=config.dr, use_state=config.use_state,
                                      real_world=real_world)
+  elif suite == 'dmc':
+    if config.dr is None or real_world:
+      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
+                                     simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version)
+    else:
+      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size,
+                                     real_world=real_world, simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':
@@ -727,12 +805,13 @@ def main(config):
   dataset = None
   print(f'Prefill dataset with {prefill} simulated steps.')
   tools.simulate(random_agent, train_sim_envs, dataset, prefill / config.action_repeat)
-  if train_real_envs is not None:
-    num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
-    if num_real_prefill == 0:
-      num_real_prefill += 1
-    print(f'Prefill dataset with {num_real_prefill} real world steps.')
-    tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
+  if config.outer_loop_version == 2:
+    if train_real_envs is not None:
+      num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
+      if num_real_prefill == 0:
+        num_real_prefill += 1
+      print(f'Prefill dataset with {num_real_prefill} real world steps.')
+      tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
 
@@ -749,10 +828,13 @@ def main(config):
     print((config.logdir / 'variables.pkl').exists())
   state = None
 
-  # Initially, don't use the real world samples to train the model since we don't know their sim params.
-  # Once the sim params converge, we can change this to True
-  dataset = agent._train_dataset_sim_only
-  dr_list = []
+  if config.outer_loop_version == 2:
+    # Initially, don't use the real world samples to train the model since we don't know their sim params.
+    # Once the sim params converge, we can change this to True
+    dataset = agent._train_dataset_sim_only
+    dr_list = []
+  else:
+    dataset = None
 
   while step < config.steps:
     print('Start evaluation.')
@@ -769,13 +851,14 @@ def main(config):
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
 
-    train_with_real = check_train_with_real(dr_list)
-    if train_with_real:
-      dataset = agent._train_dataset_combined
-      tf.summary.scalar('sim/train_with_real', 1, step)
-    else:
-      dataset = agent._train_dataset_sim_only
-      tf.summary.scalar('sim/train_with_real', 0, step)
+    if config.outer_loop_version == 2:
+      train_with_real = check_train_with_real(dr_list)
+      if train_with_real:
+        dataset = agent._train_dataset_combined
+        tf.summary.scalar('sim/train_with_real', 1, step)
+      else:
+        dataset = agent._train_dataset_sim_only
+        tf.summary.scalar('sim/train_with_real', 0, step)
 
     # Log memory usage
     log_memory(step)
@@ -810,7 +893,35 @@ def main(config):
             writer.flush()
         env.apply_dr()
 
-  for env in train_sim_envs + test_envs:
+    #after train, update sim params
+    elif config.outer_loop_version == 1:
+      real_pred_sim_params = tools.simulate_real(
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      for env in train_sim_envs:
+        if env.dr is not None:
+          for i, param in enumerate(sorted(config.dr.keys())):
+            prev_mean, prev_range = env.dr[param]
+            pred_mean = real_pred_sim_params[i * 2]
+            pred_range = real_pred_sim_params[i * 2 + 1]
+            print(f"Learned {param}", pred_mean, pred_range)
+            alpha = config.alpha
+
+            new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
+            new_range = prev_range * (1 - alpha) + alpha * pred_range
+            env.dr[param] = (new_mean, new_range)
+            with writer.as_default():
+              tf.summary.scalar(f'agent/sim_param/{param}/mean', new_mean, step)
+              tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
+
+              real_dr_param = config.real_dr_params[param]
+              if not real_dr_param == 0:
+                tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (new_mean - real_dr_param) / real_dr_param,
+                                  step)
+              writer.flush()
+
+          env.apply_dr()
+
+  for env in train_sim_envs + train_real_envs + test_envs:
     env.close()
   if train_real_envs is not None:
     for env in train_real_envs:
