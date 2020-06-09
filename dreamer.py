@@ -148,6 +148,7 @@ def define_config():
 
 def config_dr(config,):
   dr_option = config.dr_option
+  print("CONFIG DR", config.task)
   if config.task == "dmc_cup_catch":
     real_ball_mass = .065
     real_actuator_gain = 1
@@ -156,7 +157,8 @@ def config_dr(config,):
     # real_string_length = .292
     # real_string_stiffness = 0
     # real_ball_size = .025
-    config.dr_real_params = {
+    print("SETTING REAL DR PARAMS")
+    config.real_dr_params = {
       "actuator_gain": real_actuator_gain,
       "ball_mass": real_ball_mass,
       # "ball_size": real_ball_size,
@@ -312,8 +314,8 @@ class Dreamer(tools.Module):
   @tf.function
   def policy(self, obs, state, training):
     if state is None:
-      latent = self._dynamics.initial(len(obs['image']))
-      action = tf.zeros((len(obs['image']), self._actdim), self._float)
+      latent = self._dynamics.initial(obs['image'].shape[0])
+      action = tf.zeros((obs['image'].shape[0], self._actdim), self._float)
     else:
       latent, action = state
     embed = self._encode(preprocess(obs, self._c))
