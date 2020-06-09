@@ -7,14 +7,136 @@ import traceback
 import gym
 import numpy as np
 from PIL import Image
+import cv2
 
 from environments.reach import FetchReachEnv
 from environments.push import FetchPushEnv
 from environments.slide import FetchSlideEnv
-from metaworld.benchmarks import ML1
+
+class PegTask:
+  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
+    from envs import Insert_XArm7Pos
+    self._env = Insert_XArm7Pos()
+    self._size = size
+    self.real_world = real_world
+    self.use_state = use_state
+    self.dr = dr
+
+    self.apply_dr()
+
+  def apply_dr(self):
+    pass
+
+  @property
+  def observation_space(self):
+    spaces = {}
+    if self.use_state:
+      spaces['state'] = self._env.observation_space
+    spaces['image'] = gym.spaces.Box(
+      0, 255, self._size + (3,), dtype=np.uint8)
+    return gym.spaces.Dict(spaces)
+
+  @property
+  def action_space(self):
+    return self._env.action_space
+
+  def step(self, action):
+    state_obs, reward, done, info = self._env.step(action)
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs
+    obs['image'] = self.render()
+    info['discount'] = 1.0
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 1.0 if reward > 0 else 0.0
+    return obs, reward, done, info
+
+  def get_dr(self):
+    return np.array([0])  # TODO: add this!
+
+  def reset(self):
+    self.apply_dr()
+    state_obs = self._env.reset()
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs
+    obs['image'] = self.render()
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 0.0
+    return obs
+
+  def render(self, *args, **kwargs):
+    if kwargs.get('mode', 'rgb_array') != 'rgb_array':
+      raise ValueError("Only render mode 'rgb_array' is supported.")
+    img = self._env.render(mode='rgb_array')
+    return cv2.resize(img, self._size)
+
+class Kitchen:
+  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
+    import adept_envs
+    self._env = gym.make('kitchen_relax-v1')
+    self._size = size
+    self.real_world = real_world
+    self.use_state = use_state
+    self.dr = dr
+
+    self.apply_dr()
+
+  def apply_dr(self):
+    pass
+
+  @property
+  def observation_space(self):
+    spaces = {}
+    if self.use_state:
+      spaces['state'] = self._env.observation_space
+    spaces['image'] = gym.spaces.Box(
+      0, 255, self._size + (3,), dtype=np.uint8)
+    return gym.spaces.Dict(spaces)
+
+  @property
+  def action_space(self):
+    return self._env.action_space
+
+  def step(self, action):
+    state_obs, reward, done, info = self._env.step(action)
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs[:9]  # Only include robot state
+    obs['image'] = self.render()
+    info['discount'] = 1.0
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 1.0 if reward > 0 else 0.0
+    return obs, reward, done, info
+
+  def get_dr(self):
+    return np.array([0])  # TODO: add this!
+
+  def reset(self):
+    self.apply_dr()
+    state_obs = self._env.reset()
+    obs = {}
+    if self.use_state:
+      obs['state'] = state_obs[:9]  # Only include robot state
+    obs['image'] = self.render()
+    obs['real_world'] = 1.0 if self.real_world else 0.0
+    obs['dr_params'] = self.get_dr()
+    obs['success'] = 0.0
+    return obs
+
+  def render(self, *args, **kwargs):
+    if kwargs.get('mode', 'rgb_array') != 'rgb_array':
+      raise ValueError("Only render mode 'rgb_array' is supported.")
+    img = self._env.render(mode='rgb_array')
+    cropped = img[750:1750, 1000:2000]
+    return cv2.resize(cropped, self._size)
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
+    from metaworld.benchmarks import ML1
     self._env = ML1.get_train_tasks(name + "-v1")
     self._size = size
     self.real_world = real_world

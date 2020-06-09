@@ -8,6 +8,7 @@ import sys
 import time
 import shutil
 import psutil
+import adept_envs
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -90,7 +91,7 @@ def define_config():
   config.gpu_growth = True
   config.precision = 32
   # Environment.
-  config.task = 'metaworld_sweep'
+  config.task = 'dmc_cup_catch'
   config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
@@ -141,7 +142,7 @@ def define_config():
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2  # How often we should sample from the real world
 
-  config.outer_loop_version = 2  # 0= no outer loop, 1 = regression, 2 = conditioning
+  config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.5
 
   return config
@@ -158,13 +159,14 @@ def config_dr(config,):
     # real_string_length = .292
     # real_string_stiffness = 0
     # real_ball_size = .025
-    config.dr_real_params = {
+    config.real_dr_params = {
       "actuator_gain": real_actuator_gain,
       "ball_mass": real_ball_mass,
       # "ball_size": real_ball_size,
       "damping": real_damping,
       "friction": real_friction,
       # "string_length": real_string_length,
+      # "string_stiffness": real_string_stiffness,
       # "string_stiffness": real_string_stiffness,
     }
     if dr_option == 'accurate_small_range':
@@ -629,7 +631,17 @@ def summarize_episode(episode, config, datadir, writer, prefix):
 
 def make_env(config, writer, prefix, datadir, store, index=None, real_world=False):
   suite, task = config.task.split('_', 1)
-  if suite == 'metaworld':
+  if suite == 'peg':
+    if config.dr is None or real_world:
+      env = wrappers.PegTask(use_state=config.use_state, real_world=real_world)
+    else:
+      env = wrappers.PegTask(dr=config.dr, use_state=config.use_state, real_world=real_world)
+  elif suite == 'kitchen':
+    if config.dr is None or real_world:
+      env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world)
+    else:
+      env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world)
+  elif suite == 'metaworld':
     if config.dr is None or real_world:
       env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
     else:
