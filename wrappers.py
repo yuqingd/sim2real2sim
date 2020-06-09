@@ -111,6 +111,7 @@ class DeepMindControl:
     if self.simple_randomization:
       mean, range = self.dr["ball_mass"]
       eps = 1e-3
+      range = max(range, eps)
       self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean - range, high=mean + range), eps)
       self.sim_params.append(mean)
       self.sim_params.append(range)
@@ -118,12 +119,14 @@ class DeepMindControl:
       if "actuator_gain" in self.dr:
         mean, range = self.dr["actuator_gain"]
         eps = 1e-3
+        range = max(range, eps)
         self._env.physics.model.actuator_gainprm[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
         self.sim_params.append(mean)
         self.sim_params.append(range)
       if "ball_mass" in self.dr:
         mean, range = self.dr["ball_mass"]
         eps = 1e-3
+        range = max(range, eps)
         self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
         self.sim_params.append(mean)
         self.sim_params.append(range)
@@ -134,12 +137,14 @@ class DeepMindControl:
       if "damping" in self.dr:
         mean, range = self.dr["damping"]
         eps = 1e-3
+        range = max(range, eps)
         self._env.physics.model.dof_damping[:2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
         self.sim_params.append(mean)
         self.sim_params.append(range)
       if "friction" in self.dr:
         mean, range = self.dr["friction"]
         eps = 1e-6
+        range = max(range, eps)
         # Only adjust sliding friction
         self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
         self.sim_params.append(mean)

@@ -899,19 +899,26 @@ def main(config):
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
       for env in train_sim_envs:
         if env.dr is not None:
-          if config.simple_randomization:
-            prev_mean, prev_range = env.dr["ball_mass"]
-            pred_mean = real_pred_sim_params[0]
-            pred_range = real_pred_sim_params[1]
+          for i, param in enumerate(sorted(config.dr.keys())):
+            prev_mean, prev_range = env.dr[param]
+            pred_mean = real_pred_sim_params[i * 2]
+            pred_range = real_pred_sim_params[i * 2 + 1]
+            print(f"Learned {param}", pred_mean, pred_range)
             alpha = config.alpha
 
-            new_mean = prev_mean*(1-alpha) + alpha*pred_mean
-            new_range = prev_range*(1-alpha) + alpha*pred_range
-            env.dr["ball_mass"] = (new_mean, new_range)
+            new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
+            new_range = prev_range * (1 - alpha) + alpha * pred_range
+            env.dr[param] = (new_mean, new_range)
             with writer.as_default():
-              tf.summary.scalar('agent/sim_param/mass/mean', new_mean, step)
-              tf.summary.scalar('agent/sim_param/mass/range', new_range, step)
+              tf.summary.scalar(f'agent/sim_param/{param}/mean', new_mean, step)
+              tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
+
+              real_dr_param = config.real_dr_params[param]
+              if not real_dr_param == 0:
+                tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (new_mean - real_dr_param) / real_dr_param,
+                                  step)
               writer.flush()
+
           env.apply_dr()
 
   for env in train_sim_envs + train_real_envs + test_envs:
