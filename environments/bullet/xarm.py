@@ -115,11 +115,11 @@ class XArm6Env(gym.Env):
                                                             roll=0,
                                                             upAxisIndex=2)
         proj_matrix = p.computeProjectionMatrixFOV(fov=60,
-                                                     aspect=float(960) /720,
+                                                     aspect=float(self.img_shape[0]) /self.img_shape[1],
                                                      nearVal=0.1,
                                                      farVal=100.0)
-        (_, _, px, _, _) = p.getCameraImage(width=960,
-                                              height=720,
+        (_, _, px, _, _) = p.getCameraImage(width=self.img_shape[0],
+                                              height=self.img_shape[1],
                                               viewMatrix=view_matrix,
                                               projectionMatrix=proj_matrix,
                                               renderer=p.ER_BULLET_HARDWARE_OPENGL)
