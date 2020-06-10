@@ -29,7 +29,7 @@ class XArm6Env(gym.Env):
         xarm_path = os.path.dirname(os.path.realpath(__file__))
 
         self.planeUid = p.loadURDF(os.path.join(urdfRootPath, "plane.urdf"), basePosition=[0, 0, -0.65])
-        self.xarmUid = p.loadURDF(os.path.join(xarm_path, "assets/xarm7_with_gripper.urdf"), useFixedBase=True)
+        self.xarmUid = p.loadURDF(os.path.join(xarm_path, "xarm_description/urdf/xarm7_with_gripper.urdf"), useFixedBase=True)
 
         self.num_joints = len(p.getNumJoints(self.xarmUid))
         self.end_effector_id = 11
