@@ -1,16 +1,16 @@
 #! /bin/bash
 #SBATCH --output=/checkpoint/dpathak/sim2real2sim/slurm_logs/%x.out
 #SBATCH --error=/checkpoint/dpathak/sim2real2sim/slurm_logs/%x.err
-#SBATCH --partition=uninterrupted
+#SBATCH --partition=learnfair
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=10
 #SBATCH --signal=B:USR1@60
 #SBATCH --open-mode=append
-#SBATCH --time=4000
-#SBATCH --mem=42G
-#SBATCH --comment="NeurIPS deadline 06/03"
+#SBATCH --time=3000
+#SBATCH --mem=38G
+#SBATCH --comment="CoRL deadline 07/28"
 
 trap_handler () {
    echo "Caught signal: " $1
@@ -44,11 +44,14 @@ export MUJOCO_PY_MJKEY_PATH=/private/home/dpathak/.mujoco/mjkey.txt
 export MUJOCO_PY_MJPRO_PATH=/private/home/dpathak/.mujoco/mujoco200
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/private/home/dpathak/.mujoco/mujoco200/bin
 
+# module add doesn't include CUPTI path and there is some bug in cudnn lib64 path, so have to be added manually for TF2
+export LD_LIBRARY_PATH=/public/apps/cudnn/v7.6.5.32-cuda.10.1/lib64/:/public/apps/cuda/10.1/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
 # setup for modules and environments
 source deactivate
 module purge
-module load cuda/10.0
-module load cudnn/v7.4-cuda.10.0
+module load cuda/10.1
+module load cudnn/v7.6.5.32-cuda.10.1
 module load anaconda3
 source activate sim2real2simVenv
 
