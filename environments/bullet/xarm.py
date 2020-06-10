@@ -21,9 +21,9 @@ class XArm6Env(gym.Env):
 
         obs_shape = 5 # 2 for fingers, 3 for end effector position
         act_shape = 4 # 1 for fingers, 3 for end effector position
-        img_shape = (64, 64)
+        self.img_shape = (64, 64)
         self.action_space = spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
-        self.observation_space = self.get_observation_space(img_shape, obs_shape, robot_state)
+        self.observation_space = self.get_observation_space(self.img_shape, obs_shape, robot_state)
 
         urdfRootPath = pd.getDataPath()
         xarm_path = os.path.dirname(os.path.realpath(__file__))
@@ -31,10 +31,10 @@ class XArm6Env(gym.Env):
         self.planeUid = p.loadURDF(os.path.join(urdfRootPath, "plane.urdf"), basePosition=[0, 0, -0.65])
         self.xarmUid = p.loadURDF(os.path.join(xarm_path, "xarm_description/urdf/xarm7_with_gripper.urdf"), useFixedBase=True)
 
-        self.num_joints = len(p.getNumJoints(self.xarmUid))
-        self.end_effector_id = 11
-        self.finger1_id = 9
-        self.finger2_id = 10
+        self.num_joints = len(p.getNumJoints(self.xarmUid)) #15
+        self.end_effector_id = 8 #gripper fix
+        self.finger1_id = 10 #left finger joint
+        self.finger2_id = 13 #right finger joint
         self.num_dofs = 7
 
         self.rest_pos = [0] * self.num_joints #TODO: Update with actual reset positions
@@ -125,7 +125,7 @@ class XArm6Env(gym.Env):
                                               renderer=p.ER_BULLET_HARDWARE_OPENGL)
 
         rgb_array = np.array(px, dtype=np.uint8)
-        rgb_array = np.reshape(rgb_array, (720,960, 4))
+        rgb_array = np.reshape(rgb_array, self.img_shape + (4, ))
 
         rgb_array = rgb_array[:, :, :3]
         return rgb_array
