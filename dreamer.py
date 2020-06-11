@@ -8,7 +8,6 @@ import sys
 import time
 import shutil
 import psutil
-import adept_envs
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -303,7 +302,7 @@ class Dreamer(tools.Module):
           load_dataset(datadir, self._c, use_sim=True, use_real=True)))
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c, use_sim=False, use_real=True)))
-      elif config.outer_loop_version == 1:
+      else:
         self._dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c)))
       self._build_model()
@@ -496,7 +495,7 @@ class Dreamer(tools.Module):
         init_std=self._c.action_init_std, act=act)
     if self._c.outer_loop_version == 1:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
-    elif self._c.outer_loop_version == 2:
+    elif self._c.outer_loop_version in [0, 2]:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward]
     if self._c.pcont:
       model_modules.append(self._pcont)
@@ -517,7 +516,7 @@ class Dreamer(tools.Module):
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
-    if self._c.outer_loop_version == 1:
+    if self._c.outer_loop_version in [0, 1]:
       self.train(next(self._dataset))
     else:
       self.train(next(self._train_dataset_sim_only))

@@ -12,6 +12,7 @@ import cv2
 from environments.reach import FetchReachEnv
 from environments.push import FetchPushEnv
 from environments.slide import FetchSlideEnv
+from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import KitchenTaskRelaxV1
 
 class PegTask:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
@@ -75,8 +76,7 @@ class PegTask:
 
 class Kitchen:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
-    import adept_envs
-    self._env = gym.make('kitchen_relax-v1')
+    self._env = KitchenTaskRelaxV1()
     self._size = size
     self.real_world = real_world
     self.use_state = use_state
@@ -104,7 +104,7 @@ class Kitchen:
     state_obs, reward, done, info = self._env.step(action)
     obs = {}
     if self.use_state:
-      obs['state'] = state_obs[:9]  # Only include robot state
+      obs['state'] = state_obs[:13]  # Only include robot state
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
@@ -120,7 +120,7 @@ class Kitchen:
     state_obs = self._env.reset()
     obs = {}
     if self.use_state:
-      obs['state'] = state_obs[:9]  # Only include robot state
+      obs['state'] = state_obs[:13]  # Only include robot state
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
