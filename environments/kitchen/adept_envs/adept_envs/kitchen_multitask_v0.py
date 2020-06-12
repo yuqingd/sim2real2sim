@@ -40,7 +40,7 @@ class KitchenV0(robot_env.RobotEnv):
     N_DOF_ROBOT = 13
     N_DOF_OBJECT = 21
 
-    def __init__(self, robot_params={}, frame_skip=10): # TODO: consider decreasing this  and/or removing it when end-effector control is added
+    def __init__(self, robot_params={}, frame_skip=1):
         self.goal_concat = True
         self.obs_dict = {}
         self.robot_noise_ratio = 0.1  # 10% as per robot_config specs
