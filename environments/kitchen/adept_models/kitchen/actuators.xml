@@ -1,0 +1,17 @@
+<mujocoinclude>
+    <actuator>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint1" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint2" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint3" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint4" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint5" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint6" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="joint7" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="drive_joint" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="left_finger_joint" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="left_inner_knuckle_joint" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="right_outer_knuckle_joint" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="right_finger_joint" gear="150"/>
+        <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="right_inner_knuckle_joint" gear="150"/>
+    </actuator>
+</mujocoinclude>
