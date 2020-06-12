@@ -58,7 +58,7 @@ class KitchenV0(robot_env.RobotEnv):
                 azimuth=-66,
                 elevation=-65,
             ),
-        ) asdf
+        )
 
         # For the microwave kettle slide hinge
         self.init_qpos = np.array([ 1.48388023e-01, -1.76848573e+00,  1.84390296e+00, -2.47685760e+00,
