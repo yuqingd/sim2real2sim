@@ -76,7 +76,7 @@ class PegTask:
     return cv2.resize(img, self._size)
 
 class Kitchen:
-  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.5): #  TODO: are these defaults reasonable?
+  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.05): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self._size = size
     self.real_world = real_world
@@ -110,7 +110,7 @@ class Kitchen:
     end_effector = 'end_effector'
     end_effector_index = 3
     xyz_pos = self._env.sim.data.site_xpos[end_effector_index] + xyz_diff
-    qpos1 = self._env.sim.data.qpos
+    qpos1 = self._env.sim.data.qpos.copy()
 
     gripper_pos = action[3:]  # TODO: Figure out how to set this!!  @Yuqing, it looks like there are 5 joints. How did you set them all with one gripper action?
 
@@ -127,14 +127,14 @@ class Kitchen:
     qpos_low = self._env.model.jnt_range[:, 0]
     qpos_high = self._env.model.jnt_range[:, 1]
     update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-    # update[-len(gripper_pos):] = gripper_pos
+    update[-len(gripper_pos):] = gripper_pos
 
     self._env.data.ctrl[:] = update
     self._env.sim.forward()  # TODO: figure out why Joey's code doesn't have this/whether this is actually necessary.
     for _ in range(self.step_repeat):
       self._env.sim.step()
-    qpos2 = self._env.sim.data.qpos
-    diff = qpos2 - qpos1
+    qpos2 = self._env.sim.data.qpos.copy()
+    diff = qpos2 - qpos1 # sanity check that this number is not 0
     diff2 = qpos2 - qpos
     diff3 = qpos1 - qpos
 
