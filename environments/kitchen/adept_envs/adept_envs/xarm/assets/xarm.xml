@@ -2,6 +2,7 @@
     <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="link_base" />
     <geom type="mesh" rgba="1 1 1 1" mesh="link_base" />
     <body name="link1" pos="0 0 0.267">
+<!--         childclass="robot_default"-->
         <camera name="track" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
 
         <inertial pos="-0.0042142 0.02821 -0.0087788" quat="0.917781 -0.277115 0.0606681 0.277858" mass="0.42603" diaginertia="0.00144551 0.00137757 0.000823511" />
@@ -34,6 +35,7 @@
                             <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="link6" />
                             <geom type="mesh" rgba="1 1 1 1" mesh="link6" />
                             <body name="link7" pos="0.076 0.097 0" quat="0.707105 -0.707108 0 0">
+                                <site name='end_effector' pos='0 0 0'/>
                                 <inertial pos="-0.000420033 -0.00287433 0.0257078" quat="0.999372 -0.0349129 -0.00605634 0.000551744" mass="0.85624" diaginertia="0.00137671 0.00118744 0.000514968" />
                                 <joint name="joint7" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="2" frictionloss="1" />
                                 <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.753 0.753 0.753 1" mesh="link7" />

@@ -33,7 +33,7 @@
     <map force="0.1" fogend="5" />
     </visual>
 
-    <compiler inertiafromgeom='auto' inertiagrouprange='3 5' angle="radian"
+    <compiler inertiafromgeom='true' inertiagrouprange='3 5' angle="radian"
               meshdir="../../../../adept_models/kitchen"
               texturedir="../../../../adept_models/kitchen"/>
 
@@ -41,6 +41,13 @@
         <weld body1="vive_controller" body2="world" solref="0.02 1" solimp=".7 .95 0.050"/>
     </equality>
 
+    <option integrator="RK4" timestep="0.01"/>
+<!--    <default>-->
+<!--        <default class="robot_default">-->
+<!--            <joint armature="1" damping="1" limited="true"/>-->
+<!--            <geom conaffinity="0" condim="3" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>-->
+<!--        </default>-->
+<!--    </default>-->
     <asset>
         <mesh name="link_base" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link_base.STL" />
         <mesh name="link1" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link1.STL" />
