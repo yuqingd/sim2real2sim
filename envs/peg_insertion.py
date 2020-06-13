@@ -34,8 +34,7 @@ class PegInsert(Env):
 
     def step(self, action):
         self.do_simulation(action, self.frame_skip)
-        # obs = self._get_obs()
-        obs = np.array([0,1,2,3]) # TODO: remove!
+        obs = self._get_obs()
         #reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], None)
         #dist_to_insertion = np.linalg.norm(obs['achieved_goal'] - obs['desired_goal'])
         ref_pt = obs[-3:]
