@@ -47,7 +47,7 @@ class Robot(base_robot.BaseRobot):
         self._read_specs_from_config(robot_configs=self.calibration_path)
 
 
-        # Robot: Handware
+        # Robot: Handware  # TODO: eventually change this to xarm
         if self.is_hardware:
 
             if franka_interface is '':
@@ -75,6 +75,7 @@ class Robot(base_robot.BaseRobot):
 
     # read specs from the calibration file
     def _read_specs_from_config(self, robot_configs):
+        return
         root, root_name = get_config_root_node(config_file_name=robot_configs)
         self.robot_name = root_name[0]
         self.robot_mode = np.zeros(self.n_dofs, dtype=int)
@@ -151,7 +152,8 @@ class Robot(base_robot.BaseRobot):
             self.time = env.sim.data.time
 
             # Simulate observation noise
-            if not env.initializing:
+            if False: #TODO: consider re-adding this if we ever want noise.
+            # if not env.initializing:
                 qp += robot_noise_ratio*self.robot_pos_noise_amp[:self.n_jnt]*env.np_random.uniform(low=-1., high=1., size=self.n_jnt)
                 qv += robot_noise_ratio*self.robot_vel_noise_amp[:self.n_jnt]*env.np_random.uniform(low=-1., high=1., size=self.n_jnt)
                 if self.has_obj:
