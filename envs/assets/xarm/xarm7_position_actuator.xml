@@ -55,7 +55,7 @@
         <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint3" kp="15" name="pos_j3" forcelimited="true" forcerange="-100 100"/>
         <position ctrllimited="true" ctrlrange="-0.19 3.92" joint="joint4" kp="10" name="pos_j4" forcelimited="true" forcerange="-30 30"/>
         <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint5" kp="5" name="pos_j5" forcelimited="true" forcerange="-30 30"/>
-        <position ctrllimited="true" ctrlrange="-1.69 3.14" joint="joint6" kp="2" name="pos_j6" forcelimited="true" forcerange="-30 30"/> -->
+        <position ctrllimited="true" ctrlrange="-1.69 3.14" joint="joint6" kp="2" name="pos_j6" forcelimited="true" forcerange="-30 30"/>
         <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint7" kp="5" name="pos_j7" forcelimited="true" forcerange="-30 30"/>
     </actuator>
 </mujoco>
