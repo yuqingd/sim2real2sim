@@ -53,6 +53,8 @@ while True:
             env.sim.step()
             break
 
+        diff_again = env.sim.data.qpos - orig_qpos
+
     # if we get a valid set of joints within the correct joint limits, then (in theory) if we ever get here, we should
     # be able to look at the current qpos and check that it matches the orig_qpos
     if success and high_pass and low_pass:
@@ -60,6 +62,7 @@ while True:
 
 qpos_final = env.sim.data.qpos
 diff = qpos_final - orig_qpos
+
 
 
 
