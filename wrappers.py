@@ -109,7 +109,7 @@ class Kitchen:
     return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
 
   def step(self, action):
-    xyz_diff = action[:3] * self.step_size * 100 # TODO: remove!
+    xyz_diff = action[:3] * self.step_size
 
 
     xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
@@ -121,24 +121,23 @@ class Kitchen:
     qpos = self._env.sim.data.qpos
 
     if success is False:
-      print("Failure!")
-      return  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
+      print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
+    else:
+      action_dim = len(self._env.data.ctrl)
+      qpos_low = self._env.model.jnt_range[:, 0]
+      qpos_high = self._env.model.jnt_range[:, 1]
+      update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
 
-    action_dim = len(self._env.data.ctrl)
-    qpos_low = self._env.model.jnt_range[:, 0]
-    qpos_high = self._env.model.jnt_range[:, 1]
-    update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+      if self.use_gripper:
+        # TODO: almost certainly not the right way to implement this
+        gripper_pos = action[3:]
+        update[-len(gripper_pos):] = gripper_pos
+        raise NotImplementedError
 
-    if self.use_gripper:
-      # TODO: almost certainly not the right way to implement this
-      gripper_pos = action[3:]
-      update[-len(gripper_pos):] = gripper_pos
-      raise NotImplementedError
-
-    self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    for _ in range(self.step_repeat):
-      self._env.sim.step()
+      self._env.data.ctrl[:] = update
+      self._env.sim.forward()
+      for _ in range(self.step_repeat):
+        self._env.sim.step()
 
     reward = 0  # TODO: add in tasks, then add in reward func
     done = 0  # TODO: add in tasks, then add in done
