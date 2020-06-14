@@ -25,7 +25,7 @@
     <include file="../../../../adept_models/kitchen/assets/hingecabinet_asset.xml"/>
     <include file="../../../../adept_models/kitchen/assets/microwave_asset.xml"/>
     <include file="../../../../adept_models/kitchen/assets/kettle_asset.xml"/>
-    <include file="../../../../adept_models/kitchen/actuators.xml"/>
+<!--    <include file="../../../../adept_models/kitchen/actuators.xml"/>-->
 
     <visual>
     <global offwidth="2560" offheight="1920" />
@@ -79,7 +79,7 @@
         <!-- Robot -->
         <body pos='0. 0 1.8' euler='0 0 1.57'>
             <geom type='cylinder' size='.120 .90' pos='-.04 0 -0.90' class='panda_viz'/>
-            <include file="xarm.xml"/>
+            <include file="bullet/xarm_description/urdf/xarm7_with_gripper.xml"/>
         </body>
 
         <body name='desk' pos='-0.1 0.75 0'>
