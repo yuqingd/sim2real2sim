@@ -41,7 +41,7 @@
         <weld body1="vive_controller" body2="world" solref="0.02 1" solimp=".7 .95 0.050"/>
     </equality>
 
-    <option integrator="RK4" timestep="0.01"/>
+<!--    <option integrator="RK4" timestep="0.01"/>-->
 <!--    <default>-->
 <!--        <default class="robot_default">-->
 <!--            <joint armature="1" damping="1" limited="true"/>-->
