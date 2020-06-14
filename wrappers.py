@@ -85,6 +85,8 @@ class Kitchen:
     self.step_repeat = step_repeat
     self.step_size = step_size
     self.use_gripper = use_gripper
+    self.end_effector_name = 'end_effector'
+    self.end_effector_index = 3
 
     self.apply_dr()
 
@@ -106,20 +108,21 @@ class Kitchen:
     act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
     return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
 
-  def step(self, action): # TODO: add back in if case for if self.use_state...
-    xyz_diff = action[:3] * self.step_size
-    end_effector = 'end_effector'
-    end_effector_index = 3
-    xyz_pos = self._env.sim.data.site_xpos[end_effector_index] + xyz_diff
+  def step(self, action):
+    xyz_diff = action[:3] * self.step_size * 100 # TODO: remove!
+
+
+    xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
 
     physics = self._env.sim
-    ikresult = qpos_from_site_pose(physics, end_effector, target_pos=xyz_pos)
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos)  # TODO: possibly specify which joints to move to reach this??
     qpos = ikresult.qpos
     success = ikresult.success
+    qpos = self._env.sim.data.qpos
 
     if success is False:
       print("Failure!")
-      return  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this. We can ask Joey how he did
+      return  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
 
     action_dim = len(self._env.data.ctrl)
     qpos_low = self._env.model.jnt_range[:, 0]
@@ -130,9 +133,10 @@ class Kitchen:
       # TODO: almost certainly not the right way to implement this
       gripper_pos = action[3:]
       update[-len(gripper_pos):] = gripper_pos
+      raise NotImplementedError
 
     self._env.data.ctrl[:] = update
-    self._env.sim.forward()  # TODO: figure out why Joey's code doesn't have this/whether this is actually necessary.
+    self._env.sim.forward()
     for _ in range(self.step_repeat):
       self._env.sim.step()
 
@@ -140,6 +144,10 @@ class Kitchen:
     done = 0  # TODO: add in tasks, then add in done
     info = {}
     obs = {}
+    if self.use_state:
+      obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
+      if self.use_gripper:
+        obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
