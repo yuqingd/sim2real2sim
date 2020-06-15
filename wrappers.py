@@ -92,6 +92,7 @@ class Kitchen:
     self.use_gripper = use_gripper
     self.end_effector_name = 'end_effector'
     self.end_effector_index = 3
+    self.arm_njnts = 7
 
     self.apply_dr()
 
@@ -114,47 +115,35 @@ class Kitchen:
     return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
 
   def step(self, action):
-    if self.relative_positions:
-      xyz_diff = action[:3] * self.step_size
-      xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
-    else:
-      xyz_pos = action[:3]
+    xyz_pos = action[:3]
+
 
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
-    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
+    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
+    qpos = ikresult.qpos
+    success = ikresult.success
 
-    for i in range(self.ik_repeat):
-
-      dist = np.linalg.norm(self._env.sim.data.site_xpos[self.end_effector_index] - xyz_pos)
-      if dist < self.target_error_threshold:
-        break
+    if success is False:
+      print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
+    else:
+      action_dim = len(self._env.data.ctrl)
+      qpos_low = self._env.model.jnt_range[:, 0]
+      qpos_high = self._env.model.jnt_range[:, 1]
+      update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+      if self.use_gripper:
+        # TODO: almost certainly not the right way to implement this
+        gripper_pos = action[3:]
+        update[-len(gripper_pos):] = gripper_pos
+        raise NotImplementedError
       else:
-        if i % 20 == 0:
-          print("dist", dist, xyz_pos, self._env.sim.data.site_xpos[self.end_effector_index])  # TODO: remove after done debugging
+        update[self.arm_njnts + 1:] = 0 #no gripper movement
 
-      ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)
-      qpos = ikresult.qpos
-      success = ikresult.success
-
-      if success is False:
-        print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
-      else:
-        action_dim = len(self._env.data.ctrl)
-        qpos_low = self._env.model.jnt_range[:, 0]
-        qpos_high = self._env.model.jnt_range[:, 1]
-        update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-
-        if self.use_gripper:
-          # TODO: almost certainly not the right way to implement this
-          gripper_pos = action[3:]
-          update[-len(gripper_pos):] = gripper_pos
-          raise NotImplementedError
-
-        self._env.data.ctrl[:] = update
-        self._env.sim.forward()
-        for _ in range(self.step_repeat):
-          self._env.sim.step()
+      self._env.data.ctrl[:] = update
+    self._env.sim.forward()
+    for _ in range(self.step_repeat):
+      self._env.sim.step()
 
     reward = 0  # TODO: add in tasks, then add in reward func
     done = 0  # TODO: add in tasks, then add in done

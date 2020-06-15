@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Qt5Agg')
+
 import numpy as np
 import wrappers
 import moviepy.editor as mpy
@@ -17,24 +20,20 @@ for i in range(3):
     offset[i] = .05  # Will be scaled down by the step size
     frames = [o['image']]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
-     # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
-
-    # Update the target pos 50x.  Ideally, the agent would be able to achieve each intermediate,
-    # and the arm would travelin a straight line.
-    for k in range(50):
-        print(k)
-        target = env._env.sim.data.site_xpos[end_effector_index].copy() + offset
-
-        o, _, _, _ = env.step(target)
-        # plt.imshow(env._env.render(mode='rgb_array'))
+    a = np.zeros((3,))
+    a[i] = -10  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
+    xyz_diff = a * env.step_size
+    a = env._env.sim.data.site_xpos[env.end_effector_index] + xyz_diff
+    for _ in range(100):
+        o, _, _, _ = env.step(a)
+        # env._env.step(np.zeros((13,)))
+        # plt.imshow(env._env.render(mode='rgb_array')):q:qq
         # plt.show()
         frames.append(o['image'])
         positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
-    fps = 20
-    target_achieved = env._env.sim.data.site_xpos[end_effector_index].copy()
+    fps = 10
     clip = mpy.ImageSequenceClip(frames, fps=fps)
     clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
-
     # We'd expect to see a graph where all positions stay the same except the one along which we're moving.
     for j in range(3):
         data = [p[j] for p in positions]
