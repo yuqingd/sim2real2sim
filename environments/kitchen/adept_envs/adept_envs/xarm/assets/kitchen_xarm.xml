@@ -14,15 +14,15 @@
 
 <mujoco model="franka_mocap_studyTable_buttons">
 
-    <default>
-        <joint armature="1" damping="1" limited="true"/>
-        <geom conaffinity="1" condim="3" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>
-    </default>
+<!--    <default>-->
+<!--        <joint armature="1" damping="1" limited="true"/>-->
+<!--        <geom conaffinity="1" condim="3" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>-->
+<!--    </default>-->
 
     <size njmax='1000' nconmax='1000'/>
 
     <include file="../../../../adept_models/scenes/basic_scene.xml"/>
-    <include file="../../../../third_party/franka/assets/assets.xml"/>
+    <include file="assets.xml"/>
     <include file="../../../../adept_models/kitchen/assets/oven_asset.xml"/>
     <include file="../../../../adept_models/kitchen/assets/counters_asset.xml"/>
     <include file="../../../../adept_models/kitchen/assets/backwall_asset.xml"/>
@@ -31,6 +31,7 @@
     <include file="../../../../adept_models/kitchen/assets/microwave_asset.xml"/>
     <include file="../../../../adept_models/kitchen/assets/kettle_asset.xml"/>
     <include file="../../../../adept_models/kitchen/actuators.xml"/>
+
 
     <visual>
     <global offwidth="2560" offheight="1920" />
@@ -48,23 +49,7 @@
 
 <!--    <option integrator="RK4" timestep="0.01"/>-->
 
-    <asset>
-        <mesh name="link_base" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link_base.STL" />
-        <mesh name="link1" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link1.STL" />
-        <mesh name="link2" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link2.STL" />
-        <mesh name="link3" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link3.STL" />
-        <mesh name="link4" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link4.STL" />
-        <mesh name="link5" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link5.STL" />
-        <mesh name="link6" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link6.STL" />
-        <mesh name="link7" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link7.STL" />
-        <mesh name="base_link" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/base_link.STL" />
-        <mesh name="left_outer_knuckle" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/left_outer_knuckle.STL" />
-        <mesh name="left_finger" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/left_finger.STL" />
-        <mesh name="left_inner_knuckle" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/left_inner_knuckle.STL" />
-        <mesh name="right_outer_knuckle" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/right_outer_knuckle.STL" />
-        <mesh name="right_finger" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/right_finger.STL" />
-        <mesh name="right_inner_knuckle" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_gripper/meshes/right_inner_knuckle.STL" />
-    </asset>
+
     <worldbody>
 
         <!-- Mocap -->
@@ -78,8 +63,8 @@
 
         <!-- Robot -->
         <body pos='0. 0 1.8' euler='0 0 1.57'>
-            <geom type='cylinder' size='.120 .90' pos='-.04 0 -0.90' class='panda_viz'/>
-            <include file="xarm.xml"/>
+            <geom type='cylinder' size='.120 .90' pos='-.04 0 -0.90' class='xarm_viz'/>
+            <include file="xarm_chain.xml"/>
         </body>
 
         <body name='desk' pos='-0.1 0.75 0'>
