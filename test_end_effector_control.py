@@ -3,8 +3,43 @@ import wrappers
 import moviepy.editor as mpy
 from matplotlib import pyplot as plt
 env = wrappers.Kitchen()
+from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 
 # ====================== check whether end_effector control works ================
+
+physics = env._env.sim
+joint_names = ['joint1b', 'joint2b', 'joint3b', 'joint4b', 'joint5b', 'joint6b', 'joint7b'] # TODO: add an option to move gripper to if we're using gripper control??
+ikresult = qpos_from_site_pose(physics, 'end_effector', target_pos=np.array([0.05, 0, 0]), joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
+qpos = ikresult.qpos
+success = ikresult.success
+
+action_dim = len(env._env.data.ctrl)
+qpos_low = env._env.model.jnt_range[:, 0]
+qpos_high = env._env.model.jnt_range[:, 1]
+update1 = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+
+# ikresult = qpos_from_site_pose(physics, 'end_effector', target_pos=np.array([0, 0.05, 0]), joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
+# qpos = ikresult.qpos
+# success = ikresult.success
+#
+# action_dim = len(env._env.data.ctrl)
+# qpos_low = env._env.model.jnt_range[:, 0]
+# qpos_high = env._env.model.jnt_range[:, 1]
+# update2 = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+
+import copy
+env2 = copy.deepcopy(env)
+env._env.data.ctrl[:] = update1
+env._env.sim.forward()
+env._env.sim.step()
+qpos = env._env.sim.data.qpos[:7]
+
+env2._env.data.ctrl[:] = update1
+env2._env.sim.forward()
+env2._env.sim.step()
+qpos2 = env2._env.sim.data.qpos[:7]
+
+d = qpos - qpos2
 
 
 # Axis aligned
@@ -14,15 +49,18 @@ for i in range(3):
     frames = [o['image']]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
     a = np.zeros((3,))
-    a[i] = 1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
+    # a[i] = 1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
 
     for _ in range(100):
         o, _, _, _ = env.step(a)
+        # env._env.step(np.zeros((13,)))
+        # plt.imshow(env._env.render(mode='rgb_array'))
+        # plt.show()
         frames.append(o['image'])
         positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
     fps = 10
-    clip = mpy.ImageSequenceClip(frames, fps=fps)
-    clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
+    # clip = mpy.ImageSequenceClip(frames, fps=fps)
+    # clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
 
     # We'd expect to see a graph where all positions stay the same except the one along which we're moving.
     for j in range(3):

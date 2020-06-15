@@ -115,10 +115,11 @@ class Kitchen:
     xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
 
     physics = self._env.sim
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos)  # TODO: possibly specify which joints to move to reach this??
+    # The joints which can be manipulated to move the end-effector to the desired spot.
+    joint_names = ['joint1b', 'joint2b', 'joint3b', 'joint4b', 'joint5b', 'joint6b', 'joint7b'] # TODO: add an option to move gripper to if we're using gripper control??
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
     qpos = ikresult.qpos
     success = ikresult.success
-    qpos = self._env.sim.data.qpos
 
     if success is False:
       print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
@@ -135,9 +136,9 @@ class Kitchen:
         raise NotImplementedError
 
       self._env.data.ctrl[:] = update
-      self._env.sim.forward()
-      for _ in range(self.step_repeat):
-        self._env.sim.step()
+    self._env.sim.forward()
+    for _ in range(self.step_repeat):
+      self._env.sim.step()
 
     reward = 0  # TODO: add in tasks, then add in reward func
     done = 0  # TODO: add in tasks, then add in done
@@ -173,8 +174,9 @@ class Kitchen:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     img = self._env.render(mode='rgb_array')
-    cropped = img[750:1750, 1000:2000]
-    return cv2.resize(cropped, self._size)
+    return img # TODO: later rethink whether we want the image cropped and resized or not
+    # cropped = img[750:1750, 1000:2000]
+    # return cv2.resize(cropped, self._size)
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
