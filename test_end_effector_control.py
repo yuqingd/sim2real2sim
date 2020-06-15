@@ -7,60 +7,33 @@ from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 
 # ====================== check whether end_effector control works ================
 
-physics = env._env.sim
-joint_names = ['joint1b', 'joint2b', 'joint3b', 'joint4b', 'joint5b', 'joint6b', 'joint7b'] # TODO: add an option to move gripper to if we're using gripper control??
-ikresult = qpos_from_site_pose(physics, 'end_effector', target_pos=np.array([0.05, 0, 0]), joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
-qpos = ikresult.qpos
-success = ikresult.success
-
-action_dim = len(env._env.data.ctrl)
-qpos_low = env._env.model.jnt_range[:, 0]
-qpos_high = env._env.model.jnt_range[:, 1]
-update1 = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-
-# ikresult = qpos_from_site_pose(physics, 'end_effector', target_pos=np.array([0, 0.05, 0]), joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
-# qpos = ikresult.qpos
-# success = ikresult.success
-#
-# action_dim = len(env._env.data.ctrl)
-# qpos_low = env._env.model.jnt_range[:, 0]
-# qpos_high = env._env.model.jnt_range[:, 1]
-# update2 = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-
-import copy
-env2 = copy.deepcopy(env)
-env._env.data.ctrl[:] = update1
-env._env.sim.forward()
-env._env.sim.step()
-qpos = env._env.sim.data.qpos[:7]
-
-env2._env.data.ctrl[:] = update1
-env2._env.sim.forward()
-env2._env.sim.step()
-qpos2 = env2._env.sim.data.qpos[:7]
-
-d = qpos - qpos2
-
 
 # Axis aligned
 end_effector_index = env.end_effector_index
 for i in range(3):
+    print("TEST", i)
     o = env.reset()
+    offset = np.zeros((3,))
+    offset[i] = .05  # Will be scaled down by the step size
     frames = [o['image']]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
-    a = np.zeros((3,))
-    # a[i] = 1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
+     # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
 
-    for _ in range(100):
-        o, _, _, _ = env.step(a)
-        # env._env.step(np.zeros((13,)))
+    # Update the target pos 50x.  Ideally, the agent would be able to achieve each intermediate,
+    # and the arm would travelin a straight line.
+    for k in range(50):
+        print(k)
+        target = env._env.sim.data.site_xpos[end_effector_index].copy() + offset
+
+        o, _, _, _ = env.step(target)
         # plt.imshow(env._env.render(mode='rgb_array'))
         # plt.show()
         frames.append(o['image'])
         positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
-    fps = 10
-    # clip = mpy.ImageSequenceClip(frames, fps=fps)
-    # clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
+    fps = 20
+    target_achieved = env._env.sim.data.site_xpos[end_effector_index].copy()
+    clip = mpy.ImageSequenceClip(frames, fps=fps)
+    clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
 
     # We'd expect to see a graph where all positions stay the same except the one along which we're moving.
     for j in range(3):
@@ -69,6 +42,7 @@ for i in range(3):
     plt.legend(['x', 'y', 'z'])
     plt.savefig('plot_end_effector_axis' + str(i) + '.png')
     plt.show()
+    plt.close()
 
 
 # ==============================================================================================

@@ -76,14 +76,19 @@ class PegTask:
     return cv2.resize(img, self._size)
 
 class Kitchen:
-  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.05, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False,
+               ik_repeat=100, step_repeat=1, step_size=0.05, target_error_threshold=0.001,
+               relative_positions=False, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self._size = size
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
+    self.ik_repeat = ik_repeat
     self.step_repeat = step_repeat
     self.step_size = step_size
+    self.target_error_threshold = target_error_threshold
+    self.relative_positions = relative_positions
     self.use_gripper = use_gripper
     self.end_effector_name = 'end_effector'
     self.end_effector_index = 3
@@ -109,36 +114,47 @@ class Kitchen:
     return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
 
   def step(self, action):
-    xyz_diff = action[:3] * self.step_size
-
-
-    xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
+    if self.relative_positions:
+      xyz_diff = action[:3] * self.step_size
+      xyz_pos = self._env.sim.data.site_xpos[self.end_effector_index] + xyz_diff
+    else:
+      xyz_pos = action[:3]
 
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
-    joint_names = ['joint1b', 'joint2b', 'joint3b', 'joint4b', 'joint5b', 'joint6b', 'joint7b'] # TODO: add an option to move gripper to if we're using gripper control??
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
-    qpos = ikresult.qpos
-    success = ikresult.success
+    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
 
-    if success is False:
-      print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
-    else:
-      action_dim = len(self._env.data.ctrl)
-      qpos_low = self._env.model.jnt_range[:, 0]
-      qpos_high = self._env.model.jnt_range[:, 1]
-      update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+    for i in range(self.ik_repeat):
 
-      if self.use_gripper:
-        # TODO: almost certainly not the right way to implement this
-        gripper_pos = action[3:]
-        update[-len(gripper_pos):] = gripper_pos
-        raise NotImplementedError
+      dist = np.linalg.norm(self._env.sim.data.site_xpos[self.end_effector_index] - xyz_pos)
+      if dist < self.target_error_threshold:
+        break
+      else:
+        if i % 20 == 0:
+          print("dist", dist, xyz_pos, self._env.sim.data.site_xpos[self.end_effector_index])  # TODO: remove after done debugging
 
-      self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    for _ in range(self.step_repeat):
-      self._env.sim.step()
+      ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)
+      qpos = ikresult.qpos
+      success = ikresult.success
+
+      if success is False:
+        print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
+      else:
+        action_dim = len(self._env.data.ctrl)
+        qpos_low = self._env.model.jnt_range[:, 0]
+        qpos_high = self._env.model.jnt_range[:, 1]
+        update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+
+        if self.use_gripper:
+          # TODO: almost certainly not the right way to implement this
+          gripper_pos = action[3:]
+          update[-len(gripper_pos):] = gripper_pos
+          raise NotImplementedError
+
+        self._env.data.ctrl[:] = update
+        self._env.sim.forward()
+        for _ in range(self.step_repeat):
+          self._env.sim.step()
 
     reward = 0  # TODO: add in tasks, then add in reward func
     done = 0  # TODO: add in tasks, then add in done
