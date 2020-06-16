@@ -245,6 +245,8 @@ class Kitchen:
       self._env.sim.step()
 
     reward = self.get_reward()
+    if not success:
+      reward = reward * 2
     done = np.abs(reward) < 0.3   # TODO: tune threshold
     info = {}
     obs = {}
