@@ -153,6 +153,57 @@ def define_config():
 
 def config_dr(config):
   dr_option = config.dr_option
+  if 'kitchen' in config.task:
+    if config.simple_randomization:
+      config.real_dr_params = {
+        "kettle_mass": .88
+      }
+      config.dr = {  # (mean, range)
+        "kettle_mass": (config.mass_mean, config.mass_range)
+      }
+      config.sim_params_size = 2
+    else:
+      config.real_dr_params = {
+        "joint1_actuation": 30,
+        "joint2_actuation": 20,
+        "joint3_actuation": 15,
+        "joint4_actuation": 10,
+        "joint5_actuation": 5,
+        "joint6_actuation": 2,
+        "joint7_actuation": 5,
+        "joint1_damping": 10,
+        "joint2_damping": 10,
+        "joint3_damping": 5,
+        "joint4_damping": 5,
+        "joint5_damping": 5,
+        "joint6_damping": 2,
+        "joint7_damping": 2,
+        "kettle_b": 0.5,
+        "kettle_friction": 1.0,
+        "kettle_g": 0.5,
+        "kettle_mass": 0.02,
+        "kettle_r": 0.5,
+        "knob_mass": 0,
+        "lighting": 0.3,
+        "robot_b": 0.95,
+        "robot_friction": 1.0,
+        "robot_g": 0.95,
+        "robot_r": 0.95,
+        "stove_b": 0.5,
+        "stove_friction": 1.,
+        "stove_g": 0.5,
+        "stove_r": 0.5,
+
+      }
+      config.sim_params_size = 2 * 4
+      if dr_option == 'accurate_small_range':
+        range_scale = 0.05
+        config.dr = {}  # (mean, range)
+        for key, real_val in config.real_dr_params:
+          config.dr[key] = (real_val, real_val * range_scale)
+      else:
+        raise NotImplementedError
+
   if config.task == 'metaworld_reach':
       return {}
   elif config.task == "dmc_cup_catch":

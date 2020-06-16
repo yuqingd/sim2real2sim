@@ -96,8 +96,51 @@ class Kitchen:
 
     self.apply_dr()
 
+  def update_dr_param(self, param, param_name, eps=1e-3):
+    if param_name in self.dr:
+      mean, range = self.dr[param_name]
+      range = max(range, eps)
+      param[:] = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      self.sim_params += [mean, range]
+
+
+
   def apply_dr(self):
-    pass
+    self.sim_params = []
+    if self.dr is None or self.real_world:
+      if self.outer_loop_version == 1:
+        self.sim_params = np.zeros(self.dr_shape)
+      return
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[0, 0], 'joint1_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[1, 0], 'joint2_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[2, 0], 'joint3_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[3, 0], 'joint4_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[4, 0], 'joint5_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[5, 0], 'joint6_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[6, 0], 'joint7_actuation')
+    self.update_dr_param(self._env.sim.model.dof_damping[0], 'joint1_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[1], 'joint2_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[2], 'joint3_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[3], 'joint4_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[4], 'joint5_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[5], 'joint6_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[6], 'joint7_damping')
+    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
+    self.update_dr_param(self._env.sim.model.geom_friction[212:219, 0], 'kettle_friction')
+    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
+    self.update_dr_param(self._env.sim.model.body_mass[48], 'kettle_mass')
+    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
+    self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
+    self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
+    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 2], 'robot_b')
+    self.update_dr_param(self._env.sim.model.geom_friction[2:33, 0], 'robot_friction')
+    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
+    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86, 2], 'stove_b')
+    self.update_dr_param(self._env.sim.model.geom_friction[86, 0], 'stove_friction')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86, 1], 'stove_g')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86, 0], 'stove_r')
+
 
   @property
   def observation_space(self):
