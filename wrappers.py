@@ -278,9 +278,9 @@ class Kitchen:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     img = self._env.render(mode='rgb_array')
-    return img # TODO: later rethink whether we want the image cropped and resized or not
+    #return img # TODO: later rethink whether we want the image cropped and resized or not
     # cropped = img[750:1750, 1000:2000]
-    # return cv2.resize(cropped, self._size)
+    return cv2.resize(img, self._size)
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
