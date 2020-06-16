@@ -22,6 +22,7 @@ from environments.kitchen.adept_envs.adept_envs.utils.configurable import config
 from gym import spaces
 from dm_control.mujoco import engine
 
+
 @configurable(pickleable=True)
 class KitchenV0(robot_env.RobotEnv):
 
@@ -194,8 +195,10 @@ class KitchenV0(robot_env.RobotEnv):
 class KitchenTaskRelaxV1(KitchenV0):
     """Kitchen environment with proper camera and goal setup"""
 
-    def __init__(self):
+    def __init__(self, task_type='reach_microwave'):
+        self.task_type = task_type
         super(KitchenTaskRelaxV1, self).__init__()
+
 
     def _get_reward_n_score(self, obs_dict):
         reward_dict = {}

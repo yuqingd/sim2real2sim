@@ -15,6 +15,8 @@ from environments.slide import FetchSlideEnv
 from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import KitchenTaskRelaxV1
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 
+
+
 class PegTask:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
     from envs import Insert_XArm7Pos
@@ -75,20 +77,88 @@ class PegTask:
     img = self._env.render(mode='rgb_array')
     return cv2.resize(img, self._size)
 
+
+GOAL_DIM = 30
+ARM_DIM = 13
+XPOS_INDICES = {
+    'arm' : [4, 5, 6, 7, 8, 9, 10], #Arm,
+    'end_effector' : [10],
+    'gripper' : [11, 12, 13, 14, 15], #Gripper
+    'knob_burner1' : [22, 23],
+    'knob_burner2': [24, 25],
+    'knob_burner3': [26, 27],
+    'knob_burner4': [28, 29],
+    'light_switch' : [32, 33],
+    'slide' : [38],
+    'hinge' : [41],
+    'microwave' : [44],
+    'kettle' : [47]
+}
+
+# For light task
+BONUS_THRESH_LL = 0.3
+BONUS_THRESH_HL = 0.3
+#
+#  0               world [ 0         0         0       ]
+#  1     vive_controller [-0.44     -0.092     2.03    ]
+#  2                     [ 0         0         1.8     ]
+#  3       xarm_linkbase [ 0         0         1.8     ]
+#  4               link1 [ 0         0         2.07    ]
+#  5               link2 [ 0         0         2.07    ]
+#  6               link3 [-1.23e-06  1.63e-05  2.36    ]
+#  7               link4 [ 4.07e-05  0.0525    2.36    ]
+#  8               link5 [ 0.000101  0.13      2.02    ]
+#  9               link6 [ 0.000101  0.13      2.02    ]
+# 10               link7 [ 0.00016   0.206     1.92    ] == end_effector
+# 11  left_outer_knuckle [ 0.0352    0.206     1.86    ]
+# 12         left_finger [ 0.0706    0.206     1.82    ]
+# 13  left_inner_knuckle [ 0.0202    0.206     1.85    ]
+# 14 right_outer_knuckle [-0.0348    0.206     1.86    ]
+# 15        right_finger [-0.0703    0.206     1.82    ]
+# 16 right_inner_knuckle [-0.0198    0.206     1.85    ]
+# 17                desk [-0.1       0.75      0       ]
+# 18           counters1 [-0.1       0.75      0       ]
+# 19            counters [-0.1       0.75      0       ]
+# 20                oven [-0.1       0.75      0       ]
+# 21            ovenroot [ 0.015     0.458     0.983   ]
+# 22              knob 1 [-0.133     0.678     2.23    ]
+# 23            Burner 1 [ 0.221     0.339     1.59    ]
+# 24              knob 2 [-0.256     0.678     2.23    ]
+# 25            Burner 2 [-0.225     0.339     1.59    ]
+# 26              knob 3 [-0.133     0.678     2.34    ]
+# 27            Burner 3 [ 0.219     0.78      1.59    ]
+# 28              knob 4 [-0.256     0.678     2.34    ]
+# 29            Burner 4 [-0.222     0.78      1.59    ]
+# 30            hoodroot [ 0         0.938     2.33    ]
+# 31 lightswitchbaseroot [-0.4       0.691     2.28    ]
+# 32     lightswitchroot [-0.4       0.691     2.28    ]
+# 33    lightblock_hinge [-0.0044    0.638     2.19    ]
+# 34            backwall [-0.1       0.75      0       ]
+# 35            wallroot [-0.041     1.33      1.59    ]
+# 36               wall2 [-1.41      0.204     1.59    ]
+# 37        slidecabinet [ 0.3       1.05      2.6     ]
+# 38               slide [ 0.3       1.05      2.6     ]
+# 39           slidelink [ 0.075     0.73      2.6     ]
+# 40        hingecabinet [-0.604     1.03      2.6     ]
+# 41            hingecab [-0.604     1.03      2.6     ]
+# 42       hingeleftdoor [-0.984     0.71      2.6     ]
+# 43      hingerightdoor [-0.224     0.71      2.6     ]
+# 44           microwave [-0.85      0.725     1.6     ]
+# 45           microroot [-0.85      0.725     1.6     ]
+# 46       microdoorroot [-1.13      0.455     1.79    ]
+# 47              kettle [-0.269     0.35      1.63    ]
+# 48          kettleroot [-0.269     0.35      1.63    ]
+
 class Kitchen:
-  def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False,
-               ik_repeat=100, step_repeat=1, step_size=0.05, target_error_threshold=0.001,
-               relative_positions=False, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.05, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
+    self.task = task
     self._size = size
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
-    self.ik_repeat = ik_repeat
     self.step_repeat = step_repeat
     self.step_size = step_size
-    self.target_error_threshold = target_error_threshold
-    self.relative_positions = relative_positions
     self.use_gripper = use_gripper
     self.end_effector_name = 'end_effector'
     self.end_effector_index = 3
@@ -157,6 +227,35 @@ class Kitchen:
     act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
     return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
 
+  def get_reward(self):
+    xpos = self._env.sim.data.body_xpos
+    if 'reach' in self.task:
+      next_xpos = xpos[XPOS_INDICES['end_effector']]
+      if self.task == 'reach_microwave':
+        goal = xpos[XPOS_INDICES['microwave']]
+      elif self.task == 'reach_slide':
+        goal = xpos[XPOS_INDICES['slide']]
+      elif self.task == 'reach_kettle':
+        goal = xpos[XPOS_INDICES['kettle']]
+      else:
+        raise NotImplementedError
+      reward = -np.linalg.norm(next_xpos - goal)
+    elif self.task == 'push_kettle': #push up to burner 4
+      #two stage reward, first get to kettle, then kettle to goal
+      end_effector = xpos[XPOS_INDICES['end_effector']]
+      kettle = xpos[XPOS_INDICES['kettle']]
+      goal = xpos[XPOS_INDICES['knob_burner4']]
+
+      d1 = np.linalg.norm(end_effector - kettle)
+      d2 = np.linalg.norm(kettle - goal)
+
+      reward = -(d1 + d2)
+
+    else:
+      raise NotImplementedError
+
+    return reward
+
   def step(self, action):
     xyz_pos = action[:3]
 
@@ -188,8 +287,8 @@ class Kitchen:
     for _ in range(self.step_repeat):
       self._env.sim.step()
 
-    reward = 0  # TODO: add in tasks, then add in reward func
-    done = 0  # TODO: add in tasks, then add in done
+    reward = self.get_reward()
+    done = np.abs(reward) < 0.3   # TODO: tune threshold
     info = {}
     obs = {}
     if self.use_state:
@@ -200,7 +299,7 @@ class Kitchen:
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
-    obs['success'] = 1.0 if reward > 0 else 0.0
+    obs['success'] = done
     return obs, reward, done, info
 
   def get_dr(self):
