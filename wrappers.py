@@ -214,7 +214,7 @@ class Kitchen:
     return reward
 
   def step(self, action):
-    xyz_pos = action[:3]
+    xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
 
 
     physics = self._env.sim
