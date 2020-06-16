@@ -92,7 +92,9 @@ XPOS_INDICES = {
     'slide' : [38],
     'hinge' : [41],
     'microwave' : [44],
-    'kettle' : [47]
+    'kettle' : [47],
+    'kettle_root' : [48],
+
 }
 
 # For light task
@@ -299,7 +301,7 @@ class Kitchen:
     return reward
 
   def step(self, action):
-    xyz_pos = action[:3]
+    xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
 
 
     physics = self._env.sim
