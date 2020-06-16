@@ -707,9 +707,9 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.PegTask(dr=config.dr, use_state=config.use_state, real_world=real_world)
   elif suite == 'kitchen':
     if config.dr is None or real_world:
-      env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world)
+      env = wrappers.Kitchen(task=task, use_state=config.use_state, real_world=real_world)
     else:
-      env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world)
+      env = wrappers.Kitchen(task=task, dr=config.dr, use_state=config.use_state, real_world=real_world)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
       env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)

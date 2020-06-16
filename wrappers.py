@@ -256,7 +256,7 @@ class Kitchen:
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
-    obs['success'] = done
+    obs['success'] = 1.0 if done else 0.0
     return obs, reward, done, info
 
   def get_dr(self):
