@@ -183,7 +183,7 @@ def config_dr(config):
         "kettle_g": 0.5,
         "kettle_mass": 0.02,
         "kettle_r": 0.5,
-        "knob_mass": 0,
+        "knob_mass": 0.02,
         "lighting": 0.3,
         "robot_b": 0.95,
         "robot_friction": 1.0,
@@ -195,16 +195,16 @@ def config_dr(config):
         "stove_r": 0.5,
 
       }
-      config.sim_params_size = 2 * 4
+      config.sim_params_size = 2 * len(config.real_dr_params.keys())
       if dr_option == 'accurate_small_range':
         range_scale = 0.05
         config.dr = {}  # (mean, range)
-        for key, real_val in config.real_dr_params:
+        for key, real_val in config.real_dr_params.items():
           config.dr[key] = (real_val, real_val * range_scale)
       else:
         raise NotImplementedError
 
-  if config.task == 'metaworld_reach':
+  elif config.task == 'metaworld_reach':
       return {}
   elif config.task == "dmc_cup_catch":
     print(type(config.simple_randomization))
@@ -308,8 +308,8 @@ def config_dr(config):
 
 def config_debug(config):
   # DEBUG
-  config.prefill = 7
-  config.steps = 1005
+  config.prefill = 1
+  config.steps = 40
   config.deter_size = 2
   config.stoch_size = 3
   config.num_units = 4
@@ -319,9 +319,9 @@ def config_debug(config):
   config.train_every = 3
   config.pretrain = 3
   config.train_steps = 5
-  config.time_limit = 50
+  config.time_limit = 10
   config.batch_size = 50
-  config.batch_length = 10
+  config.batch_length = 5
 
   return config
 
@@ -758,9 +758,14 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.PegTask(dr=config.dr, use_state=config.use_state, real_world=real_world)
   elif suite == 'kitchen':
     if config.dr is None or real_world:
-      env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world)
+      env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
+                             task=task, simple_randomization=config.simple_randomization,
+                             outer_loop_version=config.outer_loop_version)
     else:
-      env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world)
+      env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world,
+                             dr_shape=config.sim_params_size, task=task,
+                             simple_randomization=config.simple_randomization,
+                             outer_loop_version=config.outer_loop_version)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
       env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
@@ -926,6 +931,7 @@ def main(config):
 
     # after train, update sim params
     if config.outer_loop_version == 2:
+      print("UPDATING!")
 
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
@@ -1011,10 +1017,11 @@ if __name__ == '__main__':
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
-  if path.exists() and config.id == 'debug':
-    print("Path exists")
+  if 'debug' in config.id:
     config = config_debug(config)
-    shutil.rmtree(path)
+    if path.exists():
+      print("Path exists")
+      shutil.rmtree(path)
   elif path.exists():
     print("continuing past run", config.id)
   else:

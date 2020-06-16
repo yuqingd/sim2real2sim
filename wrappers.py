@@ -150,7 +150,8 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.05, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
+               step_size=0.05, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -163,6 +164,9 @@ class Kitchen:
     self.end_effector_name = 'end_effector'
     self.end_effector_index = 3
     self.arm_njnts = 7
+    self.simple_randomization = simple_randomization
+    self.dr_shape = dr_shape
+    self.outer_loop_version = outer_loop_version
 
     self.apply_dr()
 
@@ -180,25 +184,25 @@ class Kitchen:
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
-      return
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[0, 0], 'joint1_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[1, 0], 'joint2_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[2, 0], 'joint3_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[3, 0], 'joint4_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[4, 0], 'joint5_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[5, 0], 'joint6_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[6, 0], 'joint7_actuation')
-    self.update_dr_param(self._env.sim.model.dof_damping[0], 'joint1_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[1], 'joint2_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[2], 'joint3_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[3], 'joint4_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[4], 'joint5_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[5], 'joint6_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[6], 'joint7_damping')
+      return  # TODO: start using XPOS_INDICES or equivalent for joints.
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[0, 0:1], 'joint1_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[1, 0:1], 'joint2_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[2, 0:1], 'joint3_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[3, 0:1], 'joint4_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[4, 0:1], 'joint5_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[5, 0:1], 'joint6_actuation')
+    self.update_dr_param(self._env.sim.model.actuator_gainprm[6, 0:1], 'joint7_actuation')
+    self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
+    self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
     self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
     self.update_dr_param(self._env.sim.model.geom_friction[212:219, 0], 'kettle_friction')
     self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
-    self.update_dr_param(self._env.sim.model.body_mass[48], 'kettle_mass')
+    self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
     self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
     self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
     self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
@@ -206,10 +210,48 @@ class Kitchen:
     self.update_dr_param(self._env.sim.model.geom_friction[2:33, 0], 'robot_friction')
     self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
     self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86, 2], 'stove_b')
-    self.update_dr_param(self._env.sim.model.geom_friction[86, 0], 'stove_friction')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86, 1], 'stove_g')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86, 0], 'stove_r')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
+    self.update_dr_param(self._env.sim.model.geom_friction[86:87, 0], 'stove_friction')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
+    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
+
+
+  def get_dr(self):
+    if self.simple_randomization:
+      return np.array([self._env.physics.model.body_mass[48]])
+    arr = np.array([
+      self._env.sim.model.actuator_gainprm[0, 0],
+      self._env.sim.model.actuator_gainprm[1, 0],
+      self._env.sim.model.actuator_gainprm[2, 0],
+      self._env.sim.model.actuator_gainprm[3, 0],
+      self._env.sim.model.actuator_gainprm[4, 0],
+      self._env.sim.model.actuator_gainprm[5, 0],
+      self._env.sim.model.actuator_gainprm[6, 0],
+      self._env.sim.model.dof_damping[0],
+      self._env.sim.model.dof_damping[1],
+      self._env.sim.model.dof_damping[2],
+      self._env.sim.model.dof_damping[3],
+      self._env.sim.model.dof_damping[4],
+      self._env.sim.model.dof_damping[5],
+      self._env.sim.model.dof_damping[6],
+      self._env.sim.model.geom_rgba[212, 2],
+      self._env.sim.model.geom_friction[212, 0],
+      self._env.sim.model.geom_rgba[212, 1],
+      self._env.sim.model.body_mass[48],
+      self._env.sim.model.geom_rgba[212, 0],
+      self._env.sim.model.body_mass[22],
+      self._env.sim.model.light_diffuse[0, 0],
+      self._env.sim.model.geom_rgba[2, 2],
+      self._env.sim.model.geom_friction[2, 0],
+      self._env.sim.model.geom_rgba[2, 1],
+      self._env.sim.model.geom_rgba[2, 0],
+      self._env.sim.model.geom_rgba[86, 2],
+      self._env.sim.model.geom_friction[86, 0],
+      self._env.sim.model.geom_rgba[86, 1],
+      self._env.sim.model.geom_rgba[86, 0],
+    ])
+    arr = arr.astype(np.float32)
+    return arr
 
 
   @property
@@ -262,8 +304,8 @@ class Kitchen:
 
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
-    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
+    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)
     qpos = ikresult.qpos
     success = ikresult.success
 
@@ -291,6 +333,8 @@ class Kitchen:
     done = np.abs(reward) < 0.3   # TODO: tune threshold
     info = {}
     obs = {}
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     if self.use_state:
       obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
       if self.use_gripper:
@@ -299,18 +343,20 @@ class Kitchen:
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
-    obs['success'] = done
+    obs['success'] = 1.0 if done else 0.0
     return obs, reward, done, info
 
-  def get_dr(self):
-    return np.array([0])  # TODO: add this!
 
   def reset(self):
     self.apply_dr()
     state_obs = self._env.reset()
     obs = {}
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = self.sim_params
     if self.use_state:
-      obs['state'] = state_obs[:13]  # Only include robot state
+      obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
+      if self.use_gripper:
+        obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -321,9 +367,9 @@ class Kitchen:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     img = self._env.render(mode='rgb_array')
-    return img # TODO: later rethink whether we want the image cropped and resized or not
+    # return img # TODO: later rethink whether we want the image cropped and resized or not
     # cropped = img[750:1750, 1000:2000]
-    # return cv2.resize(cropped, self._size)
+    return cv2.resize(img, self._size)
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
