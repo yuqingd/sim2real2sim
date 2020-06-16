@@ -318,10 +318,10 @@ def config_debug(config):
   config.log_every = 1
   config.train_every = 3
   config.pretrain = 3
-  config.train_steps = 5
-  config.time_limit = 10
+  config.train_steps = 7
+  config.time_limit = 15
   config.batch_size = 50
-  config.batch_length = 5
+  config.batch_length = 6
 
   return config
 
