@@ -150,7 +150,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.003, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.5, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -182,7 +182,7 @@ class Kitchen:
   @property
   def action_space(self):
     act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
+    return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
@@ -217,7 +217,6 @@ class Kitchen:
     action = np.clip(action, self.action_space.low, self.action_space.high)
 
     xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
-
 
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
