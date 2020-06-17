@@ -81,19 +81,19 @@ class PegTask:
 GOAL_DIM = 30
 ARM_DIM = 13
 XPOS_INDICES = {
-    'arm' : [4, 5, 6, 7, 8, 9, 10], #Arm,
-    'end_effector' : [10],
-    'gripper' : [11, 12, 13, 14, 15], #Gripper
-    'knob_burner1' : [22, 23],
+    'arm': [4, 5, 6, 7, 8, 9, 10], #Arm,
+    'end_effector': [10],
+    'gripper': [11, 12, 13, 14, 15], #Gripper
+    'knob_burner1': [22, 23],
     'knob_burner2': [24, 25],
     'knob_burner3': [26, 27],
     'knob_burner4': [28, 29],
-    'light_switch' : [32, 33],
-    'slide' : [38],
-    'hinge' : [41],
-    'microwave' : [44],
-    'kettle' : [47],
-    'kettle_root' : [48],
+    'light_switch': [32, 33],
+    'slide': [38],
+    'hinge': [41],
+    'microwave': [44],
+    'kettle': [47],
+    'kettle_root': [48],
 
 }
 
@@ -220,7 +220,7 @@ class Kitchen:
 
   def get_dr(self):
     if self.simple_randomization:
-      return np.array([self._env.physics.model.body_mass[48]])
+      return np.array([self._env.sim.model.body_mass[48]])
     arr = np.array([
       self._env.sim.model.actuator_gainprm[0, 0],
       self._env.sim.model.actuator_gainprm[1, 0],
@@ -327,9 +327,9 @@ class Kitchen:
         update[self.arm_njnts + 1:] = 0 #no gripper movement
 
       self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    for _ in range(self.step_repeat):
-      self._env.sim.step()
+      self._env.sim.forward()
+      for _ in range(self.step_repeat):
+        self._env.sim.step()
 
     reward = self.get_reward()
     done = np.abs(reward) < 0.3   # TODO: tune threshold
@@ -369,8 +369,6 @@ class Kitchen:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     img = self._env.render(mode='rgb_array')
-    # return img # TODO: later rethink whether we want the image cropped and resized or not
-    # cropped = img[750:1750, 1000:2000]
     return cv2.resize(img, self._size)
 
 class MetaWorld:
