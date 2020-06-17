@@ -150,7 +150,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.3, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.1, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -226,7 +226,7 @@ class Kitchen:
     success = ikresult.success
 
     if success is False:
-      print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
+      print("IK Failure!") # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
     else:
       action_dim = len(self._env.data.ctrl)
       qpos_low = self._env.model.jnt_range[:, 0]
