@@ -766,6 +766,8 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization,
                              outer_loop_version=config.outer_loop_version)
+    env = wrappers.ActionRepeat(env, config.action_repeat)
+    env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
       env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
