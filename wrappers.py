@@ -15,7 +15,7 @@ from environments.slide import FetchSlideEnv
 from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import KitchenTaskRelaxV1
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 
-
+from dm_control.mujoco import engine
 
 class PegTask:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
@@ -153,7 +153,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
-               step_size=0.05, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+               step_size=0.003, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0):
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -169,6 +169,9 @@ class Kitchen:
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
+
+    self.camera = engine.MovableCamera(self._env.sim, *self._size)
+    self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
 
     self.apply_dr()
 
@@ -269,7 +272,7 @@ class Kitchen:
   @property
   def action_space(self):
     act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-1] * act_shape), np.array([1] * act_shape))
+    return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
@@ -301,6 +304,7 @@ class Kitchen:
     return reward
 
   def step(self, action):
+    action = np.clip(action, self.action_space.low, self.action_space.high)
     xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
 
 
@@ -326,10 +330,10 @@ class Kitchen:
       else:
         update[self.arm_njnts + 1:] = 0 #no gripper movement
 
-      self._env.data.ctrl[:] = update
-      self._env.sim.forward()
-      for _ in range(self.step_repeat):
-        self._env.sim.step()
+    self._env.data.ctrl[:] = update
+    self._env.sim.forward()
+    for _ in range(self.step_repeat):
+      self._env.sim.step()
 
     reward = self.get_reward()
     done = np.abs(reward) < 0.3   # TODO: tune threshold
@@ -341,7 +345,7 @@ class Kitchen:
       obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
-    obs['image'] = self.render()
+    obs['image'] = self.render(mode='rgb_array')
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -368,8 +372,8 @@ class Kitchen:
   def render(self, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    img = self._env.render(mode='rgb_array')
-    return cv2.resize(img, self._size)
+    img = self.camera.render()
+    return img
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
