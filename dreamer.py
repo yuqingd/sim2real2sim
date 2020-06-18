@@ -148,6 +148,7 @@ def define_config():
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.5
+  config.sim_params_size = 0
 
   return config
 
