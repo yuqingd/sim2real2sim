@@ -276,7 +276,7 @@ class Kitchen:
     if self.control_version == 'end_effector':
       act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
       return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
-    elif self.control_version == 'position':
+    else:
       return self._env.action_space
 
   def get_reward(self):
