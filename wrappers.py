@@ -228,9 +228,7 @@ class Kitchen:
     qpos = ikresult.qpos
     success = ikresult.success
 
-    if success is False:
-      print("IK Failure!") # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
-    else:
+    if success:
       action_dim = len(self._env.data.ctrl)
       qpos_low = self._env.model.jnt_range[:, 0]
       qpos_high = self._env.model.jnt_range[:, 1]
