@@ -343,9 +343,9 @@ class Kitchen:
           self._env.sim.step()
     elif self.control_version == 'position':
       action = np.clip(action, self.action_space.low, self.action_space.high)
-      self._env.data.ctrl[:] = action
+      self._env.sim.data.ctrl[:] = action
       for _ in range(self.step_repeat):
-        self.sim.step()
+        self._env.sim.step()
     elif self.control_version == 'force': # TODO: IDK the term for this
       print("???")
     else:
