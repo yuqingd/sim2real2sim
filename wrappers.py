@@ -14,7 +14,7 @@ from environments.push import FetchPushEnv
 from environments.slide import FetchSlideEnv
 from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import KitchenTaskRelaxV1
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
-
+from dm_control.mujoco import engine
 
 
 class PegTask:
@@ -280,10 +280,14 @@ class Kitchen:
   def render(self, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    img = self._env.render(mode='rgb_array')
+    camera = engine.MovableCamera(self.sim, 1920, 2560)
+    camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+    img = camera.render(self._size)
+
+    #img = self._env.render(mode='rgb_array')
     #return img # TODO: later rethink whether we want the image cropped and resized or not
     # cropped = img[750:1750, 1000:2000]
-    return cv2.resize(img, self._size)
+    return img #cv2.resize(img, self._size)
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
