@@ -94,7 +94,7 @@ def define_config():
   config.envs = 1
   config.parallel = 'none'
   config.action_repeat = 2
-  config.time_limit = 1000
+  config.time_limit = 2000
   config.prefill = 5000
   config.eval_noise = 0.0
   config.clip_rewards = 'none'
@@ -112,8 +112,8 @@ def define_config():
   config.weight_decay = 0.0
   config.weight_decay_pattern = r'.*'
   # Training.
-  config.batch_size = 50
-  config.batch_length = 50
+  config.batch_size = 256
+  config.batch_length = 256
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
