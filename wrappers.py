@@ -342,12 +342,14 @@ class Kitchen:
         for _ in range(self.step_repeat):
           self._env.sim.step()
     elif self.control_version == 'position':
+      low = self.action_space.low
+      high = self.action_space.high
       action = np.clip(action, self.action_space.low, self.action_space.high)
       self._env.sim.data.ctrl[:] = action
       for _ in range(self.step_repeat):
         self._env.sim.step()
-    elif self.control_version == 'force': # TODO: IDK the term for this
-      print("???")
+    elif self.control_version == 'other': # TODO: IDK the term for this
+      self._env.step(self._env.action_space.sample())
     else:
       raise ValueError
 
