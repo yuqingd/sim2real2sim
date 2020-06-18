@@ -136,6 +136,7 @@ def define_config():
   config.id = 'debug'
   config.use_state = False
   config.num_dr_grad_steps = 100
+  config.control_version = 'end_effector'
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -761,12 +762,12 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     if config.dr is None or real_world:
       env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
                              task=task, simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version)
+                             outer_loop_version=config.outer_loop_version, control_version=control_version)
     else:
       env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version)
+                             outer_loop_version=config.outer_loop_version, control_version=control_version)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':

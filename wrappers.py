@@ -153,7 +153,8 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
-               step_size=0.003, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0):
+               step_size=0.003, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               control_version='end_effector'):
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -169,6 +170,7 @@ class Kitchen:
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
+    self.control_version = control_version
 
     self.camera = engine.MovableCamera(self._env.sim, *self._size)
     self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
@@ -271,8 +273,11 @@ class Kitchen:
 
   @property
   def action_space(self):
-    act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
+    if self.control_version == 'end_effector':
+      act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
+      return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
+    elif self.control_version == 'position':
+      return self._env.action_space
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
@@ -304,36 +309,47 @@ class Kitchen:
     return reward
 
   def step(self, action):
-    action = np.clip(action, self.action_space.low, self.action_space.high)
-    xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
+
+    if self.control_version == 'end_effector':
+      action = np.clip(action, self.action_space.low, self.action_space.high)
+      xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
 
 
-    physics = self._env.sim
-    # The joints which can be manipulated to move the end-effector to the desired spot.
-    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)
-    qpos = ikresult.qpos
-    success = ikresult.success
+      physics = self._env.sim
+      # The joints which can be manipulated to move the end-effector to the desired spot.
+      joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
+      ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)
+      qpos = ikresult.qpos
+      success = ikresult.success
 
-    if success is False:
-      print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
-    else:
-      action_dim = len(self._env.data.ctrl)
-      qpos_low = self._env.model.jnt_range[:, 0]
-      qpos_high = self._env.model.jnt_range[:, 1]
-      update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-      if self.use_gripper:
-        # TODO: almost certainly not the right way to implement this
-        gripper_pos = action[3:]
-        update[-len(gripper_pos):] = gripper_pos
-        raise NotImplementedError
+      if success is False:
+        print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
       else:
-        update[self.arm_njnts + 1:] = 0 #no gripper movement
+        action_dim = len(self._env.data.ctrl)
+        qpos_low = self._env.model.jnt_range[:, 0]
+        qpos_high = self._env.model.jnt_range[:, 1]
+        update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
+        if self.use_gripper:
+          # TODO: almost certainly not the right way to implement this
+          gripper_pos = action[3:]
+          update[-len(gripper_pos):] = gripper_pos
+          raise NotImplementedError
+        else:
+          update[self.arm_njnts + 1:] = 0 #no gripper movement
 
-      self._env.data.ctrl[:] = update
-      self._env.sim.forward()
+        self._env.data.ctrl[:] = update
+        self._env.sim.forward()
+        for _ in range(self.step_repeat):
+          self._env.sim.step()
+    elif self.control_version == 'position':
+      action = np.clip(action, self.action_space.low, self.action_space.high)
+      self._env.data.ctrl[:] = action
       for _ in range(self.step_repeat):
-        self._env.sim.step()
+        self.sim.step()
+    elif self.control_version == 'force': # TODO: IDK the term for this
+      print("???")
+    else:
+      raise ValueError
 
     reward = self.get_reward()
     done = np.abs(reward) < 0.3   # TODO: tune threshold
