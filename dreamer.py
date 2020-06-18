@@ -10,7 +10,7 @@ import shutil
 import psutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MUJOCO_GL'] = 'osmesa'
+os.environ['MUJOCO_GL'] = 'egl'
 
 import numpy as np
 import tensorflow as tf
