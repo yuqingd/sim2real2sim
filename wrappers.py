@@ -280,7 +280,7 @@ class Kitchen:
   def render(self, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    camera = engine.MovableCamera(self.sim, 1920, 2560)
+    camera = engine.MovableCamera(self._env.sim, 1920, 2560)
     camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
     img = camera.render(self._size)
 
