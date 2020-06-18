@@ -258,7 +258,7 @@ class Kitchen:
       obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
-    obs['image'] = self.render(mode='rgb_array')
+    obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -285,8 +285,8 @@ class Kitchen:
       raise ValueError("Only render mode 'rgb_array' is supported.")
     # camera = engine.MovableCamera(self._env.sim, *self._size)
     # camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-    # img = camera.render()
     img = self.camera.render()
+    #img = self._env.sim.render(*self._size)
     #img = self._env.render(mode='rgb_array')
     #return img # TODO: later rethink whether we want the image cropped and resized or not
     # cropped = img[750:1750, 1000:2000]
