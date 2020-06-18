@@ -204,7 +204,7 @@ class Kitchen:
       #two stage reward, first get to kettle, then kettle to goal
       end_effector = xpos[XPOS_INDICES['end_effector']]
       kettle = xpos[XPOS_INDICES['kettle']]
-      goal = xpos[XPOS_INDICES['knob_burner4']]
+      goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
 
       d1 = np.linalg.norm(end_effector - kettle)
       d2 = np.linalg.norm(kettle - goal)
