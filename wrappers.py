@@ -330,10 +330,10 @@ class Kitchen:
       else:
         update[self.arm_njnts + 1:] = 0 #no gripper movement
 
-    self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    for _ in range(self.step_repeat):
-      self._env.sim.step()
+      self._env.data.ctrl[:] = update
+      self._env.sim.forward()
+      for _ in range(self.step_repeat):
+        self._env.sim.step()
 
     reward = self.get_reward()
     done = np.abs(reward) < 0.3   # TODO: tune threshold
