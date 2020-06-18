@@ -762,12 +762,12 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     if config.dr is None or real_world:
       env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
                              task=task, simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version, control_version=control_version)
+                             outer_loop_version=config.outer_loop_version, control_version=config.control_version)
     else:
       env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version, control_version=control_version)
+                             outer_loop_version=config.outer_loop_version, control_version=config.control_version)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
