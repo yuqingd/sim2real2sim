@@ -881,6 +881,7 @@ class Collect:
     elif np.issubdtype(value.dtype, np.uint8):
       dtype = np.uint8
     else:
+      print("VALUE", value)
       raise NotImplementedError(value.dtype)
     return value.astype(dtype)
 

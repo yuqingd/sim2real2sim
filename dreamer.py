@@ -373,7 +373,7 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          if self._c.outer_loop_version == 1:
+          if self._c.outer_loop_version in [0, 1]:
             self.train(next(self._dataset), log_images)
           elif self._c.outer_loop_version == 2:
             self.train(next(dataset), log_images)
@@ -992,11 +992,12 @@ def main(config):
 
           env.apply_dr()
 
-  for env in train_sim_envs + train_real_envs + test_envs:
+  for env in train_sim_envs + test_envs:
     env.close()
   if train_real_envs is not None:
     for env in train_real_envs:
       env.close()
+  print("All done!")
 
 
 if __name__ == '__main__':
