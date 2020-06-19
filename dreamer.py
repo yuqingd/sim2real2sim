@@ -323,7 +323,7 @@ class Dreamer(tools.Module):
           log_images = self._c.log_images and log and train_step == 0
           if self._c.outer_loop_version == 1:
             self.train(next(self._dataset), log_images)
-          elif self._c.outer_loop_version == 2:
+          else:
             self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
