@@ -165,7 +165,7 @@ class Kitchen:
     self.arm_njnts = 7
 
     self.camera = engine.MovableCamera(self._env.sim, *self._size)
-    self.camera.set_pose(distance=2.0, lookat=[0, .8, 2.], azimuth=90, elevation=-65)
+    self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
 
     self.apply_dr()
 
