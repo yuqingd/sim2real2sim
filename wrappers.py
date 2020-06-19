@@ -249,7 +249,7 @@ class Kitchen:
     reward = self.get_reward()
     if not success:
       reward = reward * 2
-    done = np.abs(reward) < 0.27   # TODO: tune threshold
+    done = np.abs(reward) < 0.1   # TODO: tune threshold
     info = {}
     obs = {}
     if self.use_state:
