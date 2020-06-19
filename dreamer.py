@@ -321,7 +321,7 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          if self._c.outer_loop_version == 1:
+          if self._c.outer_loop_version != 2:
             self.train(next(self._dataset), log_images)
           else:
             self.train(next(dataset), log_images)
