@@ -15,7 +15,7 @@ from environments.slide import FetchSlideEnv
 from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import KitchenTaskRelaxV1
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 from dm_control.mujoco import engine
-
+from dm_control.rl.control import PhysicsError
 
 class PegTask:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
@@ -243,9 +243,14 @@ class Kitchen:
         update[self.arm_njnts + 1:] = 0 #no gripper movement
 
       self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    for _ in range(self.step_repeat):
+    #self._env.sim.forward()
+    #for _ in range(self.step_repeat):
+    try:
       self._env.sim.step()
+    except PhysicsError as e:
+      success = False
+      print("Physics error:", e)
+
 
     reward = self.get_reward()
     if not success:
