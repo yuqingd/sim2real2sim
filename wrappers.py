@@ -197,7 +197,7 @@ class Kitchen:
         goal = xpos[XPOS_INDICES['slide']]
       elif self.task == 'reach_kettle':
         goal = xpos[XPOS_INDICES['kettle']]
-        goal[-1] += 0.1 #goal in middle of kettle
+        goal[-1] += 0.15 #goal in middle of kettle
       else:
         raise NotImplementedError
       reward = -np.linalg.norm(next_xpos - goal)
@@ -255,7 +255,7 @@ class Kitchen:
     reward = self.get_reward()
     if not success:
       reward = reward * 2
-    done = np.abs(reward) < 0.2   # TODO: tune threshold
+    done = np.abs(reward) < 0.25   # TODO: tune threshold
     info = {}
     obs = {}
     if self.use_state:
