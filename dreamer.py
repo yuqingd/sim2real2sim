@@ -936,7 +936,7 @@ def main(config):
 
           env.apply_dr()
 
-  for env in train_sim_envs + train_real_envs + test_envs:
+  for env in train_sim_envs + test_envs:
     env.close()
   if train_real_envs is not None:
     for env in train_real_envs:
