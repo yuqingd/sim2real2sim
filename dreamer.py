@@ -112,8 +112,8 @@ def define_config():
   config.weight_decay = 0.0
   config.weight_decay_pattern = r'.*'
   # Training.
-  config.batch_size = 50
-  config.batch_length = 50
+  config.batch_size = 100
+  config.batch_length = 100
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
@@ -129,7 +129,7 @@ def define_config():
   config.horizon = 15
   config.action_dist = 'tanh_normal'
   config.action_init_std = 5.0
-  config.expl = 'additive_gaussian'
+  config.expl = 'completely_random'
   config.expl_amount = 0.3
   config.expl_decay = 0.0
   config.expl_min = 0.0
