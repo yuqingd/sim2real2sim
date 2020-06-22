@@ -205,9 +205,12 @@ class Kitchen:
       #two stage reward, first get to kettle, then kettle to goal
       end_effector = xpos[XPOS_INDICES['end_effector']]
       kettle = xpos[XPOS_INDICES['kettle']]
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.15  # goal in middle of kettle
+
       goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
 
-      d1 = np.linalg.norm(end_effector - kettle)
+      d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - goal)
 
       reward = -(d1 + d2)
@@ -221,7 +224,6 @@ class Kitchen:
     action = np.clip(action, self.action_space.low, self.action_space.high)
 
     xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
-
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
     joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
@@ -243,7 +245,7 @@ class Kitchen:
         update[self.arm_njnts + 1:] = 0 #no gripper movement
 
       self._env.data.ctrl[:] = update
-    #self._env.sim.forward()
+    self._env.sim.forward()
     #for _ in range(self.step_repeat):
     try:
       self._env.sim.step()
