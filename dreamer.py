@@ -538,9 +538,9 @@ class Dreamer(tools.Module):
     else:
       return action
     if self._c.expl == 'additive_gaussian':
-      return tf.clip_by_value(tfd.Normal(action, amount).sample(), -self._actspace.low, self._actspace.high)
+      return tf.clip_by_value(tfd.Normal(action, amount).sample(), -1, 1)
     if self._c.expl == 'completely_random':
-      return tf.random.uniform(action.shape, self._actspace.low, self._actspace.high)
+      return tf.random.uniform(action.shape, -1, 1)
     if self._c.expl == 'epsilon_greedy':
       indices = tfd.Categorical(0 * action).sample()
       return tf.where(
