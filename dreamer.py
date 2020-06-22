@@ -129,7 +129,7 @@ def define_config():
   config.horizon = 15
   config.action_dist = 'tanh_normal'
   config.action_init_std = 5.0
-  config.expl = 'completely_random'
+  config.expl = 'additive_gaussian'
   config.expl_amount = 0.3
   config.expl_decay = 0.0
   config.expl_min = 0.0
@@ -538,7 +538,7 @@ class Dreamer(tools.Module):
     else:
       return action
     if self._c.expl == 'additive_gaussian':
-      return tf.clip_by_value(tfd.Normal(action, amount).sample(), -1, 1)
+      return tf.clip_by_value(tfd.Normal(action, amount).sample(), -self._actspace.low, self._actspace.high)
     if self._c.expl == 'completely_random':
       return tf.random.uniform(action.shape, self._actspace.low, self._actspace.high)
     if self._c.expl == 'epsilon_greedy':
