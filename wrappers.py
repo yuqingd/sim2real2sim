@@ -214,6 +214,19 @@ class Kitchen:
       d2 = np.linalg.norm(kettle - goal)
 
       reward = -(d1 + d2)
+    elif self.task == 'push_kettle_microwave': #push to microwave
+      #two stage reward, first get to kettle, then kettle to goal
+      end_effector = xpos[XPOS_INDICES['end_effector']]
+      kettle = xpos[XPOS_INDICES['kettle']]
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.15  # goal in middle of kettle
+
+      goal = xpos[XPOS_INDICES['microwave'][-1]]
+
+      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d2 = np.linalg.norm(kettle - goal)
+
+      reward = -(d1 + d2)
 
     else:
       raise NotImplementedError
