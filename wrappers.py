@@ -190,21 +190,21 @@ class Kitchen:
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
     if 'reach' in self.task:
-      next_xpos = xpos[XPOS_INDICES['end_effector']]
+      next_xpos = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       if self.task == 'reach_microwave':
-        goal = xpos[XPOS_INDICES['microwave']]
+        goal = np.squeeze(xpos[XPOS_INDICES['microwave']])
       elif self.task == 'reach_slide':
-        goal = xpos[XPOS_INDICES['slide']]
+        goal = np.squeeze(xpos[XPOS_INDICES['slide']])
       elif self.task == 'reach_kettle':
-        goal = xpos[XPOS_INDICES['kettle']]
+        goal = np.squeeze(xpos[XPOS_INDICES['kettle']])
         goal[-1] += 0.15 #goal in middle of kettle
       else:
         raise NotImplementedError
       reward = -np.linalg.norm(next_xpos - goal)
     elif self.task == 'push_kettle': #push up to burner 4
       #two stage reward, first get to kettle, then kettle to goal
-      end_effector = xpos[XPOS_INDICES['end_effector']]
-      kettle = xpos[XPOS_INDICES['kettle']]
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
       kettlehandle[-1] += 0.15  # goal in middle of kettle
 
@@ -216,8 +216,8 @@ class Kitchen:
       reward = -(d1 + d2)
     elif self.task == 'push_kettle_microwave': #push to microwave
       #two stage reward, first get to kettle, then kettle to goal
-      end_effector = xpos[XPOS_INDICES['end_effector']]
-      kettle = xpos[XPOS_INDICES['kettle']]
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
       kettlehandle[-1] += 0.15  # goal in middle of kettle
 
