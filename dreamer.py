@@ -351,8 +351,8 @@ class Dreamer(tools.Module):
       if self._c.outer_loop_version == 2:
         self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c, use_sim=True, use_real=False)))
-        self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c, use_sim=True, use_real=True)))
+        # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+        #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       else:
@@ -573,7 +573,7 @@ class Dreamer(tools.Module):
       self.train(next(self._dataset))
     else:
       self.train(next(self._train_dataset_sim_only))
-      self.train(next(self._train_dataset_combined))
+      # self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
 
 
@@ -922,13 +922,13 @@ def main(config):
     agent.save(config.logdir / 'variables.pkl')
 
     if config.outer_loop_version == 2:
-      train_with_real = check_train_with_real(dr_list)
-      if train_with_real:
-        dataset = agent._train_dataset_combined
-        tf.summary.scalar('sim/train_with_real', 1, step)
-      else:
-        dataset = agent._train_dataset_sim_only
-        tf.summary.scalar('sim/train_with_real', 0, step)
+      # train_with_real = check_train_with_real(dr_list)
+      # if train_with_real:
+      #   dataset = agent._train_dataset_combined
+      #   tf.summary.scalar('sim/train_with_real', 1, step)
+      # else:
+      dataset = agent._train_dataset_sim_only
+      tf.summary.scalar('sim/train_with_real', 0, step)
 
     # Log memory usage
     log_memory(step)
