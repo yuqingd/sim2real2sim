@@ -137,6 +137,7 @@ def define_config():
   config.use_state = False
   config.num_dr_grad_steps = 100
   config.control_version = 'end_effector'
+  config.generate_videos = False  # If true, it doesn't train; just generates videos
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -838,6 +839,34 @@ def check_train_with_real(dr_list):
   return observed_std <= std_cutoff and observed_range <= range_
 
 
+def generate_videos(train_envs, test_envs, agent, size=(512, 512), num_rollouts=3):
+  # Only use a single env from each set
+  train_env = train_envs[-1]
+  test_env = test_envs[-1]
+  envs = [(train_env, "train_env"), (test_env, "test_env")]
+  for env, save_name in envs:
+    frames = []
+    for _ in range(num_rollouts):
+      s = None
+      env.apply_dr()
+      d = False
+      promise = env.reset(blocking=False)
+      o = promise()
+      while not d:
+        o = {k: np.expand_dims(o[k], 0) for k in o}
+        frames.append(env.render(size=size))
+        a, s = agent.policy(o, s, False)
+        a = np.array(a).astype(np.float32)[0]
+        o, _, d = env.step(a, blocking=False)()[:3]
+
+
+      for _ in range(10):
+        frames.append(np.zeros_like(frames[0]))
+    frames = np.stack(frames)
+    frames = np.expand_dims(frames, 0)
+    tools.video_summary(f'sim/{save_name}/video', frames)
+
+
 def main(config):
   if config.gpu_growth:
     for gpu in tf.config.experimental.list_physical_devices('GPU'):
@@ -868,6 +897,20 @@ def main(config):
       for _ in range(config.envs)]
   actspace = train_sim_envs[0].action_space
 
+  if config.generate_videos:
+    random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
+    tools.simulate(random_agent, train_sim_envs, None, episodes=1)
+    agent = Dreamer(config, datadir, actspace, writer)
+    agent.load(config.logdir / 'variables.pkl')
+    generate_videos(train_sim_envs, test_envs, agent)
+    for env in train_sim_envs + test_envs:
+      env.close()
+    if train_real_envs is not None:
+      for env in train_real_envs:
+        env.close()
+    print("Done generating videos!")
+    return
+
   # Prefill dataset with random episodes.
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
@@ -887,7 +930,6 @@ def main(config):
 
   # Train and regularly evaluate the agent.
   step = count_steps(datadir, config)
-  print(f'Simulating agent for {config.steps-step} steps.')
   agent = Dreamer(config, datadir, actspace, writer)
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
@@ -896,6 +938,7 @@ def main(config):
     print("checkpoint not loaded")
     print(config.logdir / 'variables.pkl')
     print((config.logdir / 'variables.pkl').exists())
+  print(f'Simulating agent for {config.steps-step} steps.')
   state = None
 
   if config.outer_loop_version == 2:

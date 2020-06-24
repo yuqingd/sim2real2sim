@@ -177,6 +177,9 @@ class Kitchen:
 
     self.apply_dr()
 
+  def get_sim(self):
+    return self._env.sim
+
   def update_dr_param(self, param, param_name, eps=1e-3):
     if param_name in self.dr:
       mean, range = self.dr[param_name]
@@ -383,10 +386,15 @@ class Kitchen:
     obs['success'] = 0.0
     return obs
 
-  def render(self, *args, **kwargs):
+  def render(self, size=None, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    img = self.camera.render()
+    if size is not None:
+      camera = engine.MovableCamera(self._env.sim, *size)
+      camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+    else:
+      camera = self.camera
+    img = camera.render()
     return img
 
 class MetaWorld:
@@ -897,6 +905,8 @@ class TimeLimit:
     return getattr(self._env, name)
 
   def step(self, action):
+
+
     assert self._step is not None, 'Must reset environment.'
     obs, reward, done, info = self._env.step(action)
     self._step += 1
