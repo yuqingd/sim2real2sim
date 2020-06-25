@@ -150,7 +150,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.003, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1, step_size=0.1, use_gripper=False): #  TODO: are these defaults reasonable? It's higher than than the pybullet one for now, but just for testing.
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -241,7 +241,7 @@ class Kitchen:
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
     joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names)  # TODO: possibly specify which joints to move to reach this??
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-10, max_steps=20)  # TODO: possibly specify which joints to move to reach this??
     qpos = ikresult.qpos
     success = ikresult.success
 
