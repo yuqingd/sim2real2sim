@@ -163,6 +163,7 @@ class Kitchen:
     self.end_effector_name = 'end_effector'
     self.end_effector_index = 3
     self.arm_njnts = 7
+    self.goal = None
 
     self.camera = engine.MovableCamera(self._env.sim, *self._size)
     self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
@@ -192,15 +193,15 @@ class Kitchen:
     if 'reach' in self.task:
       next_xpos = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       if self.task == 'reach_microwave':
-        goal = np.squeeze(xpos[XPOS_INDICES['microwave']])
+        self.goal = np.squeeze(xpos[XPOS_INDICES['microwave']])
       elif self.task == 'reach_slide':
-        goal = np.squeeze(xpos[XPOS_INDICES['slide']])
+        self.goal = np.squeeze(xpos[XPOS_INDICES['slide']])
       elif self.task == 'reach_kettle':
-        goal = np.squeeze(xpos[XPOS_INDICES['kettle']])
-        goal[-1] += 0.15 #goal in middle of kettle
+        self.goal = np.squeeze(xpos[XPOS_INDICES['kettle']])
+        self.goal[-1] += 0.15 #goal in middle of kettle
       else:
         raise NotImplementedError
-      reward = -np.linalg.norm(next_xpos - goal)
+      reward = -np.linalg.norm(next_xpos - self.goal)
     elif self.task == 'push_kettle': #push up to burner 4
       #two stage reward, first get to kettle, then kettle to goal
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
@@ -208,10 +209,10 @@ class Kitchen:
       kettlehandle = kettle.copy()
       kettlehandle[-1] += 0.15  # goal in middle of kettle
 
-      goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
+      self.goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
-      d2 = np.linalg.norm(kettle - goal)
+      d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
     elif self.task == 'push_kettle_microwave': #push to microwave
@@ -221,10 +222,10 @@ class Kitchen:
       kettlehandle = kettle.copy()
       kettlehandle[-1] += 0.15  # goal in middle of kettle
 
-      goal = xpos[XPOS_INDICES['microwave'][-1]]
+      self.goal = xpos[XPOS_INDICES['microwave'][-1]]
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
-      d2 = np.linalg.norm(kettle - goal)
+      d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
 
@@ -273,8 +274,9 @@ class Kitchen:
     done = np.abs(reward) < 0.25   # TODO: tune threshold
     info = {}
     obs = {}
+    obs['state'] = self.goal
     if self.use_state:
-      obs['state'] = np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
@@ -291,8 +293,9 @@ class Kitchen:
     self.apply_dr()
     state_obs = self._env.reset()
     obs = {}
+    obs['state'] = np.zeros((3,))
     if self.use_state:
-      obs['state'] = np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])  # Only include robot state
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
