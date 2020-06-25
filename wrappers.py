@@ -293,7 +293,7 @@ class Kitchen:
     self.apply_dr()
     state_obs = self._env.reset()
     obs = {}
-    obs['state'] = np.zeros((3,))
+    obs['state'] = np.zeros(3)
     if self.use_state:
       obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
     obs['image'] = self.render()
