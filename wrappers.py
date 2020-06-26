@@ -16,6 +16,7 @@ from environments.kitchen.adept_envs.adept_envs.kitchen_multitask_v0 import Kitc
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 
 from dm_control.mujoco import engine
+from dm_control.rl.control import PhysicsError
 
 class PegTask:
   def __init__(self, size=(64, 64), real_world=False, dr=None, use_state=False):
@@ -175,6 +176,9 @@ class Kitchen:
     self.camera = engine.MovableCamera(self._env.sim, *self._size)
     self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
 
+    self.camera = engine.MovableCamera(self._env.sim, *self._size)
+    self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+
     self.apply_dr()
 
   def get_sim(self):
@@ -312,11 +316,9 @@ class Kitchen:
     return reward
 
   def step(self, action):
-
     if self.control_version == 'end_effector':
       action = np.clip(action, self.action_space.low, self.action_space.high)
       xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
-
 
       physics = self._env.sim
       # The joints which can be manipulated to move the end-effector to the desired spot.
@@ -325,9 +327,7 @@ class Kitchen:
       qpos = ikresult.qpos
       success = ikresult.success
 
-      if success is False:
-        print("Failure!")  # TODO: if the position specified is invalid, we just don't advance the simulation. This probably isn't the best way of handling this.
-      else:
+      if success:
         action_dim = len(self._env.data.ctrl)
         qpos_low = self._env.model.jnt_range[:, 0]
         qpos_high = self._env.model.jnt_range[:, 1]
@@ -341,9 +341,15 @@ class Kitchen:
           update[self.arm_njnts + 1:] = 0 #no gripper movement
 
         self._env.data.ctrl[:] = update
-        self._env.sim.forward()
-        for _ in range(self.step_repeat):
+      self._env.sim.forward()
+      for _ in range(self.step_repeat):
+        try:
           self._env.sim.step()
+        except PhysicsError as e:
+          success = False
+          print("Physics error:", e)
+
+
     elif self.control_version == 'position':
       action = np.clip(action, self.action_space.low, self.action_space.high)
       self._env.sim.data.ctrl[:] = action
@@ -353,7 +359,9 @@ class Kitchen:
       raise ValueError
 
     reward = self.get_reward()
-    done = np.abs(reward) < 0.3   # TODO: tune threshold
+    # if not success:
+    #   reward = reward * 2
+    done = np.abs(reward) < 0.25   # TODO: tune threshold
     info = {}
     obs = {}
     if self.outer_loop_version == 1:

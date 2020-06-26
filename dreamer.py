@@ -759,6 +759,8 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.PegTask(use_state=config.use_state, real_world=real_world)
     else:
       env = wrappers.PegTask(dr=config.dr, use_state=config.use_state, real_world=real_world)
+    env = wrappers.ActionRepeat(env, config.action_repeat)
+    env = wrappers.NormalizeActions(env)
   elif suite == 'kitchen':
     if config.dr is None or real_world:
       env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,

@@ -21,9 +21,9 @@ for i in range(3):
     frames = [o['image']]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
     a = np.zeros((3,))
-    a[i] = -10  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
-    xyz_diff = a * env.step_size
-    a = env._env.sim.data.site_xpos[env.end_effector_index] + xyz_diff
+    a[i] = -1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
+    #xyz_diff = a * env.step_size
+    #a = env._env.sim.data.site_xpos[env.end_effector_index] + xyz_diff
     for _ in range(100):
         o, _, _, _ = env.step(a)
         # env._env.step(np.zeros((13,)))
