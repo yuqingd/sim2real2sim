@@ -200,10 +200,16 @@ def config_dr(config):
       }
       config.sim_params_size = 2 * len(config.real_dr_params.keys())
       if dr_option == 'accurate_small_range':
-        range_scale = 0.05
+        range_scale = 0.1
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           config.dr[key] = (real_val, real_val * range_scale)
+      if dr_option == 'inaccurate_small_range':
+        range_scale = 0.1
+        offset = 1.08
+        config.dr = {}  # (mean, range)
+        for key, real_val in config.real_dr_params.items():
+          config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
         raise NotImplementedError
 
