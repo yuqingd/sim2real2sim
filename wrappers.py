@@ -241,7 +241,7 @@ class Kitchen:
     physics = self._env.sim
     # The joints which can be manipulated to move the end-effector to the desired spot.
     joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-11, progress_thresh=10, max_steps=20)  # TODO: possibly specify which joints to move to reach this??
+    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-11, progress_thresh=10, max_steps=50)  # TODO: possibly specify which joints to move to reach this??
     qpos = ikresult.qpos
     success = ikresult.success
 
