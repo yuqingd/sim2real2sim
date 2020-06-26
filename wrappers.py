@@ -185,8 +185,8 @@ class Kitchen:
 
   @property
   def action_space(self):
-    act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
+    act_shape = self.arm_njnts # if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
+    return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
@@ -235,32 +235,18 @@ class Kitchen:
     return reward
 
   def step(self, action):
+    #action is relative change in 7 joints
     action = np.clip(action, self.action_space.low, self.action_space.high)
+    cur_joints = self._env.sim.data.qpos[:self.arm_njnts]
+    updated_joints = action + cur_joints
 
-    xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
-    physics = self._env.sim
-    # The joints which can be manipulated to move the end-effector to the desired spot.
-    joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7'] # TODO: add an option to move gripper to if we're using gripper control??
-    ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-10, progress_thresh=10, max_steps=50)  # TODO: possibly specify which joints to move to reach this??
-    qpos = ikresult.qpos
-    success = ikresult.success
+    #impose joint limits
+    low_lim = self._env.model.jnt_range[:self.arm_njnts, 0]
+    high_lim = self._env.model.jnt_range[:self.arm_njnts, 1]
+    ctrl = np.clip(updated_joints, low_lim, high_lim)
 
-    if success:
-      action_dim = len(self._env.data.ctrl)
-      qpos_low = self._env.model.jnt_range[:, 0]
-      qpos_high = self._env.model.jnt_range[:, 1]
-      update = np.clip(qpos[:action_dim], qpos_low[:action_dim], qpos_high[:action_dim])
-      if self.use_gripper:
-        # TODO: almost certainly not the right way to implement this
-        gripper_pos = action[3:]
-        update[-len(gripper_pos):] = gripper_pos
-        raise NotImplementedError
-      else:
-        update[self.arm_njnts + 1:] = 0 #no gripper movement
+    self._env.data.ctrl[:self.arm_njnts] = ctrl
 
-      self._env.data.ctrl[:] = update
-    self._env.sim.forward()
-    #for _ in range(self.step_repeat):
     try:
       self._env.sim.step()
     except PhysicsError as e:
