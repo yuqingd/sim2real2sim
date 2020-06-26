@@ -154,7 +154,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
-               step_size=0.003, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               step_size=0.01, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='end_effector'):
     self._env = KitchenTaskRelaxV1()
     self.task = task
@@ -172,12 +172,8 @@ class Kitchen:
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
-
     self.camera = engine.MovableCamera(self._env.sim, *self._size)
-    self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-
-    self.camera = engine.MovableCamera(self._env.sim, *self._size)
-    self.camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+    self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
 
     self.apply_dr()
 
@@ -289,24 +285,41 @@ class Kitchen:
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
     if 'reach' in self.task:
-      next_xpos = xpos[XPOS_INDICES['end_effector']]
+      next_xpos = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       if self.task == 'reach_microwave':
-        goal = xpos[XPOS_INDICES['microwave']]
+        self.goal = np.squeeze(xpos[XPOS_INDICES['microwave']])
       elif self.task == 'reach_slide':
-        goal = xpos[XPOS_INDICES['slide']]
+        self.goal = np.squeeze(xpos[XPOS_INDICES['slide']])
       elif self.task == 'reach_kettle':
-        goal = xpos[XPOS_INDICES['kettle']]
+        self.goal = np.squeeze(xpos[XPOS_INDICES['kettle']])
+        self.goal[-1] += 0.15 #goal in middle of kettle
       else:
         raise NotImplementedError
-      reward = -np.linalg.norm(next_xpos - goal)
+      reward = -np.linalg.norm(next_xpos - self.goal)
     elif self.task == 'push_kettle': #push up to burner 4
       #two stage reward, first get to kettle, then kettle to goal
-      end_effector = xpos[XPOS_INDICES['end_effector']]
-      kettle = xpos[XPOS_INDICES['kettle']]
-      goal = xpos[XPOS_INDICES['knob_burner4']]
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.15  # goal in middle of kettle
 
-      d1 = np.linalg.norm(end_effector - kettle)
-      d2 = np.linalg.norm(kettle - goal)
+      self.goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
+
+      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d2 = np.linalg.norm(kettle - self.goal)
+
+      reward = -(d1 + d2)
+    elif self.task == 'push_kettle_microwave': #push to microwave
+      #two stage reward, first get to kettle, then kettle to goal
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.15  # goal in middle of kettle
+
+      self.goal = xpos[XPOS_INDICES['microwave'][-1]]
+
+      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
 
@@ -367,10 +380,10 @@ class Kitchen:
     if self.outer_loop_version == 1:
       obs['sim_params'] = self.sim_params
     if self.use_state:
-      obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
-    obs['image'] = self.render(mode='rgb_array')
+    obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -385,7 +398,7 @@ class Kitchen:
     if self.outer_loop_version == 1:
       obs['sim_params'] = self.sim_params
     if self.use_state:
-      obs['state'] = self._env.sim.data.site_xpos[self.end_effector_index]
+      obs['state'] = np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
@@ -747,7 +760,7 @@ class GymControl:
     obs, reward, done, info = self._env.step(action) # Done currently has None
     img = self.render()
     obs['image'] = img
-    done = int(done) # int(self._env._is_success(obs["achieved_goal"], obs["desired_goal"]))
+    done = int(done)
     discount = 1 # TODO: discount?
     info = {'discount': np.array(discount, np.float32)}
     return obs, reward, done, info
