@@ -186,7 +186,7 @@ class Kitchen:
   @property
   def action_space(self):
     act_shape = self.arm_njnts # if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-5.0] * act_shape), np.array([5.0] * act_shape))
+    return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
