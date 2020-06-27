@@ -186,7 +186,7 @@ class Kitchen:
   @property
   def action_space(self):
     act_shape = self.arm_njnts # if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
-    return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
+    return gym.spaces.Box(np.array([-10.0] * act_shape), np.array([10.0] * act_shape))
 
   def get_reward(self):
     xpos = self._env.sim.data.body_xpos
@@ -207,11 +207,11 @@ class Kitchen:
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.15  # goal in middle of kettle
+      #kettlehandle[-1] += 0.15  # goal in middle of kettle
 
       self.goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
 
-      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d1 = np.linalg.norm(end_effector - kettle)
       d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
@@ -220,11 +220,11 @@ class Kitchen:
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.15  # goal in middle of kettle
+      #kettlehandle[-1] += 0.15  # goal in middle of kettle
 
       self.goal = xpos[XPOS_INDICES['microwave'][-1]]
 
-      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d1 = np.linalg.norm(end_effector - kettle)
       d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
