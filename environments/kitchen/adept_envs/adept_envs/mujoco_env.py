@@ -79,9 +79,11 @@ class MujocoEnv(gym.Env):
         observation, _reward, done, _info = self.step(np.zeros(self.model.nu))
         assert not done
 
-        bounds = self.model.actuator_ctrlrange.copy()
-        act_upper = bounds[:, 1]
-        act_lower = bounds[:, 0]
+        # bounds = self.model.actuator_ctrlrange.copy()
+        # act_upper = bounds[:, 1]
+        # act_lower = bounds[:, 0]
+        act_lower = np.zeros((3,))
+        act_upper = np.ones((3,))
 
         # Define the action and observation spaces.
         # HACK: MJRL is still using gym 0.9.x so we can't provide a dtype.

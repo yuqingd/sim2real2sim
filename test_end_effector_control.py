@@ -1,10 +1,33 @@
 import matplotlib
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 
 import numpy as np
 import wrappers
 import moviepy.editor as mpy
 from matplotlib import pyplot as plt
+
+
+# env = wrappers.MetaWorld("reach")
+# env.reset()
+# x = env.action_space
+# a = env.action_space.sample()
+# env.step(a)
+
+
+
+env = wrappers.Kitchen(control_version='metaworld_ik')
+env.reset()
+x = env.action_space
+while True:
+    img = env._env.sim.render(width=512, height=512, camera_name="top_camera")
+    print()
+    plt.imshow(img)
+    plt.show()
+    a = env.action_space.sample()
+    env.step(a)
+
+
+
 env = wrappers.Kitchen()
 from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 

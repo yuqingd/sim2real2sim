@@ -210,9 +210,10 @@ class KitchenTaskRelaxV1(KitchenV0):
 
     def render(self, mode='human'):
         if mode =='rgb_array':
-            camera = engine.MovableCamera(self.sim, 1920, 2560)
-            camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-            img = camera.render()
+            img = self.sim.render(mode='offscreen', width=64, height=64)
+            # camera = engine.MovableCamera(self.sim, 1920, 2560)
+            # camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+            # img = camera.render()
             return img
         else:
             super(KitchenTaskRelaxV1, self).render()

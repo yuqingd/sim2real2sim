@@ -155,7 +155,7 @@ BONUS_THRESH_HL = 0.3
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
                step_size=0.01, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               control_version='end_effector'):
+               control_version='end_effector', action_scale=0.01):
     self._env = KitchenTaskRelaxV1()
     self.task = task
     self._size = size
@@ -172,8 +172,9 @@ class Kitchen:
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
-    self.camera = engine.MovableCamera(self._env.sim, *self._size)
-    self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
+    self.action_scale = action_scale
+    # self.camera = engine.MovableCamera(self._env.sim, *self._size)
+    # self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
 
     self.apply_dr()
 
@@ -195,13 +196,13 @@ class Kitchen:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[0, 0:1], 'joint1_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[1, 0:1], 'joint2_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[2, 0:1], 'joint3_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[3, 0:1], 'joint4_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[4, 0:1], 'joint5_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[5, 0:1], 'joint6_actuation')
-    self.update_dr_param(self._env.sim.model.actuator_gainprm[6, 0:1], 'joint7_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[0, 0:1], 'joint1_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[1, 0:1], 'joint2_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[2, 0:1], 'joint3_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[3, 0:1], 'joint4_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[4, 0:1], 'joint5_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[5, 0:1], 'joint6_actuation')
+    # self.update_dr_param(self._env.sim.model.actuator_gainprm[6, 0:1], 'joint7_actuation')
     self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
     self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
     self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -230,13 +231,13 @@ class Kitchen:
     if self.simple_randomization:
       return np.array([self._env.sim.model.body_mass[48]])
     arr = np.array([
-      self._env.sim.model.actuator_gainprm[0, 0],
-      self._env.sim.model.actuator_gainprm[1, 0],
-      self._env.sim.model.actuator_gainprm[2, 0],
-      self._env.sim.model.actuator_gainprm[3, 0],
-      self._env.sim.model.actuator_gainprm[4, 0],
-      self._env.sim.model.actuator_gainprm[5, 0],
-      self._env.sim.model.actuator_gainprm[6, 0],
+      # self._env.sim.model.actuator_gainprm[0, 0],
+      # self._env.sim.model.actuator_gainprm[1, 0],
+      # self._env.sim.model.actuator_gainprm[2, 0],
+      # self._env.sim.model.actuator_gainprm[3, 0],
+      # self._env.sim.model.actuator_gainprm[4, 0],
+      # self._env.sim.model.actuator_gainprm[5, 0],
+      # self._env.sim.model.actuator_gainprm[6, 0],
       self._env.sim.model.dof_damping[0],
       self._env.sim.model.dof_damping[1],
       self._env.sim.model.dof_damping[2],
@@ -279,6 +280,9 @@ class Kitchen:
     if self.control_version == 'end_effector':
       act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
       return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
+    elif self.control_version == 'metaworld_ik':
+      act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
+      return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
     else:
       return self._env.action_space
 
@@ -328,8 +332,26 @@ class Kitchen:
 
     return reward
 
+  def set_xyz_action(self, action):
+    action = np.clip(action, self.action_space.low, self.action_space.high)
+    pos_delta = action * self.action_scale
+    new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
+
+    new_mocap_pos[0, :] = np.clip(  # TODO: high/low
+      new_mocap_pos[0, :],
+      self.action_space.low,
+      self.action_space.high,
+    )
+    self._env.data.set_mocap_pos('mocap', new_mocap_pos)
+    # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
+
   def step(self, action):
-    if self.control_version == 'end_effector':
+    if self.control_version == 'metaworld_ik':
+        self.set_xyz_action(action[:3])
+        update = np.array([])
+
+
+    elif self.control_version == 'end_effector':
       action = np.clip(action, self.action_space.low, self.action_space.high)
       xyz_pos = action[:3] * self.step_size + self._env.sim.data.site_xpos[self.end_effector_index]
 
@@ -353,23 +375,19 @@ class Kitchen:
         else:
           update[self.arm_njnts + 1:] = 0 #no gripper movement
 
-        self._env.data.ctrl[:] = update
-      self._env.sim.forward()
-      for _ in range(self.step_repeat):
-        try:
-          self._env.sim.step()
-        except PhysicsError as e:
-          success = False
-          print("Physics error:", e)
-
-
     elif self.control_version == 'position':
-      action = np.clip(action, self.action_space.low, self.action_space.high)
-      self._env.sim.data.ctrl[:] = action
-      for _ in range(self.step_repeat):
-        self._env.sim.step()
+      update = np.clip(action, self.action_space.low, self.action_space.high)
     else:
-      raise ValueError
+      raise ValueError(self.control_version)
+
+    if not update.shape == (0,):
+      self._env.data.ctrl[:] = update
+    for _ in range(self.step_repeat):
+        try:
+            self._env.sim.step()
+        except PhysicsError as e:
+            success = False
+            print("Physics error:", e)
 
     reward = self.get_reward()
     # if not success:
@@ -410,12 +428,13 @@ class Kitchen:
   def render(self, size=None, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    if size is not None:
-      camera = engine.MovableCamera(self._env.sim, *size)
-      camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-    else:
-      camera = self.camera
-    img = camera.render()
+    # if size is not None:
+    #   camera = engine.MovableCamera(self._env.sim, *size)
+    #   camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+    # else:
+    #   camera = self.camera
+    # img = camera.render()
+    img = self._env.sim.render(width=64, height=64, mode='offscreen')
     return img
 
 class MetaWorld:
