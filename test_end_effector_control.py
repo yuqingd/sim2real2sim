@@ -49,7 +49,7 @@ from matplotlib import pyplot as plt
 
 
 
-env = wrappers.Kitchen(step_repeat=100, control_version='metaworld_ik')
+env = wrappers.Kitchen(size=(256, 256), step_repeat=100)#, control_version='metaworld_ik')
 # from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 # end_effector_index = env.end_effector_index
 # mocap_index = env.mocap_index
@@ -69,7 +69,7 @@ env = wrappers.Kitchen(step_repeat=100, control_version='metaworld_ik')
 # Axis aligned
 img_size = 512
 end_effector_index = env.end_effector_index
-for i in range(1, 3):
+for i in range(2, 3):
     print("TEST", i)
     o = env.reset()
     offset = np.zeros((3,))
@@ -77,17 +77,19 @@ for i in range(1, 3):
     frames = [env.render(size=(img_size,img_size))]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
     a = np.zeros((3,))
-    a[i] = -10  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
+    # a[i-1] = 20
+    a[i] = -1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
     #xyz_diff = a * env.step_size
     #a = env._env.sim.data.site_xpos[env.end_effector_index] + xyz_diff
-    for _ in range(100):
+    for k in range(1000):
         o, _, _, _ = env.step(a)
         # env._env.step(np.zeros((13,)))
         # plt.imshow(env._env.render(mode='rgb_array')):q:qq
         # plt.show()
-        frames.append(env.render(size=(img_size,img_size)).copy())
-        positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
-    fps = 10
+        if k % 10 == 0:
+            frames.append(env.render(size=(img_size,img_size)).copy())
+            positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
+    fps = 20
     clip = mpy.ImageSequenceClip(frames, fps=fps)
     clip.write_gif('test_end_effector_axis' + str(i) + '.gif', fps=fps)
     # We'd expect to see a graph where all positions stay the same except the one along which we're moving.
@@ -99,7 +101,7 @@ for i in range(1, 3):
     plt.show()
     plt.close()
 
-
+assert False
 # ==============================================================================================
 
 
