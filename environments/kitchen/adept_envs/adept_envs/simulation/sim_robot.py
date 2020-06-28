@@ -52,7 +52,7 @@ class MujocoSimRobot:
             raise ValueError(
                 '[MujocoSimRobot] Invalid model file path: {}'.format(
                     model_file))
-        # self._use_dm_backend = False  # TODO: ???
+        self._use_dm_backend = False  # TODO: ???
         if self._use_dm_backend:
             dm_mujoco = module.get_dm_mujoco()
             if model_file.endswith('.mjb'):

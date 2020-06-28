@@ -49,7 +49,7 @@ from matplotlib import pyplot as plt
 
 
 
-env = wrappers.Kitchen(size=(256, 256), step_repeat=100)#, control_version='metaworld_ik')
+env = wrappers.Kitchen(size=(256, 256), step_repeat=100, control_version='metaworld_ik')
 # from dm_control.utils.inverse_kinematics import qpos_from_site_pose
 # end_effector_index = env.end_effector_index
 # mocap_index = env.mocap_index

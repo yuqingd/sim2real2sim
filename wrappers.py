@@ -380,7 +380,6 @@ class Kitchen:
     else:
       raise ValueError(self.control_version)
 
-    print("success?", success)
     if not update.shape == (0,):
       self._env.data.ctrl[:] = update
     for _ in range(self.step_repeat):
