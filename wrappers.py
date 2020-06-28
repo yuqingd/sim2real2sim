@@ -207,11 +207,11 @@ class Kitchen:
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
-      #kettlehandle[-1] += 0.15  # goal in middle of kettle
+      kettlehandle[-1] += 0.1  # goal in middle of kettle
 
       self.goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
 
-      d1 = np.linalg.norm(end_effector - kettle)
+      d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - self.goal)
 
       reward = -(d1 + d2)
