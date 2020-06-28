@@ -26,6 +26,7 @@ dependencies:
     - pyglet==1.3.2
     - tensorflow==2.1.0
     - tensorflow-probability==0.9.0
+    -
     - mujoco-py==2.0.2
     - dm_control==0.0.300771433
 prefix: /miniconda3/envs/dreamer_sim

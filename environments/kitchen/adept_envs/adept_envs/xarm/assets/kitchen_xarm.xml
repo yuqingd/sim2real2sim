@@ -44,7 +44,7 @@
               texturedir="../../../../adept_models/kitchen"/>
 
     <equality>
-        <weld body1="mocap" body2="world" solref="0.02 1" solimp=".7 .95 0.050"/>
+        <weld body1="mocap" body2="link7" solref="0.02 1" solimp=".7 .95 0.050"/>
     </equality>
 
 <!--    <option integrator="RK4" timestep="0.01"/>-->

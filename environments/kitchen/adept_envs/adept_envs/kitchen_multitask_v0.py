@@ -41,7 +41,7 @@ class KitchenV0(robot_env.RobotEnv):
     N_DOF_ROBOT = 13
     N_DOF_OBJECT = 21
 
-    def __init__(self, robot_params={}, frame_skip=1):
+    def __init__(self, robot_params={}, frame_skip=1, distance=4.5, azimuth=-66, elevation=-65):
         self.goal_concat = True
         self.obs_dict = {}
         self.robot_noise_ratio = 0.1  # 10% as per robot_config specs
@@ -55,9 +55,9 @@ class KitchenV0(robot_env.RobotEnv):
                 **robot_params),
             frame_skip=frame_skip,
             camera_settings=dict(
-                distance=4.5,
-                azimuth=-66,
-                elevation=-65,
+                distance=distance,
+                azimuth=azimuth,
+                elevation=elevation,
             ),
         )
 
@@ -195,9 +195,9 @@ class KitchenV0(robot_env.RobotEnv):
 class KitchenTaskRelaxV1(KitchenV0):
     """Kitchen environment with proper camera and goal setup"""
 
-    def __init__(self, task_type='reach_microwave'):
+    def __init__(self, task_type='reach_microwave', distance=4.5, azimuth=-66, elevation=-65):
         self.task_type = task_type
-        super(KitchenTaskRelaxV1, self).__init__()
+        super(KitchenTaskRelaxV1, self).__init__(distance=distance, azimuth=azimuth, elevation=elevation)
 
 
     def _get_reward_n_score(self, obs_dict):
@@ -208,12 +208,12 @@ class KitchenTaskRelaxV1(KitchenV0):
         score = 0.
         return reward_dict, score
 
-    def render(self, mode='human'):
-        if mode =='rgb_array':
-            img = self.sim.render(mode='offscreen', width=64, height=64)
-            # camera = engine.MovableCamera(self.sim, 1920, 2560)
-            # camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-            # img = camera.render()
-            return img
-        else:
-            super(KitchenTaskRelaxV1, self).render()
+    # def render(self, mode='human', ):
+    #     if mode =='rgb_array':
+    #         img = self.sim.render(mode='offscreen', width=64, height=64)
+    #         # camera = engine.MovableCamera(self.sim, 1920, 2560)
+    #         # camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
+    #         # img = camera.render()
+    #         return img
+    #     else:
+    #         super(KitchenTaskRelaxV1, self).render()

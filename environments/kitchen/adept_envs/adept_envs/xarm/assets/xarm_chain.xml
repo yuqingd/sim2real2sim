@@ -29,7 +29,7 @@
                         <geom class="xarm_col" mass="0.18554" mesh="link5" />
                         <geom class="xarm_viz" mesh="link5" />
                         <body name="link6" pos="0 0 0" quat="0.707105 0.707108 0 0">
-                            <inertial pos="0.058911 0.028469 0.0068428" quat="-0.188705 0.793535 0.166088 0.554173" mass="0.31344" diaginertia="0.000827892 0.000768871 0.000386708" />
+                            <inertial pos="0.058911 0.028469 0.0068428" quat="-0.188705 0.793535 0.166088 0.554173" mass="0.31344" diaginertia="0.000827892 0.000768871 0.00038670ki8" />
                             <joint name="joint6" pos="0 0 0" axis="0 0 1" limited="true" range="-1.69 3.14" damping="2" frictionloss="1" />
                             <geom class="xarm_col" mass="0.31344" mesh="link6" />
                             <geom class="xarm_viz"  mesh="link6" />

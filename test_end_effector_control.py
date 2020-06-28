@@ -6,42 +6,75 @@ import wrappers
 import moviepy.editor as mpy
 from matplotlib import pyplot as plt
 
+# env = wrappers.MetaWorld("reach", size=(512, 512))
+# env = wrappers.Kitchen(control_version='metaworld_ik', step_size=0.1)
+# env.reset()
+# while True:
+#     low = env.action_space.low
+#     high = env.action_space.high
+#     # a = env.action_space.sample(low)
+#     a = np.zeros((3,))
+#     a[2] = -1
+#     env.step(a)
+#     o = env.render(mode='rgb_array')
+#     # plt.imshow(o)
+#     plt.imshow(env.render(size=(512, 512)))
+#     plt.show()
 
-# env = wrappers.MetaWorld("reach")
+
+
+# env = wrappers.Kitchen(control_version='metaworld_ik')
 # env.reset()
 # x = env.action_space
-# a = env.action_space.sample()
+# while True:
+#     img = env._env.sim.render(width=512, height=512, camera_name="top_camera")
+#     print()
+#     plt.imshow(img)
+#     plt.show()
+#     a = env.action_space.sample()
+#     env.step(a)
+
+
+# while True:
+#     distance = float(input('distance'))
+#     azimuth = float(input('azimuth'))
+#     elevation = float(input('elevation'))
+#
+#     env = wrappers.Kitchen(control_version='metaworld_ik', distance=distance, azimuth=azimuth, elevation=elevation)
+#     env.reset()
+#     o = env.render(size=(512, 512))
+#     plt.imshow(o)
+#     plt.show()
+#     print("??")
+
+
+
+env = wrappers.Kitchen()#control_version='metaworld_ik')
+# from dm_control.utils.inverse_kinematics import qpos_from_site_pose
+# end_effector_index = env.end_effector_index
+# mocap_index = env.mocap_index
+# orig_end_effector = env._env.sim.data.site_xpos[end_effector_index].copy()
+# orig_mocap = env._env.sim.data.site_xpos[mocap_index].copy()
+# orig_mocap2 = env._env.data.mocap_pos.copy()
+# a = np.zeros((3,))
+# a[0] = -1
 # env.step(a)
-
-
-
-env = wrappers.Kitchen(control_version='metaworld_ik')
-env.reset()
-x = env.action_space
-while True:
-    img = env._env.sim.render(width=512, height=512, camera_name="top_camera")
-    print()
-    plt.imshow(img)
-    plt.show()
-    a = env.action_space.sample()
-    env.step(a)
-
-
-
-env = wrappers.Kitchen()
-from dm_control.utils.inverse_kinematics import qpos_from_site_pose
+# final_end_effector = env._env.sim.data.site_xpos[end_effector_index].copy()
+# final_mocap = env._env.sim.data.site_xpos[mocap_index].copy()
+# final_mocap2 = env._env.data.mocap_pos.copy()
 
 # ====================== check whether end_effector control works ================
 
-
+# k = env._env.sim.named
 # Axis aligned
+img_size = 512
 end_effector_index = env.end_effector_index
-for i in range(3):
+for i in range(2, 3):
     print("TEST", i)
     o = env.reset()
     offset = np.zeros((3,))
-    offset[i] = .05  # Will be scaled down by the step size
-    frames = [o['image']]
+    offset[i] = 1  # Will be scaled down by the step size
+    frames = [env.render(size=(img_size,img_size))]
     positions = [env._env.sim.data.site_xpos[end_effector_index].copy()]
     a = np.zeros((3,))
     a[i] = -1  # Specify a change along one axis. We could also comment this out to check that with no change the arm stays still.
@@ -52,7 +85,7 @@ for i in range(3):
         # env._env.step(np.zeros((13,)))
         # plt.imshow(env._env.render(mode='rgb_array')):q:qq
         # plt.show()
-        frames.append(o['image'])
+        frames.append(env.render(size=(img_size,img_size)))
         positions.append(env._env.sim.data.site_xpos[end_effector_index].copy())
     fps = 10
     clip = mpy.ImageSequenceClip(frames, fps=fps)

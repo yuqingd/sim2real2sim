@@ -155,8 +155,8 @@ BONUS_THRESH_HL = 0.3
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
                step_size=0.01, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               control_version='end_effector', action_scale=0.01):
-    self._env = KitchenTaskRelaxV1()
+               control_version='end_effector', distance=2.5, azimuth=60, elevation=-30):
+    self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
     self.task = task
     self._size = size
     self.real_world = real_world
@@ -166,13 +166,13 @@ class Kitchen:
     self.step_size = step_size
     self.use_gripper = use_gripper
     self.end_effector_name = 'end_effector'
-    self.end_effector_index = 3
+    self.mocap_index = 3
+    self.end_effector_index = 4
     self.arm_njnts = 7
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
-    self.action_scale = action_scale
     # self.camera = engine.MovableCamera(self._env.sim, *self._size)
     # self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
 
@@ -334,13 +334,13 @@ class Kitchen:
 
   def set_xyz_action(self, action):
     action = np.clip(action, self.action_space.low, self.action_space.high)
-    pos_delta = action * self.action_scale
+    pos_delta = action * self.step_size
     new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
 
     new_mocap_pos[0, :] = np.clip(  # TODO: high/low
       new_mocap_pos[0, :],
-      self.action_space.low,
-      self.action_space.high,
+      self.action_space.low * 3,
+      self.action_space.high * 3,
     )
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
@@ -425,7 +425,7 @@ class Kitchen:
     obs['success'] = 0.0
     return obs
 
-  def render(self, size=None, *args, **kwargs):
+  def render(self, size=(64, 64), *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     # if size is not None:
@@ -434,7 +434,8 @@ class Kitchen:
     # else:
     #   camera = self.camera
     # img = camera.render()
-    img = self._env.sim.render(width=64, height=64, mode='offscreen')
+    h, w = size
+    img = self._env.render(width=w, height=h, mode='rgb_array')
     return img
 
 class MetaWorld:
