@@ -8,6 +8,7 @@ import sys
 import time
 import shutil
 import psutil
+import cv2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'egl'
@@ -848,7 +849,7 @@ def check_train_with_real(dr_list):
   return observed_std <= std_cutoff and observed_range <= range_
 
 
-def generate_videos(train_envs, test_envs, agent, size=(512, 512), num_rollouts=3):
+def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
   # Only use a single env from each set
   train_env = train_envs[-1]
   test_env = test_envs[-1]
@@ -861,20 +862,24 @@ def generate_videos(train_envs, test_envs, agent, size=(512, 512), num_rollouts=
       d = False
       promise = env.reset(blocking=False)
       o = promise()
+      i = 0
       while not d:
         o = {k: np.expand_dims(o[k], 0) for k in o}
         frames.append(env.render(size=size))
         a, s = agent.policy(o, s, False)
         a = np.array(a).astype(np.float32)[0]
         o, _, d = env.step(a, blocking=False)()[:3]
+        i += 1
+      print("Generated run of length", i)
 
 
       for _ in range(10):
         frames.append(np.zeros_like(frames[0]))
-    frames = np.stack(frames)
-    frames = np.expand_dims(frames, 0)
-    tools.video_summary(f'sim/{save_name}/video', frames)
-
+    fps = 10
+    writer = cv2.VideoWriter(os.path.join(logdir, save_name + "_videos.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), fps, size)
+    for frame in frames:
+        writer.write(frame)
+    writer.release()
 
 def main(config):
   if config.gpu_growth:
@@ -911,7 +916,7 @@ def main(config):
     tools.simulate(random_agent, train_sim_envs, None, episodes=1)
     agent = Dreamer(config, datadir, actspace, writer)
     agent.load(config.logdir / 'variables.pkl')
-    generate_videos(train_sim_envs, test_envs, agent)
+    generate_videos(train_sim_envs, test_envs, agent, config.logdir)
     for env in train_sim_envs + test_envs:
       env.close()
     if train_real_envs is not None:
