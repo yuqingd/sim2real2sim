@@ -154,7 +154,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
-               step_size=0.01, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               step_size=0.02, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='end_effector', distance=2.5, azimuth=60, elevation=-30):
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
     self.task = task
@@ -173,6 +173,8 @@ class Kitchen:
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
+    self.end_effector_bound_low = [-1.5, -.5, 1.5]
+    self.end_effector_bound_high = [.5, 1, 5]
     # self.camera = engine.MovableCamera(self._env.sim, *self._size)
     # self.camera.set_pose(distance=1.7, lookat=[-.2, .7, 2.], azimuth=40, elevation=-50)
 
@@ -277,10 +279,10 @@ class Kitchen:
 
   @property
   def action_space(self):
-    if self.control_version == 'end_effector':
+    if self.control_version == 'dmc_ik':
       act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
       return gym.spaces.Box(np.array([-100.0] * act_shape), np.array([100.0] * act_shape))
-    elif self.control_version == 'metaworld_ik':
+    elif self.control_version == 'mocap_ik':
       act_shape = 4 if self.use_gripper else 3  # 1 for fingers, 3 for end effector position
       return gym.spaces.Box(np.array([-1.0] * act_shape), np.array([1.0] * act_shape))
     else:
@@ -337,16 +339,16 @@ class Kitchen:
     pos_delta = action * self.step_size
     new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
 
-    new_mocap_pos[0, :] = np.clip(  # TODO: high/low
+    new_mocap_pos[0, :] = np.clip(
       new_mocap_pos[0, :],
-      self.action_space.low * 3,
-      self.action_space.high * 3,
+      self.end_effector_bound_low,
+      self.end_effector_bound_high,
     )
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
 
   def step(self, action):
-    if self.control_version == 'metaworld_ik':
+    if self.control_version == 'mocap_ik':
         self.set_xyz_action(action[:3])
         update = np.array([])
 
@@ -425,15 +427,11 @@ class Kitchen:
     obs['success'] = 0.0
     return obs
 
-  def render(self, size=(64, 64), *args, **kwargs):
+  def render(self, size=None, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    # if size is not None:
-    #   camera = engine.MovableCamera(self._env.sim, *size)
-    #   camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-    # else:
-    #   camera = self.camera
-    # img = camera.render()
+    if size is None:
+        size = self._size
     h, w = size
     img = self._env.render(width=w, height=h, mode='rgb_array')
     return img

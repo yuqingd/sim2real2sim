@@ -136,7 +136,7 @@ def define_config():
   config.id = 'debug'
   config.use_state = False
   config.num_dr_grad_steps = 100
-  config.control_version = 'metaworld_ik'
+  config.control_version = 'mocap_ik'
   config.generate_videos = False  # If true, it doesn't train; just generates videos
 
   # Sim2real transfer
