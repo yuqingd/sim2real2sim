@@ -41,7 +41,7 @@ class KitchenV0(robot_env.RobotEnv):
     N_DOF_ROBOT = 13
     N_DOF_OBJECT = 21
 
-    def __init__(self, robot_params={}, frame_skip=1, distance=4.5, azimuth=-66, elevation=-65):
+    def __init__(self, robot_params={}, frame_skip=1, distance=2.5, azimuth=60, elevation=-30):
         self.goal_concat = True
         self.obs_dict = {}
         self.robot_noise_ratio = 0.1  # 10% as per robot_config specs

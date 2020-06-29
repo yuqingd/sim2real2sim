@@ -149,7 +149,7 @@ BONUS_THRESH_HL = 0.3
 # 44           microwave [-0.85      0.725     1.6     ]
 # 45           microroot [-0.85      0.725     1.6     ]
 # 46       microdoorroot [-1.13      0.455     1.79    ]
-# 47              kettle [-0.269     0.35      1.63    ]\
+# 47              kettle [-0.269     0.35      1.63    ]
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
@@ -346,10 +346,9 @@ class Kitchen:
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
 
   def step(self, action):
+    update = None
     if self.control_version == 'mocap_ik':
         self.set_xyz_action(action[:3])
-        update = np.array([])
-
 
     elif self.control_version == 'dmc_ik':
       action = np.clip(action, self.action_space.low, self.action_space.high)
@@ -374,13 +373,14 @@ class Kitchen:
           raise NotImplementedError
         else:
           update[self.arm_njnts + 1:] = 0 #no gripper movement
+        self._env.data.ctrl[:] = update
 
     elif self.control_version == 'position':
       update = np.clip(action, self.action_space.low, self.action_space.high)
     else:
       raise ValueError(self.control_version)
 
-    if not update.shape == (0,):
+    if update is not None:
       self._env.data.ctrl[:] = update
     for _ in range(self.step_repeat):
         try:
