@@ -140,6 +140,7 @@ def define_config():
   config.control_version = 'mocap_ik'
   config.generate_videos = False  # If true, it doesn't train; just generates videos
   config.step_repeat = 200
+  config.bounds = 'stove_area'
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -912,10 +913,13 @@ def main(config):
   actspace = train_sim_envs[0].action_space
 
   if config.generate_videos:
+    print("Collecting a trajectory so it doesn't die on us")
     random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
     tools.simulate(random_agent, train_sim_envs, None, episodes=1)
+    print("Loading past run")
     agent = Dreamer(config, datadir, actspace, writer)
     agent.load(config.logdir / 'variables.pkl')
+    print("Generating videos")
     generate_videos(train_sim_envs, test_envs, agent, config.logdir)
     for env in train_sim_envs + test_envs:
       env.close()

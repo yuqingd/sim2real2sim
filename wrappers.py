@@ -155,7 +155,7 @@ BONUS_THRESH_HL = 0.3
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
                step_size=0.02, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               control_version='mocap_ik', distance=2.5, azimuth=60, elevation=-30):
+               control_version='mocap_ik', distance=2.5, azimuth=60, elevation=-30, bounds='stove_area'):
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
     self.task = task
     self._size = size
@@ -173,8 +173,36 @@ class Kitchen:
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
-    self.end_effector_bound_low = [-1.5, -.5, 1.5]
-    self.end_effector_bound_high = [.5, 1, 5]
+
+    if bounds == 'no_restrictions':
+      x_low = y_low = z_low = -float('inf')
+      x_high = y_high = z_high = float('inf')
+    elif bounds == 'full_workspace':
+      x_low = -1.5  # Around the microwave
+      x_high = 0.5  # Around the sink
+      y_low = -0.5  # Right in front of the robot's pedestal
+      y_high = 2  # Past back burner
+      z_low = 1.5  # Tabletop
+      z_high = 5  # Cabinet height TODO
+    elif bounds == 'stove_area':
+      x_low = -1  # Left edge of stove
+      x_high = 0.  # Right edge of stove
+      y_low = -0.5  # Right in front of the robot's pedestal
+      y_high = 1.0  # Back burner
+      z_low = 1.5  # Tabletop
+      z_high = 2  # Around top of kettle
+    elif bounds == 'front_stove_area':  # For use with sliding
+      x_low = -1  # Left edge of stove
+      x_high = 0.  # Right edge of stove
+      y_low = -0.5  # Right in front of the robot's pedestal
+      y_high = 0  # Mid-front burner
+      z_low = 1.5  # Tabletop
+      z_high = 2  # Around top of kettle
+    else:
+      raise NotImplementedError("No other bounds types")
+
+    self.end_effector_bound_low = [x_low, y_low, z_low]
+    self.end_effector_bound_high = [x_high, y_high, z_high]
 
     self.apply_dr()
 
