@@ -195,7 +195,7 @@ class KitchenV0(robot_env.RobotEnv):
 class KitchenTaskRelaxV1(KitchenV0):
     """Kitchen environment with proper camera and goal setup"""
 
-    def __init__(self, task_type='reach_microwave', distance=4.5, azimuth=-66, elevation=-65):
+    def __init__(self, task_type='reach_microwave', distance=2.5, azimuth=60, elevation=-30):
         self.task_type = task_type
         super(KitchenTaskRelaxV1, self).__init__(distance=distance, azimuth=azimuth, elevation=elevation)
 
@@ -207,13 +207,3 @@ class KitchenTaskRelaxV1(KitchenV0):
         reward_dict['r_total'] = 0.
         score = 0.
         return reward_dict, score
-
-    # def render(self, mode='human', ):
-    #     if mode =='rgb_array':
-    #         img = self.sim.render(mode='offscreen', width=64, height=64)
-    #         # camera = engine.MovableCamera(self.sim, 1920, 2560)
-    #         # camera.set_pose(distance=2.2, lookat=[-0.2, .5, 2.], azimuth=70, elevation=-35)
-    #         # img = camera.render()
-    #         return img
-    #     else:
-    #         super(KitchenTaskRelaxV1, self).render()

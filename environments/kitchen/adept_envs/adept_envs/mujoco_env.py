@@ -31,7 +31,7 @@ from environments.kitchen.adept_envs.adept_envs.simulation.sim_robot import Mujo
 
 DEFAULT_RENDER_SIZE = 480
 
-USE_DM_CONTROL = True
+USE_DM_CONTROL = False
 
 
 class MujocoEnv(gym.Env):
@@ -79,9 +79,6 @@ class MujocoEnv(gym.Env):
         observation, _reward, done, _info = self.step(np.zeros(self.model.nu))
         assert not done
 
-        # bounds = self.model.actuator_ctrlrange.copy()
-        # act_upper = bounds[:, 1]
-        # act_lower = bounds[:, 0]
         act_lower = np.zeros((3,))
         act_upper = np.ones((3,))
 

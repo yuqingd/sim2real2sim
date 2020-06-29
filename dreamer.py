@@ -167,13 +167,13 @@ def config_dr(config):
       config.sim_params_size = 2
     else:
       config.real_dr_params = {
-        # "joint1_actuation": 30,
-        # "joint2_actuation": 20,
-        # "joint3_actuation": 15,
-        # "joint4_actuation": 10,
-        # "joint5_actuation": 5,
-        # "joint6_actuation": 2,
-        # "joint7_actuation": 5,
+        "joint1_actuation": 30,
+        "joint2_actuation": 20,
+        "joint3_actuation": 15,
+        "joint4_actuation": 10,
+        "joint5_actuation": 5,
+        "joint6_actuation": 2,
+        "joint7_actuation": 5,
         "joint1_damping": 10,
         "joint2_damping": 10,
         "joint3_damping": 5,
