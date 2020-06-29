@@ -153,7 +153,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=1,
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
                step_size=0.02, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2.5, azimuth=60, elevation=-30):
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
