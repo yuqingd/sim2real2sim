@@ -174,6 +174,99 @@ class Kitchen:
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
 
+    self.apply_dr()
+
+  def setup_task(self):
+    init_xpos = self._env.sim.data.body_xpos
+
+    if 'reach' in self.task:
+      self.set_workspace_bounds('full_workspace')
+
+      if self.task == 'reach_microwave':
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['microwave']])
+      elif self.task == 'reach_slide':
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['slide']])
+      elif self.task == 'reach_kettle':
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal[-1] += 0.1  # goal in middle of kettle
+      else:
+        raise NotImplementedError
+
+    elif 'push' in self.task:
+      self.set_workspace_bounds('stove_area')
+
+      if self.task == 'push_kettle_burner': #single goal test, push to back burner
+        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+      else:
+        self.goal = np.random.uniform(low=self.end_effector_bound_low, high=self.end_effector_bound_high) #randomly select goal location in workspace
+        self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to push in x,y
+
+    elif 'slide' in self.task:
+      self.set_workspace_bounds('front_stove_area')
+      self.slide_d1 = None
+
+      if self.task == 'slide_kettle_burner': #single goal test, slide to back burner
+        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+      else:
+        self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
+        self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
+
+    else:
+      raise NotImplementedError
+
+
+
+  def get_reward(self):
+    xpos = self._env.sim.data.body_xpos
+    if 'reach' in self.task:
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+      reward = -np.linalg.norm(end_effector - self.goal)
+    elif 'push' in self.task:
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+        # two stage reward, first get to kettle, then kettle to goal
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.1  # goal in middle of kettle
+
+      d1 = np.linalg.norm(end_effector - kettlehandle)
+      d2 = np.linalg.norm(kettle - self.goal)
+
+      reward = -(d1 + d2)
+
+    elif 'slide' in self.task:
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+        # two stage reward, first get to kettle, then kettle to goal
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.1  # goal in middle of kettle
+
+      d1 = np.linalg.norm(end_effector - kettlehandle)
+      if d1 < 0.1: #TODO: tune threshold for hitting kettle
+        self.slide_d1 = d1
+
+      d2 = np.linalg.norm(kettle - self.goal)
+
+      if self.slide_d1 is not None:
+        reward = -(self.slide_d1 + d2)
+      else:
+        reward = -(d1 + d2)
+
+    else:
+      raise NotImplementedError
+
+    return reward
+
+  def get_sim(self):
+    return self._env.sim
+
+  def update_dr_param(self, param, param_name, eps=1e-3):
+    if param_name in self.dr:
+      mean, range = self.dr[param_name]
+      range = max(range, eps)
+      param[:] = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      self.sim_params += [mean, range]
+
+  def set_workspace_bounds(self, bounds):
     if bounds == 'no_restrictions':
       x_low = y_low = z_low = -float('inf')
       x_high = y_high = z_high = float('inf')
@@ -203,20 +296,6 @@ class Kitchen:
 
     self.end_effector_bound_low = [x_low, y_low, z_low]
     self.end_effector_bound_high = [x_high, y_high, z_high]
-
-    self.apply_dr()
-
-  def get_sim(self):
-    return self._env.sim
-
-  def update_dr_param(self, param, param_name, eps=1e-3):
-    if param_name in self.dr:
-      mean, range = self.dr[param_name]
-      range = max(range, eps)
-      param[:] = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
-      self.sim_params += [mean, range]
-
-
 
   def apply_dr(self):
     self.sim_params = []
@@ -314,51 +393,6 @@ class Kitchen:
     else:
       return self._env.action_space
 
-  def get_reward(self):
-    xpos = self._env.sim.data.body_xpos
-    if 'reach' in self.task:
-      next_xpos = np.squeeze(xpos[XPOS_INDICES['end_effector']])
-      if self.task == 'reach_microwave':
-        self.goal = np.squeeze(xpos[XPOS_INDICES['microwave']])
-      elif self.task == 'reach_slide':
-        self.goal = np.squeeze(xpos[XPOS_INDICES['slide']])
-      elif self.task == 'reach_kettle':
-        self.goal = np.squeeze(xpos[XPOS_INDICES['kettle']])
-        self.goal[-1] += 0.15 #goal in middle of kettle
-      else:
-        raise NotImplementedError
-      reward = -np.linalg.norm(next_xpos - self.goal)
-    elif self.task == 'push_kettle': #push up to burner 4
-      #two stage reward, first get to kettle, then kettle to goal
-      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
-      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
-      kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.15  # goal in middle of kettle
-
-      self.goal = xpos[XPOS_INDICES['knob_burner4'][-1]]
-
-      d1 = np.linalg.norm(end_effector - kettlehandle)
-      d2 = np.linalg.norm(kettle - self.goal)
-
-      reward = -(d1 + d2)
-    elif self.task == 'push_kettle_microwave': #push to microwave
-      #two stage reward, first get to kettle, then kettle to goal
-      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
-      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
-      kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.15  # goal in middle of kettle
-
-      self.goal = xpos[XPOS_INDICES['microwave'][-1]]
-
-      d1 = np.linalg.norm(end_effector - kettlehandle)
-      d2 = np.linalg.norm(kettle - self.goal)
-
-      reward = -(d1 + d2)
-
-    else:
-      raise NotImplementedError
-
-    return reward
 
   def set_xyz_action(self, action):
     action = np.clip(action, self.action_space.low, self.action_space.high)
@@ -439,6 +473,7 @@ class Kitchen:
 
   def reset(self):
     self.apply_dr()
+    self.setup_task()
     state_obs = self._env.reset()
     obs = {}
     if self.outer_loop_version == 1:
