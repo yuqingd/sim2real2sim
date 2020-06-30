@@ -498,7 +498,7 @@ class Kitchen:
     if self.use_state:
       obs['state'] = np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])
       if self.use_gripper:
-        obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
+        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
