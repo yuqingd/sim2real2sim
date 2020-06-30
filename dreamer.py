@@ -114,7 +114,7 @@ def define_config():
   config.weight_decay_pattern = r'.*'
   # Training.
   config.batch_size = 50
-  config.batch_length = 25 # TODO: consier changing back
+  config.batch_length = 25 # TODO: consider changing back
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
@@ -141,6 +141,7 @@ def define_config():
   config.generate_videos = False  # If true, it doesn't train; just generates videos
   config.step_repeat = 200
   config.bounds = 'stove_area'
+  config.step_size = 0.02
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
