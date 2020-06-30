@@ -180,24 +180,24 @@ class Kitchen:
     elif bounds == 'full_workspace':
       x_low = -1.5  # Around the microwave
       x_high = 0.5  # Around the sink
-      y_low = -0.5  # Right in front of the robot's pedestal
+      y_low = -0.2  # Right in front of the robot's pedestal
       y_high = 2  # Past back burner
       z_low = 1.5  # Tabletop
       z_high = 5  # Cabinet height TODO
     elif bounds == 'stove_area':
       x_low = -1  # Left edge of stove
       x_high = 0.  # Right edge of stove
-      y_low = -0.5  # Right in front of the robot's pedestal
+      y_low = -0.2  # Right in front of the robot's pedestal
       y_high = 1.0  # Back burner
       z_low = 1.5  # Tabletop
-      z_high = 2  # Around top of kettle
+      z_high = 2.2  # Around top of kettle
     elif bounds == 'front_stove_area':  # For use with sliding
       x_low = -1  # Left edge of stove
       x_high = 0.  # Right edge of stove
-      y_low = -0.5  # Right in front of the robot's pedestal
+      y_low = -0.2  # Right in front of the robot's pedestal
       y_high = 0  # Mid-front burner
       z_low = 1.5  # Tabletop
-      z_high = 2  # Around top of kettle
+      z_high = 2.2  # Around top of kettle
     else:
       raise NotImplementedError("No other bounds types")
 
@@ -364,12 +364,12 @@ class Kitchen:
     action = np.clip(action, self.action_space.low, self.action_space.high)
     pos_delta = action * self.step_size
     new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
-
     new_mocap_pos[0, :] = np.clip(
       new_mocap_pos[0, :],
       self.end_effector_bound_low,
       self.end_effector_bound_high,
     )
+
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
 
