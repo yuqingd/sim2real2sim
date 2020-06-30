@@ -154,7 +154,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
-               step_size=0.02, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               step_size=0.05, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2.5, azimuth=60, elevation=-30, bounds='stove_area'):
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
     self.task = task
@@ -406,7 +406,8 @@ class Kitchen:
   def set_xyz_action(self, action):
     action = np.clip(action, self.action_space.low, self.action_space.high)
     pos_delta = action * self.step_size
-    new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
+    new_mocap_pos = self._env.sim.data.site_xpos[self.end_effector_index].copy() + pos_delta[None]
+    # new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
     new_mocap_pos[0, :] = np.clip(
       new_mocap_pos[0, :],
       self.end_effector_bound_low,
