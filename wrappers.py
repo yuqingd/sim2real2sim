@@ -280,7 +280,7 @@ class Kitchen:
       y_low = -0.2  # Right in front of the robot's pedestal
       y_high = 2  # Past back burner
       z_low = 1.5  # Tabletop
-      z_high = 5  # Cabinet height TODO
+      z_high = 5  # Cabinet height
     elif bounds == 'stove_area':
       x_low = -1  # Left edge of stove
       x_high = 0.  # Right edge of stove

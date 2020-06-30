@@ -11,7 +11,7 @@ import psutil
 import cv2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MUJOCO_GL'] = 'egl'
+os.environ['MUJOCO_GL'] = 'osmesa'
 
 import numpy as np
 import tensorflow as tf
@@ -94,7 +94,7 @@ def define_config():
   config.task = 'dmc_cup_catch'
   config.envs = 1
   config.parallel = 'none'
-  config.action_repeat = 2
+  config.action_repeat = 1
   config.time_limit = 200
   config.prefill = 5000
   config.eval_noise = 0.0
