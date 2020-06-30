@@ -245,7 +245,7 @@ class Kitchen:
       kettlehandle[-1] += 0.1  # goal in middle of kettle
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
-      if d1 < 0.1: #TODO: tune threshold for hitting kettle
+      if d1 < 0.1 and self.slide_d1 is None: #TODO: tune threshold for hitting kettle
         self.slide_d1 = d1
 
       d2 = np.linalg.norm(kettle - self.goal)
