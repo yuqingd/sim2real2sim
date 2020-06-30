@@ -5,7 +5,7 @@
     <body name="link1" pos="0 0 0.267" >
 <!--         childclass="robot_default"-->
         <inertial pos="-0.0042142 0.02821 -0.0087788" quat="0.917781 -0.277115 0.0606681 0.277858" mass="0.42603" diaginertia="0.00144551 0.00137757 0.000823511" />
-        <joint name="joint1" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="10" frictionloss="1" />
+        <joint name="joint1" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="10" frictionloss="1" />
         <geom class="xarm_col" mass="0.42603" mesh="link1" />
         <geom class="xarm_viz"  mesh="link1" />
         <body name="link2" pos="0 0 0" quat="0.707105 -0.707108 0 0">
@@ -15,7 +15,7 @@
             <geom class="xarm_viz" mesh="link2" />
             <body name="link3" pos="0 -0.293 0" quat="0.707105 0.707108 0 0">
                 <inertial pos="0.04223 -0.023258 -0.0096674" quat="0.883205 0.339803 0.323238 0.000542237" mass="0.44463" diaginertia="0.00133227 0.00119126 0.000780475" />
-                <joint name="joint3" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="5" frictionloss="1" />
+                <joint name="joint3" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="5" frictionloss="1" />
                 <geom class="xarm_col"  mass="0.44463"  mesh="link3" />
                 <geom class="xarm_viz"  mesh="link3" />
                 <body name="link4" pos="0.0525 0 0" quat="0.707105 0.707108 0 0">
@@ -25,7 +25,7 @@
                     <geom class="xarm_viz" mesh="link4" />
                     <body name="link5" pos="0.0775 -0.3425 0" quat="0.707105 0.707108 0 0">
                         <inertial pos="-0.00023397 0.036705 -0.080064" quat="0.981064 -0.19003 0.00637998 0.0369004" mass="0.18554" diaginertia="0.00099553 0.000988613 0.000247126" />
-                        <joint name="joint5" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="5" frictionloss="1" />
+                        <joint name="joint5" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="5" frictionloss="1" />
                         <geom class="xarm_col" mass="0.18554" mesh="link5" />
                         <geom class="xarm_viz" mesh="link5" />
                         <body name="link6" pos="0 0 0" quat="0.707105 0.707108 0 0">
@@ -36,7 +36,7 @@
                             <body name="link7" pos="0.076 0.097 0" quat="0.707105 -0.707108 0 0">
                                 <site name='end_effector' pos='0 0 0'/>
                                 <inertial pos="-0.000420033 -0.00287433 0.0257078" quat="0.999372 -0.0349129 -0.00605634 0.000551744" mass="0.85624" diaginertia="0.00137671 0.00118744 0.000514968" />
-                                <joint name="joint7" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                <joint name="joint7" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="2" frictionloss="1" />
                                 <geom class="xarm_col" mass="0.85624" mesh="link7" />
                                 <geom class="xarm_viz" mesh="link7" />
                                 <geom class="xarm_col"  name="end_effector" mass="0.85624" mesh="base_link" />
