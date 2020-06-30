@@ -302,7 +302,7 @@ class Dreamer(tools.Module):
           load_dataset(datadir, self._c, use_sim=True, use_real=True)))
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c, use_sim=False, use_real=True)))
-      elif config.outer_loop_version == 1:
+      else:
         self._dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c)))
       self._build_model()
@@ -320,9 +320,9 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          if self._c.outer_loop_version == 1:
+          if self._c.outer_loop_version in [0,1]:
             self.train(next(self._dataset), log_images)
-          elif self._c.outer_loop_version == 2:
+          else:
             self.train(next(dataset), log_images)
       if log:
         self._write_summaries()
@@ -495,7 +495,7 @@ class Dreamer(tools.Module):
         init_std=self._c.action_init_std, act=act)
     if self._c.outer_loop_version == 1:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
-    elif self._c.outer_loop_version == 2:
+    elif self._c.outer_loop_version in [0, 2]:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward]
     if self._c.pcont:
       model_modules.append(self._pcont)
@@ -921,7 +921,7 @@ def main(config):
 
           env.apply_dr()
 
-  for env in train_sim_envs + train_real_envs + test_envs:
+  for env in train_sim_envs + test_envs:
     env.close()
   if train_real_envs is not None:
     for env in train_real_envs:
