@@ -211,6 +211,10 @@ class Kitchen:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
 
+    elif 'pick' in self.task:
+      self.set_workspace_bounds('full_workspace')
+      self.use_gripper = True
+
     else:
       raise NotImplementedError
 
@@ -375,9 +379,14 @@ class Kitchen:
   @property
   def observation_space(self):
     spaces = {}
+
     if self.use_state:
-      state_shape = 5 if self.use_gripper else 3  # 2 for fingers, 3 for end effector position
-      spaces['state'] = gym.spaces.Box(np.array([-1] * state_shape), np.array([1] * state_shape))
+      state_shape = 4 if self.use_gripper else 3  # 2 for fingers, 3 for end effector position
+      state_shape = self.goal.shape + state_shape
+      spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * state_shape), np.array([-float('inf')] * state_shape))
+    else:
+      spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * self.goal.shape[0]),
+                                       np.array([float('inf')] * self.goal.shape[0]))
     spaces['image'] = gym.spaces.Box(
       0, 255, self._size + (3,), dtype=np.uint8)
     return gym.spaces.Dict(spaces)
@@ -411,6 +420,13 @@ class Kitchen:
     update = None
     if self.control_version == 'mocap_ik':
         self.set_xyz_action(action[:3])
+
+        if self.use_gripper:
+          gripper_ac = action[-1]
+          #gripper drive angle goes from 0 - 0.85, normalize
+          gripper_ac = (gripper_ac + 1) * (0.85/2.)
+          self._env.data.ctrl[self.arm_njnts] = gripper_ac
+
 
     elif self.control_version == 'dmc_ik':
       action = np.clip(action, self.action_space.low, self.action_space.high)
@@ -462,7 +478,7 @@ class Kitchen:
     if self.use_state:
       obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.use_gripper:
-        obs['state'] = np.concatenate([obs['state'], [-1]])  # TODO: compute gripper position, include it
+        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
