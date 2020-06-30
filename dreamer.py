@@ -516,7 +516,7 @@ class Dreamer(tools.Module):
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
-    if self._c.outer_loop_version == 1:
+    if self._c.outer_loop_version != 2:
       self.train(next(self._dataset))
     else:
       self.train(next(self._train_dataset_sim_only))
