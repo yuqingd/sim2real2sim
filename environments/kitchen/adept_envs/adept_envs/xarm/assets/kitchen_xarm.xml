@@ -52,7 +52,7 @@
         <!-- Mocap -0.05 -->
 <!--        <body name="mocap" mocap="true" pos="-0.15 0.01 1.95" euler="-1.57 0 -.785">-->
         <body name="mocap" mocap="true" pos="0 0.206 1.7705" euler="-1.57 0 -.785">
-            <geom type="sphere" group="2" pos='0 0 0' size="0.01" contype="0" conaffinity="0" rgba=".9 .7 .95 0" euler="0 0 -.785"/>
+            <geom type="sphere" group="2" pos='0 0 0' size="0.01" contype="0" conaffinity="0" rgba=".9 .7 .95 1" euler="0 0 -.785"/>
             <site name="mocap" pos="0 0 0" rgba="0.0 0.5 0.5 0" size="0.01" type="sphere"></site>
         </body>
 
