@@ -240,7 +240,7 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
         probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
       else:
         probs = None
-    elif real_world_prob and "real_world" in cache[keys[0]]:
+    elif real_world_prob > 0and "real_world" in cache[keys[0]]:
       num_real = sum([True in cache[key]['real_world'] for key in keys])
       num_sim = len(keys) - num_real
       if num_real == 0 or num_sim == 0:
