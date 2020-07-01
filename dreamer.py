@@ -787,7 +787,7 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0 or config.outer_loop_version in [1, 2]:
+  if config.real_world_prob > 0 or config.sample_real_every > 0 or config.outer_loop_version in [1, 2]:
     train_real_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                   for _ in range(config.envs)]
