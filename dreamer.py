@@ -869,7 +869,9 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
       i = 0
       while not d:
         o = {k: np.expand_dims(o[k], 0) for k in o}
-        frames.append(env.render(size=size))
+        # RGB --> BGR
+        img = env.render(size=size)[:, :, ::-1]
+        frames.append(img)
         a, s = agent.policy(o, s, False)
         a = np.array(a).astype(np.float32)[0]
         o, _, d = env.step(a, blocking=False)()[:3]
