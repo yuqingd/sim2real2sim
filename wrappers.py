@@ -164,7 +164,10 @@ class Kitchen:
     self.dr = dr
     self.step_repeat = step_repeat
     self.step_size = step_size
-    self.use_gripper = use_gripper
+    if 'pick' in task:
+      self.use_gripper = True
+    else:
+      self.use_gripper = False
     self.end_effector_name = 'end_effector'
     self.mocap_index = 3
     self.end_effector_index = 4
@@ -476,6 +479,7 @@ class Kitchen:
   def step(self, action):
     update = None
     if self.control_version == 'mocap_ik':
+        import pdb; pdb.set_trace()
         action = np.clip(action, self.action_space.low, self.action_space.high)
         self.set_xyz_action(action[:3])
 
