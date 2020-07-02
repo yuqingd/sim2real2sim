@@ -87,7 +87,7 @@
                 <include file="../../../../adept_models/kitchen/assets/microwave_chain.xml"/>
             </body>
         </body>
-        <body name="kettle" pos="-0.269 0.35 1.626" euler="0 0 1.57">
+        <body name="kettle" pos="0. 0.35 1.626" euler="0 0 -1.57">
             <freejoint/>
             <include file="../../../../adept_models/kitchen/assets/kettle_chain.xml"/>
         </body>
