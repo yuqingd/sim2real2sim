@@ -199,7 +199,8 @@ class Kitchen:
       self.set_workspace_bounds('stove_area')
 
       if self.task == 'push_kettle_burner': #single goal test, push to back burner
-        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal[1] += 0.6
       else:
         self.goal = np.random.uniform(low=self.end_effector_bound_low, high=self.end_effector_bound_high) #randomly select goal location in workspace
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to push in x,y
@@ -209,7 +210,8 @@ class Kitchen:
       self.slide_d1 = None
 
       if self.task == 'slide_kettle_burner': #single goal test, slide to back burner
-        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal[1] += 0.6
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
@@ -221,7 +223,8 @@ class Kitchen:
       self.pick_d1 = None
 
       if self.task == 'pick_kettle_burner': #single goal test, slide to back burner
-        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal[1] += 0.6
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
