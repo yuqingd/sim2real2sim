@@ -479,7 +479,6 @@ class Kitchen:
   def step(self, action):
     update = None
     if self.control_version == 'mocap_ik':
-        import pdb; pdb.set_trace()
         action = np.clip(action, self.action_space.low, self.action_space.high)
         self.set_xyz_action(action[:3])
 
