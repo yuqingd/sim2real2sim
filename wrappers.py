@@ -3,7 +3,7 @@ import functools
 import sys
 import threading
 import traceback
-
+import time
 import gym
 import numpy as np
 from PIL import Image
@@ -214,6 +214,14 @@ class Kitchen:
     elif 'pick' in self.task:
       self.set_workspace_bounds('full_workspace')
       self.use_gripper = True
+      self.orig_kettle_height = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1]
+      self.pick_d1 = None
+
+      if self.task == 'pick_kettle_burner': #single goal test, slide to back burner
+        self.goal = init_xpos[XPOS_INDICES['knob_burner4'][-1]]
+      else:
+        self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
+        self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
 
     else:
       raise NotImplementedError
@@ -254,6 +262,38 @@ class Kitchen:
         reward = -(self.slide_d1 + d2)
       else:
         reward = -(d1 + d2)
+
+    elif 'pick' in self.task:
+      #three stage reward, first reach kettle, pick up kettle, then goal
+      end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
+
+      kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
+      kettlehandle = kettle.copy()
+      kettlehandle[-1] += 0.15  # goal in middle of kettle
+      kettle_height = kettle[-1]
+
+      d1 = np.linalg.norm(end_effector - kettlehandle) #reach handle
+
+      if d1 < 0.1 and self.pick_d1 is None: #TODO: tune this
+        d1 = d1 - self._env.data.ctrl[self.arm_njnts] #TODO: scale gripper contribution to reward
+        self.pick_d1 = d1
+
+      d3 = np.linalg.norm(kettle[:2] - self.goal[:2]) #xy distance to goal
+
+      if self.pick_d1 is not None:
+        d2 = np.linalg.norm(self.orig_kettle_height - kettle_height) #distance kettle has been lifted
+        if d2 > 0.02: #TODO: tune this
+          #then we have lifted it
+          d2 = -d2
+        else:
+          if d3 > 0.25: #TODO: tune this
+          #then we haven't lifted it and it is far from goal, restart
+            self.pick_d1 = None
+            d2 = 0
+      else:
+        d2 = 0
+
+      reward = -(d1 + d2 + d3)
 
     else:
       raise NotImplementedError
@@ -404,7 +444,7 @@ class Kitchen:
 
 
   def set_xyz_action(self, action):
-    action = np.clip(action, self.action_space.low, self.action_space.high)
+
     pos_delta = action * self.step_size
     new_mocap_pos = self._env.sim.data.site_xpos[self.end_effector_index].copy() + pos_delta[None]
     # new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
@@ -417,16 +457,31 @@ class Kitchen:
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
 
+  def set_gripper(self, action):
+    #gripper either open or close
+    cur_ac = self._env.data.qpos[self.arm_njnts] #current gripper position, either 0 or 0.85
+
+    if action < 0:
+      gripper_ac = 0 #open
+    else:
+      gripper_ac = 0.85 #close
+
+    sequence = np.linspace(cur_ac, gripper_ac, num=50)
+    for step in sequence:
+      self._env.data.ctrl[self.arm_njnts] = step
+      self._env.sim.step()
+    #need to linearly space out control with multiple steps so simulator doesnt break
+
+
   def step(self, action):
     update = None
     if self.control_version == 'mocap_ik':
+        action = np.clip(action, self.action_space.low, self.action_space.high)
         self.set_xyz_action(action[:3])
 
         if self.use_gripper:
           gripper_ac = action[-1]
-          #gripper drive angle goes from 0 - 0.85, normalize
-          gripper_ac = (gripper_ac + 1) * (0.85/2.)
-          self._env.data.ctrl[self.arm_njnts] = gripper_ac
+          self.set_gripper(gripper_ac)
 
 
     elif self.control_version == 'dmc_ik':
