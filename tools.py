@@ -116,10 +116,7 @@ def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
         obs[index] = promise()
     # Step agents.
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-    if dataset is None:
-      action, agent_state = agent(obs, done, agent_state)
-    else:
-      action, agent_state = agent(obs, done, dataset, agent_state)
+    action, agent_state = agent(obs, done, dataset, agent_state)
     action = np.array(action)
     assert len(action) == len(envs)
     # Step envs.

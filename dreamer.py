@@ -919,7 +919,7 @@ def main(config):
 
   if config.generate_videos:
     print("Collecting a trajectory so it doesn't die on us")
-    random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
+    random_agent = lambda o, d, da, s: ([actspace.sample() for _ in d], None)
     tools.simulate(random_agent, train_sim_envs, None, episodes=1)
     print("Loading past run")
     agent = Dreamer(config, datadir, actspace, writer)
