@@ -145,7 +145,7 @@ def define_config():
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
-  config.sample_real_every = 2  # How often we should sample from the real world
+  config.sample_real_every = 100 # How often we should sample from the real world
   config.simple_randomization = False
 
   # these values are for testing dmc_cup_catch
@@ -372,6 +372,7 @@ class Dreamer(tools.Module):
       self._build_model()
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
+    assert dataset is None, dataset  # TODO: debug_cup
     step = self._step.numpy().item()
     tf.summary.experimental.set_step(step)
     if state is not None and reset.any():
@@ -399,6 +400,8 @@ class Dreamer(tools.Module):
   @tf.function
   def policy(self, obs, state, training):
     if state is None:
+      # latent = self._dynamics.initial(len(obs['image']))
+      # action = tf.zeros((len(obs['image']), self._actdim), self._float)  # TODO: debug_cup; these lines are modified to match baseline_working
       latent = self._dynamics.initial(obs['image'].shape[0])
       action = tf.zeros((obs['image'].shape[0], self._actdim), self._float)
     else:
@@ -658,6 +661,8 @@ class Dreamer(tools.Module):
 
   def _write_summaries(self):
     step = int(self._step.numpy())
+    for k, v in self._metrics.items():  # TODO: debug_cup
+      print(v.count > 0, ("Zero", k, v.count, v))
     metrics = [(k, float(v.result())) for k, v in self._metrics.items() if v.count > 0]
     if self._last_log is not None:
       duration = time.time() - self._last_time
@@ -715,6 +720,7 @@ def count_steps(datadir, config):
 
 
 def load_dataset(directory, config, use_sim=None, use_real=None):
+  assert (use_sim is None) and (use_real is None), (use_sim, use_real)  # TODO: debug_cup
   if config.outer_loop_version != 2:
     episode = next(tools.load_episodes(directory, 1))
   else:
@@ -907,6 +913,7 @@ def main(config):
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
   if config.real_world_prob > 0 or config.outer_loop_version in [1, 2]:
+    assert False, "train_real_envs"  # TODO: debug_cup
     train_real_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                   for _ in range(config.envs)]

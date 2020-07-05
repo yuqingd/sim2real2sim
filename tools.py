@@ -98,6 +98,7 @@ def encode_gif(frames, fps):
 
 
 def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
+  assert dataset is None, dataset  # TODO: debug_cup
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
@@ -204,6 +205,7 @@ def save_episodes(directory, episodes):
 
 
 def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_world_prob=-1, use_sim=None, use_real=None):
+  assert (use_sim is None) and (use_real is None), (use_sim, use_real)  # TODO: debug_cup
   directory = pathlib.Path(directory).expanduser()
   random = np.random.RandomState(seed)
   cache = {}
@@ -444,6 +446,7 @@ class Adam(tf.Module):
     return self._opt.variables()
 
   def __call__(self, tape, loss, module=True):
+    assert module, module  # TODO: debug_cup
     if self._variables is None:
       if module:
         variables = [module.variables for module in self._modules]
