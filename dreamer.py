@@ -937,7 +937,7 @@ def main(config):
   # Prefill dataset with random episodes.
   step = count_steps(datadir, config)
   prefill = max(0, config.prefill - step)
-  random_agent = lambda o, d, _: ([actspace.sample() for _ in d], None)
+  random_agent = lambda o, d, da, s: ([actspace.sample() for _ in d], None)
   dataset = None
   print(f'Prefill dataset with {prefill} simulated steps.')
   tools.simulate(random_agent, train_sim_envs, dataset, prefill / config.action_repeat)
