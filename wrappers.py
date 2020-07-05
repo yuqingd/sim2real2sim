@@ -244,7 +244,7 @@ class Kitchen:
         # two stage reward, first get to kettle, then kettle to goal
       kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.1  # goal in middle of kettle
+      #kettlehandle[-1] += 0.1  # goal in middle of kettle
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - self.goal)
@@ -256,7 +256,7 @@ class Kitchen:
         # two stage reward, first get to kettle, then kettle to goal
       kettle = np.squeeze(xpos[XPOS_INDICES['kettle']])
       kettlehandle = kettle.copy()
-      kettlehandle[-1] += 0.1  # goal in middle of kettle
+      #kettlehandle[-1] += 0.  # goal in middle of kettle
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
       if d1 < 0.1 and self.slide_d1 is None: #TODO: tune threshold for hitting kettle
