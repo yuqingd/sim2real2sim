@@ -429,6 +429,8 @@ class Kitchen:
     if self.use_state:
       state_shape = 4 if self.use_gripper else 3  # 2 for fingers, 3 for end effector position
       state_shape = self.goal.shape + state_shape
+      if 'kettle' in self.task:
+        state_shape = 3 + state_shape #add in kettle xpos coodinates
       spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * state_shape), np.array([-float('inf')] * state_shape))
     else:
       spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * self.goal.shape[0]),
@@ -537,8 +539,9 @@ class Kitchen:
     obs = {}
     if self.outer_loop_version == 1:
       obs['sim_params'] = self.sim_params
+    obs['state'] = self.goal
     if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']]), np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])
     obs['image'] = self.render()
@@ -554,10 +557,11 @@ class Kitchen:
     self.setup_task()
     state_obs = self._env.reset()
     obs = {}
+    obs['state'] = self.goal
     if self.outer_loop_version == 1:
       obs['sim_params'] = self.sim_params
     if self.use_state:
-      obs['state'] = np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']]), np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])  # TODO: compute gripper position, include it
     obs['image'] = self.render()
