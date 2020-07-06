@@ -208,14 +208,14 @@ def config_dr(config):
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           config.dr[key] = (real_val * offset, real_val * range_scale)
-      elif dr_option == 'inaccurate_big_range':
+      elif dr_option == 'inaccurate_large_range':
         range_scale = 1
         offset = 1.5
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
-        raise NotImplementedError
+        raise NotImplementedError(dr_option)
 
   elif config.task == 'metaworld_reach':
       return {}
