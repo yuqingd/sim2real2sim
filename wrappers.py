@@ -329,21 +329,21 @@ class Kitchen:
     elif bounds == 'full_workspace':
       x_low = -1.5  # Around the microwave
       x_high = 1.  # Around the sink
-      y_low = -0.2  # Right in front of the robot's pedestal
+      y_low = -0.1  # Right in front of the robot's pedestal
       y_high = 2  # Past back burner
       z_low = 1.5  # Tabletop
       z_high = 5  # Cabinet height
     elif bounds == 'stove_area':
       x_low = -0.5  # Left edge of stove
       x_high = 0.5  # Right edge of stove
-      y_low = -0.2  # Right in front of the robot's pedestal
+      y_low = -0.1  # Right in front of the robot's pedestal
       y_high = 1.0  # Back burner
       z_low = 1.5  # Tabletop
       z_high = 2.  # Around top of kettle
     elif bounds == 'front_stove_area':  # For use with sliding
       x_low = -0.5  # Left edge of stove
       x_high = 0.5  # Right edge of stove
-      y_low = -0.2  # Right in front of the robot's pedestal
+      y_low = -0.1  # Right in front of the robot's pedestal
       y_high = 0.5  # Mid-front burner
       z_low = 1.5  # Tabletop
       z_high = 2.  # Around top of kettle
