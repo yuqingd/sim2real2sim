@@ -239,6 +239,7 @@ class Kitchen:
     if 'reach' in self.task:
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
       reward = -np.linalg.norm(end_effector - self.goal)
+      done = np.abs(reward) < 0.25
     elif 'push' in self.task:
       end_effector = np.squeeze(xpos[XPOS_INDICES['end_effector']])
         # two stage reward, first get to kettle, then kettle to goal
@@ -248,6 +249,7 @@ class Kitchen:
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - self.goal)
+      done = np.abs(d2) < 0.25
 
       reward = -(d1 + d2)
 
@@ -263,11 +265,14 @@ class Kitchen:
         self.slide_d1 = d1
 
       d2 = np.linalg.norm(kettle - self.goal)
+      done = np.abs(d2) < 0.25
 
       if self.slide_d1 is not None:
         reward = -(self.slide_d1 + d2)
       else:
         reward = -(d1 + d2)
+
+
 
     elif 'pick' in self.task:
       #three stage reward, first reach kettle, pick up kettle, then goal
@@ -298,13 +303,14 @@ class Kitchen:
             d2 = 0
       else:
         d2 = 0
+      done = np.abs(d3) < 0.25
 
       reward = -(d1 + d2 + d3)
 
     else:
       raise NotImplementedError
 
-    return reward
+    return reward, done
 
   def get_sim(self):
     return self._env.sim
@@ -454,13 +460,15 @@ class Kitchen:
   def set_xyz_action(self, action):
 
     pos_delta = action * self.step_size
-    new_mocap_pos = self._env.sim.data.site_xpos[self.end_effector_index].copy() + pos_delta[None]
+    new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]#self._env.sim.data.site_xpos[self.end_effector_index].copy() + pos_delta[None]
     # new_mocap_pos = self._env.data.mocap_pos + pos_delta[None]
+
     new_mocap_pos[0, :] = np.clip(
       new_mocap_pos[0, :],
       self.end_effector_bound_low,
       self.end_effector_bound_high,
     )
+
 
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
     # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
@@ -531,10 +539,10 @@ class Kitchen:
             success = False
             print("Physics error:", e)
 
-    reward = self.get_reward()
+    reward, done = self.get_reward()
     # if not success:
     #   reward = reward * 2
-    done = np.abs(reward) < 0.25   # TODO: tune threshold
+    #done = np.abs(reward) < 0.25   # TODO: tune threshold
     info = {}
     obs = {}
     if self.outer_loop_version == 1:
