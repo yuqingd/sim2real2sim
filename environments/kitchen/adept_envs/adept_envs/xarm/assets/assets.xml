@@ -5,6 +5,7 @@
     <size nuser_actuator="5"/>
 
    <asset>
+        <mesh name="cubewithhole" file="meshes/cubewithhole.STL" scale="0.005 0.005 0.005" />
         <mesh name="link_base" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link_base.STL" />
         <mesh name="link1" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link1.STL" />
         <mesh name="link2" file="../../adept_envs/adept_envs/xarm/assets/bullet/xarm_description/meshes/xarm7/visual/link2.STL" />

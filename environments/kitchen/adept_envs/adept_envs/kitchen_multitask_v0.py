@@ -35,20 +35,28 @@ class KitchenV0(robot_env.RobotEnv):
     robot_class = (os.path.dirname(__file__).replace("/", ".") + '.xarm.xarm_robot:Robot_VelAct')[1:]
     robot_class = 'environments.kitchen.adept_envs.adept_envs.xarm.xarm_robot:Robot_VelAct'
     ROBOTS = {'robot': robot_class}
-    MODEl = os.path.join(
+    KITCHEN_MODEl = os.path.join(
         os.path.dirname(__file__),
         'xarm/assets/kitchen_xarm.xml')
+    ROPE_MODEL = os.path.join(
+        os.path.dirname(__file__),
+        'xarm/assets/rope_xarm.xml')
     N_DOF_ROBOT = 13
     N_DOF_OBJECT = 21
 
-    def __init__(self, robot_params={}, frame_skip=1, distance=2.5, azimuth=60, elevation=-30):
+    def __init__(self, robot_params={}, frame_skip=1, distance=2.5, azimuth=60, elevation=-30,  task_type='reach_microwave'):
         self.goal_concat = True
         self.obs_dict = {}
         self.robot_noise_ratio = 0.1  # 10% as per robot_config specs
         self.goal = np.zeros((30,))
 
+        if 'rope' in task_type:
+            MODEL = self.ROPE_MODEL
+        else:
+            MODEL = self.KITCHEN_MODEl
+
         super().__init__(
-            self.MODEl,
+            MODEL,
             robot=self.make_robot(
                 n_jnt=self.N_DOF_ROBOT,  #root+robot_jnts
                 n_obj=self.N_DOF_OBJECT,
@@ -197,7 +205,7 @@ class KitchenTaskRelaxV1(KitchenV0):
 
     def __init__(self, task_type='reach_microwave', distance=2.5, azimuth=60, elevation=-30):
         self.task_type = task_type
-        super(KitchenTaskRelaxV1, self).__init__(distance=distance, azimuth=azimuth, elevation=elevation)
+        super(KitchenTaskRelaxV1, self).__init__(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task_type)
 
 
     def _get_reward_n_score(self, obs_dict):
