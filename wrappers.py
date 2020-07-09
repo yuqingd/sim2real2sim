@@ -410,8 +410,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
-      if 'slide' not in self.task:
-        self.update_dr_param(self._env.sim.model.geom_friction[220:225, 0], 'kettle_friction')
+      self.update_dr_param(self._env.sim.model.geom_friction[220:225, 0], 'kettle_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
       self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
@@ -422,8 +421,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
-      if 'slide' not in self.task:
-        self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
+      self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
 
@@ -610,8 +608,9 @@ class Kitchen:
 
 
   def reset(self):
-    self.apply_dr()
     self.setup_task()
+    self.apply_dr()
+
     state_obs = self._env.reset()
     obs = {}
     obs['state'] = self.goal
