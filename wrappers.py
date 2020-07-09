@@ -218,9 +218,13 @@ class Kitchen:
       self.set_workspace_bounds('front_stove_area')
       self.slide_d1 = None
 
+      #decrease friction for sliding
+      self._env.sim.model.geom_friction[220:225, :] = 0.002
+      self._env.sim.model.geom_friction[97:104, :] = 0.002
+
       if self.task == 'slide_kettle_burner': #single goal test, slide to back burner
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
-        self.goal[1] += 0.5
+        self.goal[1] += .6
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
@@ -363,7 +367,7 @@ class Kitchen:
       x_low = -0.5  # Left edge of stove
       x_high = 0.5  # Right edge of stove
       y_low = -0.1  # Right in front of the robot's pedestal
-      y_high = 0.5  # Mid-front burner
+      y_high = 0.4  # Mid-front burner
       z_low = 1.5  # Tabletop
       z_high = 2.  # Around top of kettle
     else:
@@ -406,7 +410,8 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[212:219, 0], 'kettle_friction')
+      if 'slide' not in self.task:
+        self.update_dr_param(self._env.sim.model.geom_friction[220:225, 0], 'kettle_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
       self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
@@ -417,7 +422,8 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[86:87, 0], 'stove_friction')
+      if 'slide' not in self.task:
+        self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
 
