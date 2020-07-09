@@ -156,7 +156,12 @@ class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
                step_size=0.05, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
-    self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation)
+    if 'rope' in task:
+      distance = 1.5
+      azimuth = 40
+      elevation = -40
+
+    self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
     self.task = task
     self._size = size
     self.real_world = real_world
@@ -171,6 +176,10 @@ class Kitchen:
     self.end_effector_name = 'end_effector'
     self.mocap_index = 3
     self.end_effector_index = 4
+    if 'rope' in task:
+      self.cylinder_index = 5
+      self.box_with_hole_index = 6
+
     self.arm_njnts = 7
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
@@ -228,6 +237,11 @@ class Kitchen:
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
+
+    elif 'rope' in self.task:
+      self.set_workspace_bounds('no_restrictions')
+      self.goal = self._env.sim.data.site_xpos[self.box_with_hole_index]
+
 
     else:
       raise NotImplementedError
@@ -307,6 +321,11 @@ class Kitchen:
 
       reward = -(d1 + d2 + d3)
 
+    elif 'rope' in self.task:
+      cylinder_loc = self._env.sim.data.site_xpos[self.cylinder_index]
+      reward = -np.linalg.norm(cylinder_loc - self.goal)
+      done = np.abs(reward) < 0.05
+
     else:
       raise NotImplementedError
 
@@ -359,57 +378,95 @@ class Kitchen:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
-    self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
-    self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
-    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
-    self.update_dr_param(self._env.sim.model.geom_friction[212:219, 0], 'kettle_friction')
-    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
-    self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
-    self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
-    self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
-    self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
-    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 2], 'robot_b')
-    self.update_dr_param(self._env.sim.model.geom_friction[2:33, 0], 'robot_friction')
-    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
-    self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
-    self.update_dr_param(self._env.sim.model.geom_friction[86:87, 0], 'stove_friction')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
-    self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
+
+    if 'rope' in self.task:
+      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
+      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+
+      self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 2], 'cylinder_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 1], 'cylinder_g')
+      self.update_dr_param( self._env.sim.model.geom_rgba[cylinder_viz, 0], 'cylinder_r')
+      self.update_dr_param(self._env.sim.model.body_mass[cylinder_body], 'cylinder_mass')
+
+      self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
+
+    else:
+      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
+      self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
+      self.update_dr_param(self._env.sim.model.geom_friction[212:219, 0], 'kettle_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
+      self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
+      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
+      self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
+      self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
+      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 2], 'robot_b')
+      self.update_dr_param(self._env.sim.model.geom_friction[2:33, 0], 'robot_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
+      self.update_dr_param(self._env.sim.model.geom_friction[86:87, 0], 'stove_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
 
 
   def get_dr(self):
     if self.simple_randomization:
       return np.array([self._env.sim.model.body_mass[48]])
-    arr = np.array([
-      self._env.sim.model.dof_damping[0],
-      self._env.sim.model.dof_damping[1],
-      self._env.sim.model.dof_damping[2],
-      self._env.sim.model.dof_damping[3],
-      self._env.sim.model.dof_damping[4],
-      self._env.sim.model.dof_damping[5],
-      self._env.sim.model.dof_damping[6],
-      self._env.sim.model.geom_rgba[212, 2],
-      self._env.sim.model.geom_friction[212, 0],
-      self._env.sim.model.geom_rgba[212, 1],
-      self._env.sim.model.body_mass[48],
-      self._env.sim.model.geom_rgba[212, 0],
-      self._env.sim.model.body_mass[22],
-      self._env.sim.model.light_diffuse[0, 0],
-      self._env.sim.model.geom_rgba[2, 2],
-      self._env.sim.model.geom_friction[2, 0],
-      self._env.sim.model.geom_rgba[2, 1],
-      self._env.sim.model.geom_rgba[2, 0],
-      self._env.sim.model.geom_rgba[86, 2],
-      self._env.sim.model.geom_friction[86, 0],
-      self._env.sim.model.geom_rgba[86, 1],
-      self._env.sim.model.geom_rgba[86, 0],
-    ])
+    if 'rope' in self.task:
+      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
+      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      arr = np.array([
+        self._env.sim.model.dof_damping[0],
+        self._env.sim.model.dof_damping[1],
+        self._env.sim.model.dof_damping[2],
+        self._env.sim.model.dof_damping[3],
+        self._env.sim.model.dof_damping[4],
+        self._env.sim.model.dof_damping[5],
+        self._env.sim.model.dof_damping[6],
+        self._env.sim.model.geom_rgba[cylinder_viz, 2],
+        self._env.sim.model.geom_rgba[cylinder_viz, 1],
+        self._env.sim.model.body_mass[cylinder_body],
+        self._env.sim.model.geom_rgba[cylinder_viz, 0],
+        self._env.sim.model.light_diffuse[0, 0]
+      ])
+    else:
+      arr = np.array([
+        self._env.sim.model.dof_damping[0],
+        self._env.sim.model.dof_damping[1],
+        self._env.sim.model.dof_damping[2],
+        self._env.sim.model.dof_damping[3],
+        self._env.sim.model.dof_damping[4],
+        self._env.sim.model.dof_damping[5],
+        self._env.sim.model.dof_damping[6],
+        self._env.sim.model.geom_rgba[212, 2],
+        self._env.sim.model.geom_friction[212, 0],
+        self._env.sim.model.geom_rgba[212, 1],
+        self._env.sim.model.body_mass[48],
+        self._env.sim.model.geom_rgba[212, 0],
+        self._env.sim.model.body_mass[22],
+        self._env.sim.model.light_diffuse[0, 0],
+        self._env.sim.model.geom_rgba[2, 2],
+        self._env.sim.model.geom_friction[2, 0],
+        self._env.sim.model.geom_rgba[2, 1],
+        self._env.sim.model.geom_rgba[2, 0],
+        self._env.sim.model.geom_rgba[86, 2],
+        self._env.sim.model.geom_friction[86, 0],
+        self._env.sim.model.geom_rgba[86, 1],
+        self._env.sim.model.geom_rgba[86, 0],
+      ])
     arr = arr.astype(np.float32)
     return arr
 
