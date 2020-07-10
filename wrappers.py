@@ -84,12 +84,12 @@ ARM_DIM = 13
 XPOS_INDICES = {
     'arm': [4, 5, 6, 7, 8, 9, 10], #Arm,
     'end_effector': [10],
-    'gripper': [11, 12, 13, 14, 15], #Gripper
+    'gripper': [11, 12, 13, 14, 15, 16], #Gripper
     'knob_burner1': [22, 23],
     'knob_burner2': [24, 25],
     'knob_burner3': [26, 27],
     'knob_burner4': [28, 29],
-    'light_switch': [32, 33],
+    'light_switch': [31, 32],
     'slide': [38],
     'hinge': [41],
     'microwave': [44],
@@ -160,6 +160,10 @@ class Kitchen:
       distance = 1.5
       azimuth = 40
       elevation = -40
+    if 'cabinet' in task:
+      distance = 2.5
+      azimuth = 120
+      elevation = -40
 
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
     self.task = task
@@ -175,7 +179,7 @@ class Kitchen:
       self.use_gripper = False
     self.end_effector_name = 'end_effector'
     self.mocap_index = 3
-    self.end_effector_index = 4
+    self.end_effector_index = self._env.sim.model._site_name2id['end_effector']
     if 'rope' in task:
       self.cylinder_index = 5
       self.box_with_hole_index = 6
@@ -187,6 +191,7 @@ class Kitchen:
     self.control_version = control_version
 
     self.apply_dr()
+    self.get_reward()  # TODO: remove
 
   def setup_task(self):
     init_xpos = self._env.sim.data.body_xpos
@@ -246,6 +251,13 @@ class Kitchen:
       self.set_workspace_bounds('no_restrictions')
       self.goal = self._env.sim.data.site_xpos[self.box_with_hole_index]
 
+    elif 'microwave' in self.task:
+      self.set_workspace_bounds('full_workspace')
+      self.goal = np.squeeze(init_xpos[XPOS_INDICES['microwave']])
+      self.goal += 0.5
+    elif 'cabinet' in self.task:
+      self.set_workspace_bounds('full_workspace')
+      self.goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_goal']]
 
     else:
       raise NotImplementedError
@@ -329,6 +341,67 @@ class Kitchen:
       cylinder_loc = self._env.sim.data.site_xpos[self.cylinder_index]
       reward = -np.linalg.norm(cylinder_loc - self.goal)
       done = np.abs(reward) < 0.05
+
+    elif 'microwave' in self.task:
+      end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']]
+      microwave_pos = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door']]
+      microwave_pos_top = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door_top']]
+      microwave_pos_bottom = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door_bottom']]
+
+      # Always give a reward for having the end-effector near the shelf
+      # since multiple z-positions are valid we'll compute each dimension separately
+      x_dist = abs(end_effector[0] - microwave_pos[0])
+      y_dist = abs(end_effector[1] - microwave_pos[1])
+      if end_effector[2] > microwave_pos_top[2]:
+        z_dist = end_effector[2] - microwave_pos_top[2]
+      elif end_effector[2] < microwave_pos_bottom[2]:
+        z_dist = microwave_pos_bottom[2] - end_effector[2]
+      else:
+        z_dist = 0
+      dist_to_handle = np.sqrt(x_dist ** 2 + y_dist ** 2 + z_dist ** 2)
+      reach_rew = -dist_to_handle
+
+      # Also have a reward for moving the cabinet
+      hinge_index = self._env.sim.model._joint_name2id['microwave_joint']
+      hinge_angle = np.squeeze(xpos[XPOS_INDICES['microwave']])
+      dist_to_goal = hinge_angle
+      # dist_to_goal = np.linalg.norm(hinge_angle - self.goal)
+      move_rew = -dist_to_goal
+      reward = reach_rew + move_rew  # TODO: scaling factors
+      print("REWARD", reward, reach_rew, move_rew)
+
+      done = dist_to_goal < 0.05
+      print("DONE?", done)
+
+    elif 'cabinet' in self.task:
+      end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']]
+      cabinet_pos = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']]
+      cabinet_pos_top = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_top']]
+      cabinet_pos_bottom = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_bottom']]
+      cabinet_pos_goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_goal']]
+
+
+      # Always give a reward for having the end-effector near the shelf
+      # since multiple z-positions are valid we'll compute each dimension separately
+      x_dist = abs(end_effector[0] - cabinet_pos[0])
+      y_dist = abs(end_effector[1] - cabinet_pos[1])
+      if end_effector[2] > cabinet_pos_top[2]:
+        z_dist = end_effector[2] - cabinet_pos_top[2]
+      elif end_effector[2] < cabinet_pos_bottom[2]:
+        z_dist = cabinet_pos_bottom[2] - end_effector[2]
+      else:
+        z_dist = 0
+      dist_to_handle = np.sqrt(x_dist ** 2 + y_dist ** 2 + z_dist ** 2)
+      reach_rew = -dist_to_handle
+
+      # Also have a reward for moving the cabinet
+      dist_to_goal = np.abs(cabinet_pos[0] - cabinet_pos_goal[0])
+      move_rew = -dist_to_goal
+      reward = reach_rew + move_rew  # TODO: scaling factors
+      print("REWARD", reward, reach_rew, move_rew)
+
+      done = dist_to_goal < 0.05
+      print("DONE?", done)
 
     else:
       raise NotImplementedError

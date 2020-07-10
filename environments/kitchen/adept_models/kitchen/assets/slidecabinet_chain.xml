@@ -16,6 +16,10 @@
             <geom material="M_slide_metal" euler="1.57 0 0" pos="-0.183 -0.06 -0.114" size="0.019 0.053 0.019" type="cylinder"/>
             <geom material="M_slide_metal" euler="1.57 0 0" pos="-0.183 -0.06 0.114" size="0.019 0.053 0.019" type="cylinder"/>
             <geom material="M_slide_metal" pos="-0.183 -0.123 0" size="0.022 0.159" type="cylinder"/>
+            <site type="sphere" name="cabinet_door" pos="-0.183 -0.123 0" size="0.05" rgba="1 1 0 1"/>
+            <site type="sphere" name="cabinet_door_goal" pos="0.15 -0.123 0" size="0.05" rgba="1 1 1 1"/>
+            <site type="sphere" name="cabinet_door_top" pos="-0.183 -0.123 -0.114" size="0.05" rgba="1 0 0 1"/>
+            <site type="sphere" name="cabinet_door_bottom" pos="-0.183 -0.123 0.114" size="0.05" rgba="0 1 0 1"/>
             <geom pos="0 -.02 0" size="0.225 0.03 0.195" type="box"/>
 
             <geom class="slide_collision" pos="0 -.02 0" size="0.225 0.03 0.195" type="box" mass=".2"/>

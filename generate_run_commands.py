@@ -8,21 +8,19 @@ ABSENT = 'absent'
 # This is to grid search. If you don't want to grid search, manually write in the param_args list.
 
 sweep_params = {
-    "task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_pick_kettle_burner"],
-    "outer_loop_version": [0, 1, 2],
+    "task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_rope", "kitchen_pick_kettle_burner"],
+    "outer_loop_version": [0],
     "sample_real_every": [100],
     "seed": [0, 1],
     "steps": [2000000],
-    "time_limit": [200],
-    "step_repeat": [10],
-    "step_size": [.05],
-    "batch_length": [10],
-    "dr_option": ['inaccurate_large_range'],
-    "dr": [PRESENT],
+    "time_limit": [100],
+    "step_repeat": [50],
+    "step_size": [.01],
+    "batch_length": [50],
 }
 
 
-starting_id = 54
+starting_id = 114
 
 print(f"{1:02d}")
 
