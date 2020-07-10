@@ -385,8 +385,7 @@ class Kitchen:
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
-      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
-      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+
       self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -395,11 +394,55 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
 
+      #cylinder
+      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
+      cylinder_body = self._env.sim.model.body_name2id('cylinder')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 2], 'cylinder_b')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 1], 'cylinder_g')
       self.update_dr_param( self._env.sim.model.geom_rgba[cylinder_viz, 0], 'cylinder_r')
       self.update_dr_param(self._env.sim.model.body_mass[cylinder_body], 'cylinder_mass')
 
+      #box
+      box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
+      box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
+      box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
+      box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
+      box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
+      box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
+      box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
+      box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
+
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 0], 'box1_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 1], 'box1_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 2], 'box1_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 0], 'box2_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 1], 'box2_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 2], 'box2_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 0], 'box3_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 1], 'box3_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 2], 'box3_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 0], 'box4_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 1], 'box4_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 2], 'box4_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 0], 'box5_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 1], 'box5_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 2], 'box5_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 0], 'box6_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 1], 'box6_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 2], 'box6_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 0], 'box7_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 1], 'box7_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 2], 'box7_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 0], 'box8_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 1], 'box8_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 2], 'box8_b')
+
+      #rope params
+      self.update_dr_param(self._env.sim.model.tendon_damping, 'rope_damping')
+      self.update_dr_param(self._env.sim.model.tendon_frictionloss, 'rope_friction')
+      self.update_dr_param(self._env.sim.model.tendon_stiffness, 'rope_stiffness')
+
+      # misc
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
     else:
@@ -433,6 +476,14 @@ class Kitchen:
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
       cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
+      box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
+      box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
+      box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
+      box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
+      box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
+      box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
+      box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
       arr = np.array([
         self._env.sim.model.dof_damping[0],
         self._env.sim.model.dof_damping[1],
@@ -446,6 +497,33 @@ class Kitchen:
         self._env.sim.model.body_mass[cylinder_body],
         self._env.sim.model.geom_rgba[cylinder_viz, 0],
         self._env.sim.model.light_diffuse[0, 0]
+        self._env.sim.model.geom_rgba[box_viz_1, 0],
+        self._env.sim.model.geom_rgba[box_viz_1, 1],
+        self._env.sim.model.geom_rgba[box_viz_1, 2],
+        self._env.sim.model.geom_rgba[box_viz_2, 0],
+        self._env.sim.model.geom_rgba[box_viz_2, 1],
+        self._env.sim.model.geom_rgba[box_viz_2, 2],
+        self._env.sim.model.geom_rgba[box_viz_3, 0],
+        self._env.sim.model.geom_rgba[box_viz_3, 1],
+        self._env.sim.model.geom_rgba[box_viz_3, 2],
+        self._env.sim.model.geom_rgba[box_viz_4, 0],
+        self._env.sim.model.geom_rgba[box_viz_4, 1],
+        self._env.sim.model.geom_rgba[box_viz_4, 2],
+        self._env.sim.model.geom_rgba[box_viz_5, 0],
+        self._env.sim.model.geom_rgba[box_viz_5, 1],
+        self._env.sim.model.geom_rgba[box_viz_5, 2],
+        self._env.sim.model.geom_rgba[box_viz_6, 0],
+        self._env.sim.model.geom_rgba[box_viz_6, 1],
+        self._env.sim.model.geom_rgba[box_viz_6, 2],
+        self._env.sim.model.geom_rgba[box_viz_7, 0],
+        self._env.sim.model.geom_rgba[box_viz_7, 1],
+        self._env.sim.model.geom_rgba[box_viz_7, 2],
+        self._env.sim.model.geom_rgba[box_viz_8, 0],
+        self._env.sim.model.geom_rgba[box_viz_8, 1],
+        self._env.sim.model.geom_rgba[box_viz_8, 2],
+        self._env.sim.model.tendon_damping,
+        self._env.sim.model.tendon_frictionloss,
+        self._env.sim.model.tendon_stiffness,
       ])
     else:
       arr = np.array([
