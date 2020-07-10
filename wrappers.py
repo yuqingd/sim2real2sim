@@ -496,7 +496,7 @@ class Kitchen:
         self._env.sim.model.geom_rgba[cylinder_viz, 1],
         self._env.sim.model.body_mass[cylinder_body],
         self._env.sim.model.geom_rgba[cylinder_viz, 0],
-        self._env.sim.model.light_diffuse[0, 0]
+        self._env.sim.model.light_diffuse[0, 0],
         self._env.sim.model.geom_rgba[box_viz_1, 0],
         self._env.sim.model.geom_rgba[box_viz_1, 1],
         self._env.sim.model.geom_rgba[box_viz_1, 2],
