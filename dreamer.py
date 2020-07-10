@@ -84,7 +84,7 @@ def define_config():
   config.logdir = pathlib.Path('.')
   config.seed = 0
   config.steps = 2e6
-  config.eval_every = 1e4
+  config.eval_every = 20e4 #25k
   config.log_every = 1e3
   config.log_scalars = True
   config.log_images = True
@@ -153,7 +153,7 @@ def define_config():
   config.mass_range = 0.01
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
-  config.alpha = 0.5
+  config.alpha = 0.3
   config.sim_params_size = 0
 
   return config
