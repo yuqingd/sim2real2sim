@@ -14,10 +14,10 @@
             <joint axis="0 0 1" limited="true" name="microwave_joint" range="-2.094 0"/>
             <geom mesh="microdoor" pos="0.345 0.176 -0.192"/>
             <geom material="micro_window" mesh="microwindow" pos="0.345 0.176 -0.192"/>
-            <site type="sphere" name="microwave_door" pos="0.475 -0.108 0" size="0.05" rgba="1 0 1 1"/>
-            <site type="sphere" name="microwave_door_top" pos="0.475 -0.108 .13" size="0.05" rgba="0 0 0 1"/>
-            <site type="sphere" name="microwave_door_bottom" pos="0.475 -0.108 -.13" size="0.05" rgba="0 0 1 1"/>
-            <geom material="micro_metal" pos="0.475 -0.108 0" size="0.02 0.13" rgba="1 1 0 1" type="capsule"/>
+            <site type="sphere" name="microwave_door" pos="0.475 -0.108 0" size="0.05" rgba="1 0 1 0"/>
+            <site type="sphere" name="microwave_door_top" pos="0.475 -0.108 .13" size="0.05" rgba="0 0 0 0"/>
+            <site type="sphere" name="microwave_door_bottom" pos="0.475 -0.108 -.13" size="0.05" rgba="0 0 1 0"/>
+            <geom material="micro_metal" pos="0.475 -0.108 0" size="0.02 0.13" type="capsule"/>
             <geom material="micro_metal" euler="1.57 0 0" pos="0.475 -0.075 .13" size="0.02 0.03" type="capsule"/>
             <geom material="micro_metal" euler="1.57 0 0" pos="0.475 -0.075 -.13" size="0.02 0.03" type="capsule"/>
 

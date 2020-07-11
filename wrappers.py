@@ -154,7 +154,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
-               step_size=0.05, use_gripper=False, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
     if 'rope' in task:
       distance = 1.5
@@ -163,6 +163,10 @@ class Kitchen:
     if 'cabinet' in task:
       distance = 2.5
       azimuth = 120
+      elevation = -40
+    if 'open_microwave' in task:
+      distance = 2.5
+      azimuth = 40
       elevation = -40
 
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
@@ -173,7 +177,7 @@ class Kitchen:
     self.dr = dr
     self.step_repeat = step_repeat
     self.step_size = step_size
-    if 'pick' in task:
+    if 'pick' in task or  'microwave' in task:
       self.use_gripper = True
     else:
       self.use_gripper = False
@@ -251,14 +255,14 @@ class Kitchen:
       self.set_workspace_bounds('no_restrictions')
       self.goal = self._env.sim.data.site_xpos[self.box_with_hole_index]
 
-    elif 'microwave' in self.task:
+    elif 'open_microwave' in self.task:
       self.set_workspace_bounds('full_workspace')
       self.goal = np.squeeze(init_xpos[XPOS_INDICES['microwave']])
       self.goal += 0.5
-    elif 'cabinet' in self.task:
+    elif 'open_cabinet' in self.task:
       self.set_workspace_bounds('full_workspace')
-      self.goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_goal']]
-
+      self.goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']]
+      self.goal[0] = 0.18
     else:
       raise NotImplementedError
 
@@ -342,7 +346,7 @@ class Kitchen:
       reward = -np.linalg.norm(cylinder_loc - self.goal)
       done = np.abs(reward) < 0.05
 
-    elif 'microwave' in self.task:
+    elif 'open_microwave' in self.task:
       end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']]
       microwave_pos = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door']]
       microwave_pos_top = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door_top']]
@@ -362,23 +366,17 @@ class Kitchen:
       reach_rew = -dist_to_handle
 
       # Also have a reward for moving the cabinet
-      hinge_index = self._env.sim.model._joint_name2id['microwave_joint']
-      hinge_angle = np.squeeze(xpos[XPOS_INDICES['microwave']])
-      dist_to_goal = hinge_angle
-      # dist_to_goal = np.linalg.norm(hinge_angle - self.goal)
+      dist_to_goal = np.abs(microwave_pos[1] - 0.28)
       move_rew = -dist_to_goal
-      reward = reach_rew + move_rew  # TODO: scaling factors
-      print("REWARD", reward, reach_rew, move_rew)
+      reward = reach_rew + move_rew
 
       done = dist_to_goal < 0.05
-      print("DONE?", done)
 
-    elif 'cabinet' in self.task:
+    elif 'open_cabinet' in self.task:  # kangaroo
       end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']]
       cabinet_pos = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']]
       cabinet_pos_top = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_top']]
       cabinet_pos_bottom = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_bottom']]
-      cabinet_pos_goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door_goal']]
 
 
       # Always give a reward for having the end-effector near the shelf
@@ -395,13 +393,11 @@ class Kitchen:
       reach_rew = -dist_to_handle
 
       # Also have a reward for moving the cabinet
-      dist_to_goal = np.abs(cabinet_pos[0] - cabinet_pos_goal[0])
+      dist_to_goal = np.abs(cabinet_pos[0] - 0.18)
       move_rew = -dist_to_goal
-      reward = reach_rew + move_rew  # TODO: scaling factors
-      print("REWARD", reward, reach_rew, move_rew)
+      reward = reach_rew + move_rew
 
       done = dist_to_goal < 0.05
-      print("DONE?", done)
 
     else:
       raise NotImplementedError
@@ -593,7 +589,8 @@ class Kitchen:
 
 
     self._env.data.set_mocap_pos('mocap', new_mocap_pos)
-    # self._env.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))  # TODO: what's a quaternion?
+    if 'open_microwave' in self.task or 'open_cabinet' in self.task:
+      self._env.data.set_mocap_quat('mocap', np.array([0.93937271,  0., 0., -0.34289781]))
 
   def set_gripper(self, action):
     #gripper either open or close
@@ -628,7 +625,7 @@ class Kitchen:
 
       physics = self._env.sim
       # The joints which can be manipulated to move the end-effector to the desired spot.
-      joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
+      joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', 'microwave_joint']
       ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-10, progress_thresh=10, max_steps=50)
       qpos = ikresult.qpos
       success = ikresult.success
@@ -686,6 +683,14 @@ class Kitchen:
     self.apply_dr()
     self.setup_task()
     state_obs = self._env.reset()
+
+    if 'open_microwave' in self.task or 'open_cabinet' in self.task:
+      self._env.data.set_mocap_quat('mocap', np.array([0.93937271, 0., 0., -0.34289781]))
+      # Make the end-effector horizontal
+      for _ in range(2000):
+        self._env.sim.step()
+
+
     obs = {}
     obs['state'] = self.goal
     if self.outer_loop_version == 1:
