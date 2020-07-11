@@ -195,7 +195,6 @@ class Kitchen:
     self.control_version = control_version
 
     self.apply_dr()
-    self.get_reward()  # TODO: remove
 
   def setup_task(self):
     init_xpos = self._env.sim.data.body_xpos
@@ -454,7 +453,7 @@ class Kitchen:
 
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
-      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      cylinder_body = self._env.sim.model.body_name2id('cylinder')
       self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -471,7 +470,19 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
     else:
-      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+      kettle_index = self._env.sim.model.body_name2id('kettleroot')  # TODO: probably OK, but double check
+      geom_dict = self._env.sim.model._geom_name2id
+      kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
+      kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
+      stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_collision" in name] #97:104  # TODO: figure out why these are empty
+      stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name] # 86
+      xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
+      xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_collision" in name or "end_effector" in name]
+      data = self._env.sim.data
+      model = self._env.sim.model
+
+
+      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')  # TODO: probably OK but double check
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
@@ -480,16 +491,16 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
       if 'slide' not in self.task:
-        self.update_dr_param(self._env.sim.model.geom_friction[220:225, 0], 'kettle_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 1], 'kettle_g')
-      self.update_dr_param(self._env.sim.model.body_mass[48:49], 'kettle_mass')
-      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 0], 'kettle_r')
+        self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 1], 'kettle_g')
+      self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
+      self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 0], 'kettle_r')
       self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
-      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 2], 'robot_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[2:33, 0], 'robot_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 1], 'robot_g')
-      self.update_dr_param(self._env.sim.model.geom_rgba[2:33:2, 0], 'robot_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 2], 'robot_b')
+      self.update_dr_param(self._env.sim.model.geom_friction[xarm_collision_indices, 0], 'robot_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 1], 'robot_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 0], 'robot_r')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
       if 'slide' not in self.task:
         self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
@@ -499,10 +510,11 @@ class Kitchen:
 
   def get_dr(self):
     if self.simple_randomization:
-      return np.array([self._env.sim.model.body_mass[48]])
+      kettle_index = self._env.sim.model.body_name2id('kettleroot')
+      return np.array([self._env.sim.model.body_mass[kettle_index]])
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
-      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      cylinder_body = self._env.sim.model.body_name2id('cylinder')
       arr = np.array([
         self._env.sim.model.dof_damping[0],
         self._env.sim.model.dof_damping[1],
@@ -625,7 +637,7 @@ class Kitchen:
 
       physics = self._env.sim
       # The joints which can be manipulated to move the end-effector to the desired spot.
-      joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7', 'microwave_joint']
+      joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7']
       ikresult = qpos_from_site_pose(physics, self.end_effector_name, target_pos=xyz_pos, joint_names=joint_names, tol=1e-10, progress_thresh=10, max_steps=50)
       qpos = ikresult.qpos
       success = ikresult.success
