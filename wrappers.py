@@ -768,10 +768,11 @@ class Kitchen:
 
 
   def reset(self):
-    self.setup_task()
-    self.apply_dr()
+
 
     state_obs = self._env.reset()
+    self.setup_task()
+    self.apply_dr()
 
     if 'open_microwave' in self.task or 'open_cabinet' in self.task:
       self._env.data.set_mocap_quat('mocap', np.array([0.93937271, 0., 0., -0.34289781]))
