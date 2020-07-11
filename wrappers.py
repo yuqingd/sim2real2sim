@@ -232,7 +232,7 @@ class Kitchen:
 
       if self.task == 'slide_kettle_burner': #single goal test, slide to back burner
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
-        self.goal[1] += .7
+        self.goal[1] += .6
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
@@ -282,7 +282,7 @@ class Kitchen:
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.25
+      done = np.abs(d2) < 0.35
 
       reward = -(d1 + d2)
 
@@ -294,11 +294,12 @@ class Kitchen:
       #kettlehandle[-1] += 0.  # goal in middle of kettle
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
-      if d1 < 0.1 and self.slide_d1 is None: #TODO: tune threshold for hitting kettle
+      if d1 < 0.35 and self.slide_d1 is None: #TODO: tune threshold for hitting kettle
         self.slide_d1 = d1
 
+
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.25
+      done = np.abs(d2) < 0.35
 
       if self.slide_d1 is not None:
         reward = -(self.slide_d1 + d2)
@@ -452,8 +453,6 @@ class Kitchen:
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
-      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
-      cylinder_body = self._env.sim.model.body_name2id('cylinder')
       self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -462,11 +461,55 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
 
+      #cylinder
+      cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
+      cylinder_body = self._env.sim.model.body_name2id('cylinder')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 2], 'cylinder_b')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 1], 'cylinder_g')
       self.update_dr_param( self._env.sim.model.geom_rgba[cylinder_viz, 0], 'cylinder_r')
       self.update_dr_param(self._env.sim.model.body_mass[cylinder_body], 'cylinder_mass')
 
+      #box
+      box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
+      box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
+      box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
+      box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
+      box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
+      box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
+      box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
+      box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
+
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 0], 'box1_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 1], 'box1_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_1, 2], 'box1_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 0], 'box2_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 1], 'box2_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_2, 2], 'box2_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 0], 'box3_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 1], 'box3_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_3, 2], 'box3_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 0], 'box4_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 1], 'box4_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_4, 2], 'box4_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 0], 'box5_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 1], 'box5_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_5, 2], 'box5_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 0], 'box6_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 1], 'box6_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_6, 2], 'box6_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 0], 'box7_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 1], 'box7_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_7, 2], 'box7_b')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 0], 'box8_r')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 1], 'box8_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[box_viz_8, 2], 'box8_b')
+
+      #rope params
+      self.update_dr_param(self._env.sim.model.tendon_damping, 'rope_damping')
+      self.update_dr_param(self._env.sim.model.tendon_frictionloss, 'rope_friction')
+      self.update_dr_param(self._env.sim.model.tendon_stiffness, 'rope_stiffness')
+
+      # misc
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
     else:
@@ -490,8 +533,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
       self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
-      if 'slide' not in self.task:
-        self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
+      self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 1], 'kettle_g')
       self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
       self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 0], 'kettle_r')
@@ -502,8 +544,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 1], 'robot_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 0], 'robot_r')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
-      if 'slide' not in self.task:
-        self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
+      self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
 
@@ -514,7 +555,15 @@ class Kitchen:
       return np.array([self._env.sim.model.body_mass[kettle_index]])
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
-      cylinder_body = self._env.sim.model.body_name2id('cylinder')
+      cylinder_body =self._env.sim.model.body_name2id('cylinder')
+      box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
+      box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
+      box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
+      box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
+      box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
+      box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
+      box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
+      box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
       arr = np.array([
         self._env.sim.model.dof_damping[0],
         self._env.sim.model.dof_damping[1],
@@ -527,7 +576,34 @@ class Kitchen:
         self._env.sim.model.geom_rgba[cylinder_viz, 1],
         self._env.sim.model.body_mass[cylinder_body],
         self._env.sim.model.geom_rgba[cylinder_viz, 0],
-        self._env.sim.model.light_diffuse[0, 0]
+        self._env.sim.model.light_diffuse[0, 0],
+        self._env.sim.model.geom_rgba[box_viz_1, 0],
+        self._env.sim.model.geom_rgba[box_viz_1, 1],
+        self._env.sim.model.geom_rgba[box_viz_1, 2],
+        self._env.sim.model.geom_rgba[box_viz_2, 0],
+        self._env.sim.model.geom_rgba[box_viz_2, 1],
+        self._env.sim.model.geom_rgba[box_viz_2, 2],
+        self._env.sim.model.geom_rgba[box_viz_3, 0],
+        self._env.sim.model.geom_rgba[box_viz_3, 1],
+        self._env.sim.model.geom_rgba[box_viz_3, 2],
+        self._env.sim.model.geom_rgba[box_viz_4, 0],
+        self._env.sim.model.geom_rgba[box_viz_4, 1],
+        self._env.sim.model.geom_rgba[box_viz_4, 2],
+        self._env.sim.model.geom_rgba[box_viz_5, 0],
+        self._env.sim.model.geom_rgba[box_viz_5, 1],
+        self._env.sim.model.geom_rgba[box_viz_5, 2],
+        self._env.sim.model.geom_rgba[box_viz_6, 0],
+        self._env.sim.model.geom_rgba[box_viz_6, 1],
+        self._env.sim.model.geom_rgba[box_viz_6, 2],
+        self._env.sim.model.geom_rgba[box_viz_7, 0],
+        self._env.sim.model.geom_rgba[box_viz_7, 1],
+        self._env.sim.model.geom_rgba[box_viz_7, 2],
+        self._env.sim.model.geom_rgba[box_viz_8, 0],
+        self._env.sim.model.geom_rgba[box_viz_8, 1],
+        self._env.sim.model.geom_rgba[box_viz_8, 2],
+        self._env.sim.model.tendon_damping,
+        self._env.sim.model.tendon_frictionloss,
+        self._env.sim.model.tendon_stiffness,
       ])
     else:
       arr = np.array([
@@ -692,8 +768,9 @@ class Kitchen:
 
 
   def reset(self):
-    self.apply_dr()
     self.setup_task()
+    self.apply_dr()
+
     state_obs = self._env.reset()
 
     if 'open_microwave' in self.task or 'open_cabinet' in self.task:
