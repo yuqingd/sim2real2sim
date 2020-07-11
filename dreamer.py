@@ -1082,7 +1082,7 @@ if __name__ == '__main__':
   if config.dr:
     config = config_dr(config)
   else:
-    config.dr = {}
+    config.dr = None
 
   print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
 
