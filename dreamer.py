@@ -162,39 +162,96 @@ def config_dr(config):
   dr_option = config.dr_option
   if 'kitchen' in config.task:
     if config.simple_randomization:
-      config.real_dr_params = {
-        "kettle_mass": .88
-      }
-      config.dr = {  # (mean, range)
-        "kettle_mass": (config.mass_mean, config.mass_range)
-      }
-      config.sim_params_size = 2
+      if 'rope' in config.task:
+        config.real_dr_params = {
+          "cylinder_mass": .01
+        }
+        config.dr = {  # (mean, range)
+          "cylinder_mass": (config.mass_mean, config.mass_range)
+        }
+        config.sim_params_size = 2
+      else:
+        config.real_dr_params = {
+          "kettle_mass": .88
+        }
+        config.dr = {  # (mean, range)
+          "kettle_mass": (config.mass_mean, config.mass_range)
+        }
+        config.sim_params_size = 2
     else:
-      config.real_dr_params = {
-        "joint1_damping": 10,
-        "joint2_damping": 10,
-        "joint3_damping": 5,
-        "joint4_damping": 5,
-        "joint5_damping": 5,
-        "joint6_damping": 2,
-        "joint7_damping": 2,
-        "kettle_b": 0.5,
-        "kettle_friction": 1.0,
-        "kettle_g": 0.5,
-        "kettle_mass": 0.02,
-        "kettle_r": 0.5,
-        "knob_mass": 0.02,
-        "lighting": 0.3,
-        "robot_b": 0.95,
-        "robot_friction": 1.0,
-        "robot_g": 0.95,
-        "robot_r": 0.95,
-        "stove_b": 0.5,
-        "stove_friction": 1.,
-        "stove_g": 0.5,
-        "stove_r": 0.5,
+      if 'rope' in config.task:
+        config.real_dr_params = {
+          "joint1_damping": 10,
+          "joint2_damping": 10,
+          "joint3_damping": 5,
+          "joint4_damping": 5,
+          "joint5_damping": 5,
+          "joint6_damping": 2,
+          "joint7_damping": 2,
+          "robot_b": 0.95,
+          "robot_friction": 1.0,
+          "robot_g": 0.95,
+          "robot_r": 0.95,
+          "cylinder_b": .2,
+          "cylinder_g": .2,
+          "cylinder_r": 1.,
+          "cylinder_mass": 0.01,
+          "box1_r": .2,
+          "box1_g": 1,
+          "box1_b": .2,
+          "box2_r": .2,
+          "box2_g": 1,
+          "box2_b": .2,
+          "box3_r": .2,
+          "box3_g": 1,
+          "box3_b": .2,
+          "box4_r": .2,
+          "box4_g": 1,
+          "box4_b": .2,
+          "box5_r": .2,
+          "box5_g": 1,
+          "box5_b": .2,
+          "box6_r": .2,
+          "box6_g": 1,
+          "box6_b": .2,
+          "box7_r": .2,
+          "box7_g": 1,
+          "box7_b": .2,
+          "box8_r": .2,
+          "box8_g": 1,
+          "box8_b": .2,
+          "rope_damping": 0,
+          "rope_friction": 0,
+          "rope_stiffness": 0,
+          "lighting": 0.3
+        }
 
-      }
+      else:
+        config.real_dr_params = {
+          "joint1_damping": 10,
+          "joint2_damping": 10,
+          "joint3_damping": 5,
+          "joint4_damping": 5,
+          "joint5_damping": 5,
+          "joint6_damping": 2,
+          "joint7_damping": 2,
+          "kettle_b": 0.5,
+          "kettle_friction": 1.0,
+          "kettle_g": 0.5,
+          "kettle_mass": 0.02,
+          "kettle_r": 0.5,
+          "knob_mass": 0.02,
+          "lighting": 0.3,
+          "robot_b": 0.95,
+          "robot_friction": 1.0,
+          "robot_g": 0.95,
+          "robot_r": 0.95,
+          "stove_b": 0.5,
+          "stove_friction": 1.,
+          "stove_g": 0.5,
+          "stove_r": 0.5,
+
+        }
       config.sim_params_size = 2 * len(config.real_dr_params.keys())
       if dr_option == 'accurate_small_range':
         range_scale = 0.1
