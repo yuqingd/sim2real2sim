@@ -562,8 +562,12 @@ class Kitchen:
 
   def get_dr(self):
     if self.simple_randomization:
-      kettle_index = self._env.sim.model.body_name2id('kettleroot')
-      return np.array([self._env.sim.model.body_mass[kettle_index]])
+      if 'rope' in self.task:
+        cylinder_body = self._env.sim.model.body_name2id('cylinder')
+        return np.array([self._env.sim.model.body_mass[cylinder_body]])
+      else:
+        kettle_index = self._env.sim.model.body_name2id('kettleroot')
+        return np.array([self._env.sim.model.body_mass[kettle_index]])
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
       cylinder_body =self._env.sim.model.body_name2id('cylinder')
