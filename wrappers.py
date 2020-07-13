@@ -158,8 +158,8 @@ class Kitchen:
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
     if 'rope' in task:
       distance = 1.5
-      azimuth = 40
-      elevation = -40
+      azimuth = 20
+      elevation = -20
     if 'cabinet' in task:
       distance = 2.5
       azimuth = 120
