@@ -158,8 +158,8 @@ class Kitchen:
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
     if 'rope' in task:
       distance = 1.5
-      azimuth = 40
-      elevation = -40
+      azimuth = 20
+      elevation = -20
     if 'cabinet' in task:
       distance = 2.5
       azimuth = 120
@@ -484,7 +484,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 2], 'cylinder_b')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 1], 'cylinder_g')
       self.update_dr_param( self._env.sim.model.geom_rgba[cylinder_viz, 0], 'cylinder_r')
-      self.update_dr_param(self._env.sim.model.body_mass[cylinder_body], 'cylinder_mass')
+      self.update_dr_param(self._env.sim.model.body_mass[cylinder_body:cylinder_body+1], 'cylinder_mass')
 
       #box
       box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
@@ -597,8 +597,12 @@ class Kitchen:
 
   def get_dr(self):
     if self.simple_randomization:
-      kettle_index = self._env.sim.model.body_name2id('kettleroot')
-      return np.array([self._env.sim.model.body_mass[kettle_index]])
+      if 'rope' in self.task:
+        cylinder_body = self._env.sim.model.body_name2id('cylinder')
+        return np.array([self._env.sim.model.body_mass[cylinder_body]])
+      else:
+        kettle_index = self._env.sim.model.body_name2id('kettleroot')
+        return np.array([self._env.sim.model.body_mass[kettle_index]])
     if 'rope' in self.task:
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
       cylinder_body =self._env.sim.model.body_name2id('cylinder')
