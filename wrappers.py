@@ -284,7 +284,7 @@ class Kitchen:
 
       d1 = np.linalg.norm(end_effector - kettlehandle)
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.35
+      done = np.abs(d2) < 0.25
 
       reward = -(d1 + d2)
 
@@ -301,7 +301,7 @@ class Kitchen:
 
 
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.35
+      done = np.abs(d2) < 0.3
 
       if self.slide_d1 is not None:
         reward = -(self.slide_d1 + d2)
@@ -455,6 +455,11 @@ class Kitchen:
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
+      geom_dict = self._env.sim.model._geom_name2id
+      xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
+      xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
+                                "xarm_collision" in name or "end_effector" in name]
+
       self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -462,6 +467,10 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 2], 'robot_b')
+      self.update_dr_param(self._env.sim.model.geom_friction[xarm_collision_indices, 0], 'robot_friction')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 1], 'robot_g')
+      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 0], 'robot_r')
 
       #cylinder
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
@@ -574,6 +583,10 @@ class Kitchen:
         self._env.sim.model.dof_damping[4],
         self._env.sim.model.dof_damping[5],
         self._env.sim.model.dof_damping[6],
+        self._env.sim.model.geom_rgba[2, 2],
+        self._env.sim.model.geom_friction[2, 0],
+        self._env.sim.model.geom_rgba[2, 1],
+        self._env.sim.model.geom_rgba[2, 0],
         self._env.sim.model.geom_rgba[cylinder_viz, 2],
         self._env.sim.model.geom_rgba[cylinder_viz, 1],
         self._env.sim.model.body_mass[cylinder_body],
@@ -790,10 +803,11 @@ class Kitchen:
 
 
   def reset(self):
-    self.setup_task()
-    self.apply_dr()
+
 
     state_obs = self._env.reset()
+    self.setup_task()
+    self.apply_dr()
 
     if 'open_microwave' in self.task or 'open_cabinet' in self.task:
       self._env.data.set_mocap_quat('mocap', np.array([0.93937271, 0., 0., -0.34289781]))
