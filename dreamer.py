@@ -172,7 +172,7 @@ def config_dr(config):
         config.sim_params_size = 2
       else:
         config.real_dr_params = {
-          "kettle_mass": 8.08
+          "kettle_mass": 1.08
         }
         config.dr = {  # (mean, range)
           "kettle_mass": (config.mass_mean, config.mass_range)
@@ -238,7 +238,7 @@ def config_dr(config):
           "kettle_b": 0.5,
           "kettle_friction": 1.0,
           "kettle_g": 0.5,
-          "kettle_mass": 8.08,
+          "kettle_mass": 1.08,
           "kettle_r": 0.5,
           "knob_mass": 0.02,
           "lighting": 0.3,

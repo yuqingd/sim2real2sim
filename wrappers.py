@@ -301,7 +301,7 @@ class Kitchen:
 
 
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.15
+      done = np.abs(d2) < 0.2
 
       if self.slide_d1 is not None:
         reward = -(self.slide_d1 + d2)
