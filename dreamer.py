@@ -164,7 +164,7 @@ def config_dr(config):
     if config.simple_randomization:
       if 'rope' in config.task:
         config.real_dr_params = {
-          "cylinder_mass": .01
+          "cylinder_mass": .5
         }
         config.dr = {  # (mean, range)
           "cylinder_mass": (config.mass_mean, config.mass_range)
@@ -172,7 +172,7 @@ def config_dr(config):
         config.sim_params_size = 2
       else:
         config.real_dr_params = {
-          "kettle_mass": .88
+          "kettle_mass": 1.08
         }
         config.dr = {  # (mean, range)
           "kettle_mass": (config.mass_mean, config.mass_range)
@@ -195,7 +195,7 @@ def config_dr(config):
           "cylinder_b": .2,
           "cylinder_g": .2,
           "cylinder_r": 1.,
-          "cylinder_mass": 0.01,
+          "cylinder_mass": 0.5,
           "box1_r": .2,
           "box1_g": 1,
           "box1_b": .2,
@@ -238,7 +238,7 @@ def config_dr(config):
           "kettle_b": 0.5,
           "kettle_friction": 1.0,
           "kettle_g": 0.5,
-          "kettle_mass": 0.88,
+          "kettle_mass": 1.08,
           "kettle_r": 0.5,
           "knob_mass": 0.02,
           "lighting": 0.3,
@@ -250,8 +250,12 @@ def config_dr(config):
           "stove_friction": 1.,
           "stove_g": 0.5,
           "stove_r": 0.5,
-
         }
+
+        if 'slide' in config.task:
+          config.real_dr_prams['stove_friction'] = 1e-3
+          config.real_dr_prams['kettle_friction'] = 1e-3
+
 
         # Remove kettle-related d-r for the microwave task, which has no kettle present.
         if 'open_microwave' in config.task:
