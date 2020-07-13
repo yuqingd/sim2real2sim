@@ -195,6 +195,13 @@ def config_dr(config):
         "stove_r": 0.5,
 
       }
+
+      # Remove kettle-related d-r for the microwave task, which has no kettle present.
+      if 'open_microwave' in config.task:
+        for k in config.real_dr_params.keys():
+          if 'kettle' in k:
+            del config.real_dr_params[k]
+
       config.sim_params_size = 2 * len(config.real_dr_params.keys())
       if dr_option == 'accurate_small_range':
         range_scale = 0.1

@@ -194,6 +194,8 @@ class Kitchen:
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
 
+    self.has_kettle = False if 'open_microwave' in task else True
+
     self.apply_dr()
 
   def setup_task(self):
@@ -513,18 +515,13 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
     else:
-      kettle_index = self._env.sim.model.body_name2id('kettleroot')  # TODO: probably OK, but double check
       geom_dict = self._env.sim.model._geom_name2id
-      kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
-      kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
       stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_collision" in name] #97:104  # TODO: figure out why these are empty
       stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name] # 86
       xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
       xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_collision" in name or "end_effector" in name]
       data = self._env.sim.data
       model = self._env.sim.model
-
-
       self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')  # TODO: probably OK but double check
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
@@ -532,11 +529,15 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
-      self.update_dr_param(self._env.sim.model.geom_rgba[212:219, 2], 'kettle_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 1], 'kettle_g')
-      self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
-      self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 0], 'kettle_r')
+      if self.has_kettle:
+        kettle_index = self._env.sim.model.body_name2id('kettleroot')
+        kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
+        kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
+        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 2], 'kettle_b')
+        self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
+        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 1], 'kettle_g')
+        self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
+        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 0], 'kettle_r')
       self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
       self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 2], 'robot_b')
@@ -547,6 +548,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
       self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
+
 
 
   def get_dr(self):
@@ -606,19 +608,37 @@ class Kitchen:
         self._env.sim.model.tendon_stiffness,
       ])
     else:
+      geom_dict = self._env.sim.model._geom_name2id
+      kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
+      kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
+      stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
+                                 "stove_collision" in name]  # 97:104  # TODO: figure out why these are empty
+      stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]  # 86
+      xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
+      xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
+                                "xarm_collision" in name or "end_effector" in name]
+      data = self._env.sim.data
+      model = self._env.sim.model
       arr = np.array([
+        # Robot arms
         self._env.sim.model.dof_damping[0],
         self._env.sim.model.dof_damping[1],
         self._env.sim.model.dof_damping[2],
         self._env.sim.model.dof_damping[3],
         self._env.sim.model.dof_damping[4],
         self._env.sim.model.dof_damping[5],
-        self._env.sim.model.dof_damping[6],
-        self._env.sim.model.geom_rgba[212, 2],
-        self._env.sim.model.geom_friction[212, 0],
-        self._env.sim.model.geom_rgba[212, 1],
-        self._env.sim.model.body_mass[48],
-        self._env.sim.model.geom_rgba[212, 0],
+        self._env.sim.model.dof_damping[6],])
+      if self.has_kettle:
+        kettle_index = self._env.sim.model.body_name2id('kettleroot')
+        kettle_viz_index = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name][0]
+        kettle_collision_index = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name][0]
+        arr = np.concatenate([arr, [
+          self._env.sim.model.geom_rgba[kettle_viz_index, 2],
+          self._env.sim.model.geom_friction[kettle_collision_index, 0],
+          self._env.sim.model.geom_rgba[kettle_viz_index, 1],
+          self._env.sim.model.body_mass[kettle_index],
+          self._env.sim.model.geom_rgba[kettle_viz_index, 0],]])
+      arr = np.concatenate([arr, [
         self._env.sim.model.body_mass[22],
         self._env.sim.model.light_diffuse[0, 0],
         self._env.sim.model.geom_rgba[2, 2],
@@ -629,7 +649,7 @@ class Kitchen:
         self._env.sim.model.geom_friction[86, 0],
         self._env.sim.model.geom_rgba[86, 1],
         self._env.sim.model.geom_rgba[86, 0],
-      ])
+      ]])
     arr = arr.astype(np.float32)
     return arr
 
@@ -756,7 +776,9 @@ class Kitchen:
       obs['sim_params'] = self.sim_params
     obs['state'] = self.goal
     if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']]), np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
+      if self.has_kettle:
+        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])
     obs['image'] = self.render()
@@ -785,7 +807,9 @@ class Kitchen:
     if self.outer_loop_version == 1:
       obs['sim_params'] = self.sim_params
     if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']]), np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
+      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
+      if self.has_kettle:
+        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']])])
       if self.use_gripper:
         obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])  # TODO: compute gripper position, include it
     obs['image'] = self.render()

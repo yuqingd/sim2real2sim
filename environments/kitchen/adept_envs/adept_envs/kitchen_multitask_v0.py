@@ -38,6 +38,9 @@ class KitchenV0(robot_env.RobotEnv):
     KITCHEN_MODEl = os.path.join(
         os.path.dirname(__file__),
         'xarm/assets/kitchen_xarm.xml')
+    KITCHEN_MODEl_NOKETTLE = os.path.join(
+        os.path.dirname(__file__),
+        'xarm/assets/kitchen_xarm_nokettle.xml')
     ROPE_MODEL = os.path.join(
         os.path.dirname(__file__),
         'xarm/assets/rope_xarm.xml')
@@ -52,6 +55,8 @@ class KitchenV0(robot_env.RobotEnv):
 
         if 'rope' in task_type:
             MODEL = self.ROPE_MODEL
+        elif 'open_microwave' in task_type:
+            MODEL = self.KITCHEN_MODEl_NOKETTLE
         else:
             MODEL = self.KITCHEN_MODEl
 
