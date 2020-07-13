@@ -164,7 +164,7 @@ def config_dr(config):
     if config.simple_randomization:
       if 'rope' in config.task:
         config.real_dr_params = {
-          "cylinder_mass": .01
+          "cylinder_mass": .5
         }
         config.dr = {  # (mean, range)
           "cylinder_mass": (config.mass_mean, config.mass_range)
@@ -195,7 +195,7 @@ def config_dr(config):
           "cylinder_b": .2,
           "cylinder_g": .2,
           "cylinder_r": 1.,
-          "cylinder_mass": 0.01,
+          "cylinder_mass": 0.5,
           "box1_r": .2,
           "box1_g": 1,
           "box1_b": .2,
