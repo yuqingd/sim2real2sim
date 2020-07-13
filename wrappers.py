@@ -622,14 +622,14 @@ class Kitchen:
       ])
     else:
       geom_dict = self._env.sim.model._geom_name2id
-      kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
-      kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
-      stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
+      stove_collision_index = [geom_dict[name] for name in geom_dict.keys() if
                                  "stove_collision" in name]  # 97:104  # TODO: figure out why these are empty
-      stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]  # 86
-      xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
-      xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
-                                "xarm_collision" in name or "end_effector" in name]
+      stove_collision_index = 94
+      stove_viz_index = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]  # 86
+      stove_viz_index = 86  # TODO: find some way to get this by default!
+      xarm_viz_index = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name][0]
+      xarm_collision_index = [geom_dict[name] for name in geom_dict.keys() if
+                                "xarm_collision" in name or "end_effector" in name][0]
       data = self._env.sim.data
       model = self._env.sim.model
       arr = np.array([
@@ -654,14 +654,14 @@ class Kitchen:
       arr = np.concatenate([arr, [
         self._env.sim.model.body_mass[22],
         self._env.sim.model.light_diffuse[0, 0],
-        self._env.sim.model.geom_rgba[2, 2],
-        self._env.sim.model.geom_friction[2, 0],
-        self._env.sim.model.geom_rgba[2, 1],
-        self._env.sim.model.geom_rgba[2, 0],
-        self._env.sim.model.geom_rgba[86, 2],
-        self._env.sim.model.geom_friction[86, 0],
-        self._env.sim.model.geom_rgba[86, 1],
-        self._env.sim.model.geom_rgba[86, 0],
+        self._env.sim.model.geom_rgba[xarm_viz_index, 2],
+        self._env.sim.model.geom_friction[xarm_collision_index, 0],
+        self._env.sim.model.geom_rgba[xarm_viz_index, 1],
+        self._env.sim.model.geom_rgba[xarm_viz_index, 0],
+        self._env.sim.model.geom_rgba[stove_viz_index, 2],
+        self._env.sim.model.geom_friction[stove_collision_index, 0],
+        self._env.sim.model.geom_rgba[stove_viz_index, 1],
+        self._env.sim.model.geom_rgba[stove_viz_index, 0],
       ]])
     arr = arr.astype(np.float32)
     return arr
