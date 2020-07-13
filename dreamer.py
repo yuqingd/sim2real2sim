@@ -228,6 +228,11 @@ def config_dr(config):
 
       else:
         config.real_dr_params = {
+          "cabinet_b": 0.5,
+          "cabinet_friction": 1,
+          "cabinet_g": 0.5,
+          "cabinet_mass": 3.4,
+          "cabinet_r": 0.5,
           "joint1_damping": 10,
           "joint2_damping": 10,
           "joint3_damping": 5,
@@ -242,6 +247,11 @@ def config_dr(config):
           "kettle_r": 0.5,
           "knob_mass": 0.02,
           "lighting": 0.3,
+          "microwave_b": 0.5,
+          "microwave_friction": 1,
+          "microwave_g": 0.5,
+          "microwave_mass": .26,
+          "microwave_r": 0.5,
           "robot_b": 0.92,
           "robot_friction": 1.0,
           "robot_g": .99,
