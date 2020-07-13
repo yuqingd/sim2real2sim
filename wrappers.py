@@ -478,7 +478,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 2], 'cylinder_b')
       self.update_dr_param(self._env.sim.model.geom_rgba[cylinder_viz, 1], 'cylinder_g')
       self.update_dr_param( self._env.sim.model.geom_rgba[cylinder_viz, 0], 'cylinder_r')
-      self.update_dr_param(self._env.sim.model.body_mass[cylinder_body], 'cylinder_mass')
+      self.update_dr_param(self._env.sim.model.body_mass[cylinder_body:cylinder_body+1], 'cylinder_mass')
 
       #box
       box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
