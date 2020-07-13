@@ -234,7 +234,7 @@ class Kitchen:
 
       if self.task == 'slide_kettle_burner': #single goal test, slide to back burner
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
-        self.goal[1] += .6
+        self.goal[1] += .5
       else:
         self.goal = np.random.uniform(low=[-1, 0, 0], high=[0, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
@@ -301,7 +301,7 @@ class Kitchen:
 
 
       d2 = np.linalg.norm(kettle - self.goal)
-      done = np.abs(d2) < 0.1
+      done = np.abs(d2) < 0.15
 
       if self.slide_d1 is not None:
         reward = -(self.slide_d1 + d2)
