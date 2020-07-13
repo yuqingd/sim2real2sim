@@ -13,7 +13,7 @@
         <geom material="oven_black" euler="1.57 0 0" pos="-.215 -0.36 0.254" size="0.018 0.03" type="cylinder"/>
         <geom material="oven_black" euler="1.57 0 0" pos=".184 -0.36 0.254" size="0.018 0.03" type="cylinder"/>
         <geom material="oven_black" euler="0 1.57 0" pos="-0.015 -0.39 0.254" size="0.022 0.28" type="cylinder"/>
-        <geom material="oven_black" mesh="oventop" pos="-0.017 0.275 0.607"/>
+        <geom name="stove_viz0" material="oven_black" mesh="oventop" pos="-0.017 0.275 0.607"/>
         <geom material="oven_black" mesh="ovenwindow" pos="0.9793 0.2921 -1.1877"/>
         <geom material="oven_black" pos="-0.011 -.327 -.05" size="0.35 0.016 0.22" type="box"/>
         <geom mesh="stoverim" pos="0.203 0.323 0.619"/>
@@ -25,13 +25,13 @@
         <geom pos="-0.017 -.326 -.14" size="0.5 0.016 0.465" type="box"/>
         <geom pos="-0.017 0.295 -0.2" size="0.5 0.602 0.78" type="box"/>
 
-        <geom class="oven_collision" pos="-0.017 0.28 -0.175" size="0.5 0.625 0.81" type="box" mass="5"/>
-        <geom class="oven_collision" euler="1.57 0 0" pos="-.215 -0.36 -0.682" size="0.018 0.03" type="cylinder" mass=".2"/>
-        <geom class="oven_collision" euler="1.57 0 0" pos=".184 -0.36 -0.682" size="0.018 0.03" type="cylinder" mass=".2"/>
-        <geom class="oven_collision" euler="0 1.57 0" pos="-0.015 -0.39 -0.682" size="0.022 0.28" type="cylinder" mass=".2"/>
-        <geom class="oven_collision" euler="1.57 0 0" pos="-.215 -0.36 0.254" size="0.018 0.03" type="cylinder" mass=".2"/>
-        <geom class="oven_collision" euler="1.57 0 0" pos=".184 -0.36 0.254" size="0.018 0.03" type="cylinder" mass=".2"/>
-        <geom class="oven_collision" euler="0 1.57 0" pos="-0.015 -0.39 0.254" size="0.022 0.28" type="cylinder" mass=".2"/>
+        <geom name="stove_collision0" class="oven_collision" pos="-0.017 0.28 -0.175" size="0.5 0.625 0.81" type="box" mass="5"/>
+        <geom name="stove_collision1" class="oven_collision" euler="1.57 0 0" pos="-.215 -0.36 -0.682" size="0.018 0.03" type="cylinder" mass=".2"/>
+        <geom name="stove_collision2" class="oven_collision" euler="1.57 0 0" pos=".184 -0.36 -0.682" size="0.018 0.03" type="cylinder" mass=".2"/>
+        <geom name="stove_collision3" class="oven_collision" euler="0 1.57 0" pos="-0.015 -0.39 -0.682" size="0.022 0.28" type="cylinder" mass=".2"/>
+        <geom name="stove_collision4" class="oven_collision" euler="1.57 0 0" pos="-.215 -0.36 0.254" size="0.018 0.03" type="cylinder" mass=".2"/>
+        <geom name="stove_collision5" class="oven_collision" euler="1.57 0 0" pos=".184 -0.36 0.254" size="0.018 0.03" type="cylinder" mass=".2"/>
+        <geom name="stove_collision6" class="oven_collision" euler="0 1.57 0" pos="-0.015 -0.39 0.254" size="0.022 0.28" type="cylinder" mass=".2"/>
         <body name="knob 1" euler="1.57 0 0" pos="-0.148 0.22 1.243">
             <joint name="knob_Joint_1" axis="0 0 1" type="hinge" limited="true" range="-1.57 0"/>
             <geom type="box" pos="0 0 .038" size=".014 .048 .018"/>

@@ -82,7 +82,7 @@
             <body name="hingecabinet" pos="-0.504 0.28 2.6" >
                 <include file="../../../../adept_models/kitchen/assets/hingecabinet_chain.xml"/>
             </body>
-            <body name="microwave" pos="-0.750 -0.025 1.6" euler="0 0 0.3">
+            <body name="microwave" pos="0.2 0.025 1.6" euler="0 0 0.3">
                 <include file="../../../../adept_models/kitchen/assets/microwave_chain.xml"/>
             </body>
         </body>

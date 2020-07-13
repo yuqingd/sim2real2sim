@@ -165,9 +165,9 @@ class Kitchen:
       azimuth = 120
       elevation = -40
     if 'open_microwave' in task:
-      distance = 2.5
-      azimuth = 40
-      elevation = -40
+      distance = 1.5
+      azimuth = 140
+      elevation = -30
 
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
     self.task = task
@@ -409,11 +409,17 @@ class Kitchen:
   def get_sim(self):
     return self._env.sim
 
-  def update_dr_param(self, param, param_name, eps=1e-3):
+  def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
     if param_name in self.dr:
       mean, range = self.dr[param_name]
       range = max(range, eps)
-      param[:] = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      if indices is None:
+        param[:] = new_value
+      else:
+        for i in indices:
+          param[i:i+1] = new_value
+
       self.sim_params += [mean, range]
 
   def set_workspace_bounds(self, bounds):
@@ -525,39 +531,68 @@ class Kitchen:
 
     else:
       geom_dict = self._env.sim.model._geom_name2id
-      stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_collision" in name] #97:104  # TODO: figure out why these are empty
-      stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name] # 86
+      stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_collision" in name]
+      stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]
       xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
       xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_collision" in name or "end_effector" in name]
       data = self._env.sim.data
       model = self._env.sim.model
-      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')  # TODO: probably OK but double check
+
+      # Cabinet
+      cabinet_index = self._env.sim.model.body_name2id('slidelink')
+      cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name]
+      cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name]
+
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'cabinet_b', indices=cabinet_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'cabinet_friction', indices=cabinet_collision_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'cabinet_g', indices=cabinet_viz_indices)
+      self.update_dr_param(self._env.sim.model.body_mass[cabinet_index: cabinet_index + 1], 'cabinet_mass')
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'cabinet_r', indices=cabinet_viz_indices)
+      # Robot
+      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
       self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+
+      # Kettle
       if self.has_kettle:
         kettle_index = self._env.sim.model.body_name2id('kettleroot')
         kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
         kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
-        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 2], 'kettle_b')
-        self.update_dr_param(self._env.sim.model.geom_friction[kettle_collision_indices, 0], 'kettle_friction')
-        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 1], 'kettle_g')
+        self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'kettle_b', indices=kettle_viz_indices)
+        self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'kettle_friction', indices=kettle_collision_indices)
+        self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'kettle_g', indices=kettle_viz_indices)
         self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
-        self.update_dr_param(self._env.sim.model.geom_rgba[kettle_viz_indices, 0], 'kettle_r')
-      self.update_dr_param(self._env.sim.model.body_mass[[22, 24, 26, 28]], 'knob_mass')
-      self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
-      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 2], 'robot_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[xarm_collision_indices, 0], 'robot_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 1], 'robot_g')
-      self.update_dr_param(self._env.sim.model.geom_rgba[xarm_viz_indices, 0], 'robot_r')
-      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 2], 'stove_b')
-      self.update_dr_param(self._env.sim.model.geom_friction[97:104, 0], 'stove_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 1], 'stove_g')
-      self.update_dr_param(self._env.sim.model.geom_rgba[86:87, 0], 'stove_r')
+        self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'kettle_r', indices=kettle_viz_indices)
 
+      # Random other stuff
+      self.update_dr_param(self._env.sim.model.body_mass, 'knob_mass', indices=[22, 24, 26, 28])
+      self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
+
+      # Microwave
+      microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+      microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name]
+      microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name]
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'microwave_b', indices=microwave_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'microwave_friction', indices=microwave_collision_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'microwave_g', indices=microwave_viz_indices)
+      self.update_dr_param(self._env.sim.model.body_mass[microwave_index: microwave_index + 1], 'microwave_mass')
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'microwave_r', indices=microwave_viz_indices)
+
+      # Robot
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b', indices=xarm_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'robot_friction', indices=xarm_collision_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
+
+      # Stove
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'stove_b', indices=stove_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'stove_friction', indices=stove_collision_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'stove_g', indices=stove_viz_indices)
+      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'stove_r', indices=stove_viz_indices)
 
 
   def get_dr(self):
@@ -623,16 +658,26 @@ class Kitchen:
     else:
       geom_dict = self._env.sim.model._geom_name2id
       stove_collision_index = [geom_dict[name] for name in geom_dict.keys() if
-                                 "stove_collision" in name]  # 97:104  # TODO: figure out why these are empty
-      stove_collision_index = 94
-      stove_viz_index = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]  # 86
-      stove_viz_index = 86  # TODO: find some way to get this by default!
+                                 "stove_collision" in name][0]
+      stove_viz_index = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]
       xarm_viz_index = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name][0]
       xarm_collision_index = [geom_dict[name] for name in geom_dict.keys() if
                                 "xarm_collision" in name or "end_effector" in name][0]
+      microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+      microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name][0]
+      microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name][0]
+      cabinet_index = self._env.sim.model.body_name2id('slidelink')
+      cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name][0]
+      cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name][0]
       data = self._env.sim.data
       model = self._env.sim.model
       arr = np.array([
+        # Cabinet
+        self._env.sim.model.geom_rgba[cabinet_viz_indices, 2],
+        self._env.sim.model.geom_friction[cabinet_collision_indices, 0],
+        self._env.sim.model.geom_rgba[cabinet_viz_indices, 1],
+        self._env.sim.model.body_mass[cabinet_index],
+        self._env.sim.model.geom_rgba[cabinet_viz_indices, 0],
         # Robot arms
         self._env.sim.model.dof_damping[0],
         self._env.sim.model.dof_damping[1],
@@ -641,6 +686,8 @@ class Kitchen:
         self._env.sim.model.dof_damping[4],
         self._env.sim.model.dof_damping[5],
         self._env.sim.model.dof_damping[6],])
+
+      # Kettle
       if self.has_kettle:
         kettle_index = self._env.sim.model.body_name2id('kettleroot')
         kettle_viz_index = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name][0]
@@ -651,13 +698,23 @@ class Kitchen:
           self._env.sim.model.geom_rgba[kettle_viz_index, 1],
           self._env.sim.model.body_mass[kettle_index],
           self._env.sim.model.geom_rgba[kettle_viz_index, 0],]])
+
       arr = np.concatenate([arr, [
+        # Random stuff
         self._env.sim.model.body_mass[22],
         self._env.sim.model.light_diffuse[0, 0],
+        # Microwave
+        self._env.sim.model.geom_rgba[microwave_viz_indices, 2],
+        self._env.sim.model.geom_friction[microwave_collision_indices, 0],
+        self._env.sim.model.geom_rgba[microwave_viz_indices, 1],
+        self._env.sim.model.body_mass[microwave_index],
+        self._env.sim.model.geom_rgba[microwave_viz_indices, 0],
+        # Robot
         self._env.sim.model.geom_rgba[xarm_viz_index, 2],
         self._env.sim.model.geom_friction[xarm_collision_index, 0],
         self._env.sim.model.geom_rgba[xarm_viz_index, 1],
         self._env.sim.model.geom_rgba[xarm_viz_index, 0],
+        # Stove
         self._env.sim.model.geom_rgba[stove_viz_index, 2],
         self._env.sim.model.geom_friction[stove_collision_index, 0],
         self._env.sim.model.geom_rgba[stove_viz_index, 1],
