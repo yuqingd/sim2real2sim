@@ -296,19 +296,28 @@ def config_dr(config):
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           if not "_b" in key:
-            config.dr[key] = (real_val, real_val * range_scale)
+            if real_val == 0:
+              config.dr[key] = (real_val, range_scale)
+            else:
+              config.dr[key] = (real_val, real_val * range_scale)
       if dr_option == 'inaccurate_small_range':
         range_scale = 0.1
-        offset = 1.08
+        offset = 0.1
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
-          config.dr[key] = (real_val * offset, real_val * range_scale)
+          if real_val == 0:
+            config.dr[key] = (0.1, 0.1)
+          else:
+            config.dr[key] = (real_val * offset, real_val * range_scale)
       elif dr_option == 'inaccurate_large_range':
         range_scale = 1
         offset = 1.5
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
-          config.dr[key] = (real_val * offset, real_val * range_scale)
+          if real_val == 0:
+            config.dr[key] = (0.5, 0.5)
+          else:
+            config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
         raise NotImplementedError(dr_option)
 
