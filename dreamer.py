@@ -170,6 +170,22 @@ def config_dr(config):
           "cylinder_mass": (config.mass_mean, config.mass_range)
         }
         config.sim_params_size = 2
+      elif 'open_microwave' in config.task:
+        config.real_dr_params = {
+          "microwave_mass": .26
+        }
+        config.dr = {  # (mean, range)
+          "microwave_mass": (config.mass_mean, config.mass_range)
+        }
+        config.sim_params_size = 2
+      elif 'open_cabinet' in config.task:
+        config.real_dr_params = {
+          "cabinet_mass": 3.4
+        }
+        config.dr = {  # (mean, range)
+          "cabinet_mass": (config.mass_mean, config.mass_range)
+        }
+        config.sim_params_size = 2
       else:
         config.real_dr_params = {
           "kettle_mass": 1.08
@@ -395,6 +411,8 @@ def config_dr(config):
     print(k)
     print(np.log(v[0]), np.log(v[1]))
 
+  dr_list = list(config.real_dr_params.keys())
+  config.dr_list = dr_list
   return config
 
 

@@ -600,6 +600,12 @@ class Kitchen:
       if 'rope' in self.task:
         cylinder_body = self._env.sim.model.body_name2id('cylinder')
         return np.array([self._env.sim.model.body_mass[cylinder_body]])
+      elif 'open_microwave' in self.task:
+        microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+        return np.array([self._env.sim.model.body_mass[microwave_index]])
+      elif 'open_cabinet' in self.task:
+        cabinet_index = self._env.sim.model.body_name2id('slidelink')
+        return np.array([self._env.sim.model.body_mass[cabinet_index]])
       else:
         kettle_index = self._env.sim.model.body_name2id('kettleroot')
         return np.array([self._env.sim.model.body_mass[kettle_index]])
