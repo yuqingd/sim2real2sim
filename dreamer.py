@@ -285,7 +285,7 @@ def config_dr(config):
 
         # Remove kettle-related d-r for the microwave task, which has no kettle present.
         if 'open_microwave' in config.task:
-          for k in config.real_dr_params.keys():
+          for k in list(config.real_dr_params.keys()):
             if 'kettle' in k:
               del config.real_dr_params[k]
 
