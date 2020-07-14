@@ -306,7 +306,7 @@ def config_dr(config):
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           if real_val == 0:
-            config.dr[key] = (offset, range_scale)
+            config.dr[key] = (0.1, 0.1)
           else:
             config.dr[key] = (real_val * offset, real_val * range_scale)
       elif dr_option == 'inaccurate_large_range':
@@ -315,7 +315,7 @@ def config_dr(config):
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
           if real_val == 0:
-            config.dr[key] = (offset, range_scale)
+            config.dr[key] = (0.5, 0.5)
           else:
             config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
