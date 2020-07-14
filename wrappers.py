@@ -417,8 +417,11 @@ class Kitchen:
       if indices is None:
         param[:] = new_value
       else:
-        for i in indices:
-          param[i:i+1] = new_value
+        try:
+          for i in indices:
+            param[i:i+1] = new_value
+        except:
+          param[indices:indices+1] = new_value
 
       self.sim_params += [mean, range]
 
