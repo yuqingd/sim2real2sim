@@ -1205,15 +1205,15 @@ if __name__ == '__main__':
     config = config_debug(config)
     if path.exists():
       print("Path exists")
-      # shutil.rmtree(path)
-  if path.exists():
+      shutil.rmtree(path)
+  elif path.exists():
     print("continuing past run", config.id)
     try:
       with open(config.logdir / 'dr_dict.pkl', 'rb') as f:
         dr = pkl.load(f)
         config.dr = dr
     except Exception as e:
-      print("Troupble loading dr dictionary", e)
+      print("Trouble loading dr dictionary", e)
   else:
     print("New run", config.id)
   main(config)

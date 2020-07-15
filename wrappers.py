@@ -259,12 +259,24 @@ class Kitchen:
 
     elif 'open_microwave' in self.task:
       self.set_workspace_bounds('full_workspace')
-      self.goal = np.squeeze(init_xpos[XPOS_INDICES['microwave']])
+      self.goal = np.squeeze(init_xpos[XPOS_INDICES['microwave']]).copy()
       self.goal += 0.5
     elif 'open_cabinet' in self.task:
       self.set_workspace_bounds('full_workspace')
-      self.goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']]
+      img_orig = self.render(size=(512, 512)).copy()
+
+      goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']].copy()
+      self.goal = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']].copy()
       self.goal[0] = 0.18
+      self.step(np.array([0, 0, 0]))
+      end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']].copy()
+      ratio_to_goal = 0.6
+      partway = ratio_to_goal * goal + (1 - ratio_to_goal) * end_effector
+      for i in range(60):
+        diff = partway - self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']].copy()
+        diff = diff / self.step_size
+        self.step(diff)
+
     else:
       raise NotImplementedError
 
