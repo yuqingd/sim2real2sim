@@ -587,7 +587,7 @@ class Kitchen:
 
       # Robot
       self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b', indices=xarm_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'robot_friction', indices=xarm_collision_indices)
+      # self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'robot_friction', indices=xarm_collision_indices)
       self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
       self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
 
@@ -724,7 +724,7 @@ class Kitchen:
         self._env.sim.model.geom_rgba[microwave_viz_indices, 0],
         # Robot
         self._env.sim.model.geom_rgba[xarm_viz_index, 2],
-        self._env.sim.model.geom_friction[xarm_collision_index, 0],
+        # self._env.sim.model.geom_friction[xarm_collision_index, 0],
         self._env.sim.model.geom_rgba[xarm_viz_index, 1],
         self._env.sim.model.geom_rgba[xarm_viz_index, 0],
         # Stove

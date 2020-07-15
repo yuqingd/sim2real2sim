@@ -269,7 +269,7 @@ def config_dr(config):
           "microwave_mass": .26,
           "microwave_r": 0.5,
           "robot_b": 0.92,
-          "robot_friction": 1.0,
+          # "robot_friction": 1.0,
           "robot_g": .99,
           "robot_r": 0.95,
           "stove_b": 0.5,
@@ -420,8 +420,8 @@ def config_dr(config):
     print(k)
     print(np.log(v[0]), np.log(v[1]))
 
-  dr_list = list(config.real_dr_params.keys())
-  config.dr_list = dr_list
+  # dr_list = list(config.real_dr_params.keys())
+  # config.dr_list = dr_list
   return config
 
 
@@ -1190,7 +1190,10 @@ if __name__ == '__main__':
   else:
     config.dr = None
 
-  print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
+  try:
+    print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
+  except:
+    print("GPUS found", tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None))
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
