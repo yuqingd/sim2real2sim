@@ -37,44 +37,44 @@
                                 <site name='end_effector' pos='0 0 .15' type="sphere" size=".01" rgba="1 1 .1 1"/>
                                 <inertial pos="-0.000420033 -0.00287433 0.0257078" quat="0.999372 -0.0349129 -0.00605634 0.000551744" mass="0.85624" diaginertia="0.00137671 0.00118744 0.000514968" />
                                 <joint name="joint7" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" damping="2" frictionloss="1" />
-                                <geom name="xarm_collision7" class="xarm_col" mass="0.85624" mesh="link7" />
+                                <geom name="xarm_collision7" class="xarm_col" mass="0.85624" mesh="link7" solimp="0.99 0.99 0.01" />
                                 <geom name="xarm_viz7" class="xarm_viz" mesh="link7" />
-                                <geom name="end_effector" mass="0.85624" mesh="base_link" />
+                                <geom name="end_effector" mass="0.85624" mesh="base_link" solimp="0.99 0.99 0.01" />
                                 <geom name="xarm_viz8" class="xarm_viz"  mesh="base_link" />
                                 <body name="left_outer_knuckle" pos="0 0.035 0.059098">
                                     <inertial pos="0 0.021559 0.015181" quat="0.47789 0.87842 0 0" mass="0.033618" diaginertia="1.9111e-05 1.79089e-05 1.90167e-06" />
                                     <joint name="drive_joint" pos="0 0 0" axis="1 0 0" limited="true" range="0 0.85" />
-                                    <geom name="xarm_collision9" class="xarm_col"  mass="0.033618" mesh="left_outer_knuckle" />
+                                    <geom name="xarm_collision9" class="xarm_col"  mass="0.033618" mesh="left_outer_knuckle" solimp="0.99 0.99 0.01" />
                                     <geom name="xarm_viz9" class="xarm_viz"  mesh="left_outer_knuckle" />
                                     <body name="left_finger" pos="0 0.035465 0.042039">
                                         <inertial pos="0 -0.016413 0.029258" quat="0.697634 0.115353 -0.115353 0.697634" mass="0.048304" diaginertia="1.88037e-05 1.7493e-05 3.56792e-06" />
                                         <joint name="left_finger_joint" pos="0 0 0" axis="-1 0 0" limited="true" range="0 0.85" />
-                                        <geom name="xarm_collision10" class="xarm_col" mass="0.048304" mesh="left_finger" />
+                                        <geom name="xarm_collision10" class="xarm_col" mass="0.048304" mesh="left_finger" solimp="0.99 0.99 0.01" />
                                         <geom name="xarm_viz10" class="xarm_viz"  mesh="left_finger" />
                                     </body>
                                 </body>
                                 <body name="left_inner_knuckle" pos="0 0.02 0.074098">
                                     <inertial pos="1.86601e-06 0.0220468 0.0261335" quat="0.664139 -0.242732 0.242713 0.664146" mass="0.0230126" diaginertia="8.34216e-06 6.0949e-06 2.75601e-06" />
                                     <joint name="left_inner_knuckle_joint" pos="0 0 0" axis="1 0 0" limited="true" range="0 0.85" />
-                                    <geom name="xarm_collision11" class="xarm_col"  mass="0.0230126" mesh="left_inner_knuckle" />
+                                    <geom name="xarm_collision11" class="xarm_col"  mass="0.0230126" mesh="left_inner_knuckle"  solimp="0.99 0.99 0.01" />
                                     <geom name="xarm_viz11" class="xarm_viz" mesh="left_inner_knuckle" />
                                 </body>
                                 <body name="right_outer_knuckle" pos="0 -0.035 0.059098">
                                     <inertial pos="0 -0.021559 0.015181" quat="0.87842 0.47789 0 0" mass="0.033618" diaginertia="1.9111e-05 1.79089e-05 1.90167e-06" />
                                     <joint name="right_outer_knuckle_joint" pos="0 0 0" axis="-1 0 0" limited="true" range="0 0.85" />
-                                    <geom name="xarm_collision12" class="xarm_col" mass="0.033618"  mesh="right_outer_knuckle" />
+                                    <geom name="xarm_collision12" class="xarm_col" mass="0.033618"  mesh="right_outer_knuckle" solimp="0.99 0.99 0.01" />
                                     <geom name="xarm_viz12" class="xarm_viz" mesh="right_outer_knuckle" />
                                     <body name="right_finger" pos="0 -0.035465 0.042039">
                                         <inertial pos="0 0.016413 0.029258" quat="0.697634 -0.115356 0.115356 0.697634" mass="0.048304" diaginertia="1.88038e-05 1.7493e-05 3.56779e-06" />
                                         <joint name="right_finger_joint" pos="0 0 0" axis="1 0 0" limited="true" range="0 0.85" />
-                                        <geom name="xarm_collision13" class="xarm_col"  mass="0.048304" mesh="right_finger" />
+                                        <geom name="xarm_collision13" class="xarm_col"  mass="0.048304" mesh="right_finger" solimp="0.99 0.99 0.01" />
                                         <geom name="xarm_viz13" class="xarm_viz" mesh="right_finger" />
                                     </body>
                                 </body>
                                 <body name="right_inner_knuckle" pos="0 -0.02 0.074098">
                                     <inertial pos="1.866e-06 -0.022047 0.026133" quat="0.66415 0.242702 -0.242721 0.664144" mass="0.023013" diaginertia="8.34209e-06 6.0949e-06 2.75601e-06" />
                                     <joint name="right_inner_knuckle_joint" pos="0 0 0" axis="-1 0 0" limited="true" range="0 0.85" />
-                                    <geom name="xarm_collision14" class="xarm_col"  mass="0.023013"  mesh="right_inner_knuckle" />
+                                    <geom name="xarm_collision14" class="xarm_col"  mass="0.023013"  mesh="right_inner_knuckle" solimp="0.99 0.99 0.01"  />
                                     <geom name="xarm_viz14" class="xarm_viz"  mesh="right_inner_knuckle" />
                                 </body>
                             </body>
