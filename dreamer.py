@@ -9,6 +9,7 @@ import time
 import shutil
 import psutil
 import cv2
+import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -1092,6 +1093,8 @@ def main(config):
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
+    with open(config.logdir / 'dr_dict.pkl', 'wb') as f:
+      pkl.dump(config.dr, f)
 
     if config.outer_loop_version == 2:
       # train_with_real = check_train_with_real(dr_list)
@@ -1196,15 +1199,21 @@ if __name__ == '__main__':
     print("GPUS found", tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None))
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
+  config.logdir = path
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if 'debug' in config.id:
     config = config_debug(config)
     if path.exists():
       print("Path exists")
-      shutil.rmtree(path)
-  elif path.exists():
+      # shutil.rmtree(path)
+  if path.exists():
     print("continuing past run", config.id)
+    try:
+      with open(config.logdir / 'dr_dict.pkl', 'rb') as f:
+        dr = pkl.load(f)
+        config.dr = dr
+    except Exception as e:
+      print("Troupble loading dr dictionary", e)
   else:
     print("New run", config.id)
-  config.logdir = path
   main(config)
