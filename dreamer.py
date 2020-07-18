@@ -280,8 +280,8 @@ def config_dr(config):
         }
 
         if 'slide' in config.task:
-          config.real_dr_prams['stove_friction'] = 1e-3
-          config.real_dr_prams['kettle_friction'] = 1e-3
+          config.real_dr_params['stove_friction'] = 1e-3
+          config.real_dr_params['kettle_friction'] = 1e-3
 
 
         # Remove kettle-related d-r for the microwave task, which has no kettle present.
