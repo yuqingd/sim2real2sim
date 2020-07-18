@@ -1184,6 +1184,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--dr', action='store_true', help='If true, test with DR sim environments')
   parser.add_argument('--dr_option', type=str, help='Which DR option to use')
+  parser.add_argument('--gpudevice', type=str, default=None, help='cuda visible devices for fair cluster')
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
@@ -1197,6 +1198,10 @@ if __name__ == '__main__':
     print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
   except:
     print("GPUS found", tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None))
+
+  if config.gpudevice is not None:
+    print('Setting gpudevice to:', config.gpudevice)
+    os.environ['CUDA_VISIBLE_DEVICES'] = config.gpudevice
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   config.logdir = path

@@ -1,16 +1,16 @@
 #! /bin/bash
 #SBATCH --output=/checkpoint/dpathak/sim2real2sim/slurm_logs/%x.out
 #SBATCH --error=/checkpoint/dpathak/sim2real2sim/slurm_logs/%x.err
-#SBATCH --partition=uninterrupted
+#SBATCH --partition=learnfair
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=5
 #SBATCH --signal=B:USR1@60
 #SBATCH --open-mode=append
-#SBATCH --time=4000
+#SBATCH --time=3000
 #SBATCH --mem=42G
-#SBATCH --comment="NeurIPS deadline 06/03"
+#SBATCH --comment="CoRL deadline 07/28"
 
 trap_handler () {
    echo "Caught signal: " $1
@@ -30,13 +30,9 @@ trap_handler () {
 trap 'trap_handler USR1' USR1
 trap 'trap_handler TERM' TERM
 
-# Debug output
-echo $SLURM_JOB_ID $SLURM_JOB_NAME $SLURMD_NODENAME $CUDA_VISIBLE_DEVICES
-echo ${args}
-
 # Load modules
 source /etc/profile.d/modules.sh
-source /private/home/dpathak/.bashrc
+# source /private/home/dpathak/.bashrc
 source /etc/profile
 
 # path
@@ -44,14 +40,34 @@ export MUJOCO_PY_MJKEY_PATH=/private/home/dpathak/.mujoco/mjkey.txt
 export MUJOCO_PY_MJPRO_PATH=/private/home/dpathak/.mujoco/mujoco200
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/private/home/dpathak/.mujoco/mujoco200/bin
 
+# module add doesn't include CUPTI path and there is some bug in cudnn lib64 path, so have to be added manually for TF2
+export LD_LIBRARY_PATH=/public/apps/cudnn/v7.6.5.32-cuda.10.1/lib64/:/public/apps/cuda/10.1/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/nvidia-opengl/:$LD_LIBRARY_PATH
+unset LD_PRELOAD
+
+# Debug output
+echo $SLURM_JOB_ID $SLURM_JOB_NAME $SLURMD_NODENAME $CUDA_VISIBLE_DEVICES
+echo ${args}
+echo $LD_PRELOAD $LD_LIBRARY_PATH
+
 # setup for modules and environments
 source deactivate
 module purge
-module load cuda/10.0
-module load cudnn/v7.4-cuda.10.0
+module load cuda/10.1
+module load cudnn/v7.6.5.32-cuda.10.1
 module load anaconda3
 source activate sim2real2simVenv
 
+for i in 0 1 2 3 4 5 6 7 8 9 10
+do
+if [ -r "/dev/nvidia$i" ]
+then
+ gpudevice=$i
+ echo $gpudevice
+fi
+done
+
 cd /private/home/dpathak/projects/sim2real2sim/
-python dreamer.py ${args} &
+python dreamer.py --gpudevice $gpudevice ${args} &
 wait $!
