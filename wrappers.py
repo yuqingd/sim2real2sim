@@ -221,8 +221,10 @@ class Kitchen:
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
         self.goal[1] += 0.5
       else:
-        self.goal = np.random.uniform(low=self.end_effector_bound_low, high=self.end_effector_bound_high) #randomly select goal location in workspace
-        self.goal[1] = max(self.goal[1] + 0.5, self.end_effector_bound_high[1]) # move forward in y
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal += np.random.standard_normal() #randomly select goal location in workspace
+        self.goal[1] += 0.4 # move forward in y
+        self.goal = np.clip(self.goal, self.end_effector_bound_low, self.end_effector_bound_high)
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to push in x,y
 
     elif 'slide' in self.task:
@@ -237,7 +239,12 @@ class Kitchen:
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
         self.goal[1] += .5
       else:
-        self.goal = np.random.uniform(low=[-.5, 0.45, 0], high=[.5, 1, 0]) #randomly select goal location in workspace OUTSIDE of end effector reach
+        self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
+        self.goal += np.random.standard_normal()  # randomly select goal location in workspace
+        self.goal[1] += 0.5  # move forward in y
+        self.goal = np.clip(self.goal, [-.5, 0.45, 0], [.5, 1, 0])
+        self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1]  # set z pos to be same as kettle, since we only want to push in x,y
+
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
 
     elif 'pick' in self.task:
