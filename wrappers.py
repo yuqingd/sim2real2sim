@@ -153,7 +153,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, use_state=False, step_repeat=200,
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, use_state=False, step_repeat=200,
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
     if 'rope' in task:
@@ -172,6 +172,7 @@ class Kitchen:
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
     self.task = task
     self._size = size
+    self.mean_only = mean_only
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
@@ -431,8 +432,12 @@ class Kitchen:
 
   def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
     if param_name in self.dr:
-      mean, range = self.dr[param_name]
-      range = max(range, eps)
+      if self.mean_only:
+        mean = self.dr[param_name]
+        range = 0.1 * mean #TODO: tune this?
+      else:
+        mean, range = self.dr[param_name]
+        range = max(range, eps)
       new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
       if indices is None:
         param[:] = new_value

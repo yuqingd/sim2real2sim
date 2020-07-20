@@ -152,6 +152,7 @@ def define_config():
   # these values are for testing dmc_cup_catch
   config.mass_mean = 0.2
   config.mass_range = 0.01
+  config.mean_only = False
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.3
@@ -321,6 +322,14 @@ def config_dr(config):
             config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
         raise NotImplementedError(dr_option)
+
+      #Keep mean only
+      if config.mean_only:
+        dr = {}
+        for key, vals in config.dr:
+          dr[key] = vals[0] #only keep mean
+        config.sim_params_size = int(config.sim_params_size / 2)
+        config.dr = dr
 
   elif config.task == 'metaworld_reach':
       return {}
@@ -885,7 +894,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size)
     else:
-      env = wrappers.Kitchen(dr=config.dr, use_state=config.use_state, real_world=real_world,
+      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, use_state=config.use_state, real_world=real_world,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
@@ -1117,20 +1126,28 @@ def main(config):
 
       for env in train_sim_envs:
         for i, param in enumerate(sorted(config.dr.keys())):
-
-          prev_mean, prev_range = env.dr[param]
-          pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
-          pred_range = np.exp(agent.learned_dr_std.numpy())[i]
-          print(f"Learned {param}", pred_mean, pred_range)
+          if config.mean_only:
+            prev_mean = env.dr[param]
+            pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
+            print(f"Learned {param}", pred_mean)
+          else:
+            prev_mean, prev_range = env.dr[param]
+            pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
+            pred_range = np.exp(agent.learned_dr_std.numpy())[i]
+            print(f"Learned {param}", pred_mean, pred_range)
           alpha = config.alpha
 
           new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
-          new_range = prev_range * (1 - alpha) + alpha * pred_range
-          env.dr[param] = (new_mean, new_range)
+          if config.mean_only:
+            env.dr[param] = new_mean
+          else:
+            new_range = prev_range * (1 - alpha) + alpha * pred_range
+            env.dr[param] = (new_mean, new_range)
           # dr_list.append(new_mean)
           with writer.as_default():
             tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
-            tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
+            if not config.mean_only:
+              tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
 
             real_dr_param = config.real_dr_params[param]
             if not real_dr_param == 0:
@@ -1146,18 +1163,27 @@ def main(config):
       for env in train_sim_envs:
         if env.dr is not None:
           for i, param in enumerate(sorted(config.dr.keys())):
-            prev_mean, prev_range = env.dr[param]
+            if config.mean_only:
+              prev_mean = env.dr[param]
+            else:
+              prev_mean, prev_range = env.dr[param]
             pred_mean = real_pred_sim_params[i * 2]
-            pred_range = real_pred_sim_params[i * 2 + 1]
-            print(f"Learned {param}", pred_mean, pred_range)
+
+            if not config.mean_only:
+              pred_range = real_pred_sim_params[i * 2 + 1]
+              print(f"Learned {param}", pred_mean, pred_range)
             alpha = config.alpha
 
             new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
-            new_range = prev_range * (1 - alpha) + alpha * pred_range
-            env.dr[param] = (new_mean, new_range)
+            if not config.mean_only:
+              new_range = prev_range * (1 - alpha) + alpha * pred_range
+              env.dr[param] = (new_mean, new_range)
+            else:
+              env.dr[param] = new_mean
             with writer.as_default():
               tf.summary.scalar(f'agent/sim_param/{param}/mean', new_mean, step)
-              tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
+              if not config.mean_only:
+                tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
 
               real_dr_param = config.real_dr_params[param]
               if not real_dr_param == 0:
