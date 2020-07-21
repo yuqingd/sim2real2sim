@@ -886,7 +886,7 @@ def summarize_episode(episode, config, datadir, writer, prefix):
   with writer.as_default():  # Env might run in a different thread.
     tf.summary.experimental.set_step(step)
     [tf.summary.scalar('sim/' + k, v) for k, v in metrics]
-    if prefix == 'test':
+    if prefix == 'test' and config.log_images:
       tools.video_summary(f'sim/{prefix}/video', episode['image'][None])
 
 
