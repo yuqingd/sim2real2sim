@@ -1188,7 +1188,10 @@ def main(config):
               pred_range = real_pred_sim_params[i * 2 + 1]
               print(f"Learned {param}", pred_mean, pred_range)
             else:
-              pred_mean = real_pred_sim_params[i]
+              try:
+                pred_mean = real_pred_sim_params[i]
+              except:
+                pred_mean = real_pred_sim_params
               print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
