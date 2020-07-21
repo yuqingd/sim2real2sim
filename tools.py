@@ -251,7 +251,7 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
       probs = None
 
     if buffer_size > 0:
-      start = max(len(keys) - buffer_size, 0)
+      start = int(max(len(keys) - buffer_size, 0))
       buffer_idx = np.arange(start, len(keys), dtype=np.int32)
       if probs is not None:
         probs = probs[start:]
