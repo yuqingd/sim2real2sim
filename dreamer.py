@@ -326,7 +326,7 @@ def config_dr(config):
       #Keep mean only
       if config.mean_only and config.dr is not None:
         dr = {}
-        for key, vals in config.dr:
+        for key, vals in config.dr.items():
           dr[key] = vals[0] #only keep mean
         config.sim_params_size = int(config.sim_params_size / 2)
         config.dr = dr
