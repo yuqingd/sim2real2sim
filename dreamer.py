@@ -573,7 +573,7 @@ class Dreamer(tools.Module):
 
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
-        sim_param_obj = sim_param_pred.log_prob(np.log(data['sim_params']))
+        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
 
         likes.sim_params = tf.reduce_mean(sim_param_obj)
