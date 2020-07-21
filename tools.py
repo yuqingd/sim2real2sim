@@ -249,10 +249,11 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
         probs = [real_prob if True in cache[key]['real_world'] else sim_prob for key in keys]
     else:
       probs = None
-
+    
     if buffer_size > 0:
       buffer_idx = np.arange(len(keys), dtype=np.int32)
       if probs is not None:
+        probs = np.array(probs)
         buffer_idx = buffer_idx[probs != 0]
         probs = probs[probs != 0]
       start = int(max(len(buffer_idx) - buffer_size, 0))
