@@ -158,6 +158,7 @@ def define_config():
   config.alpha = 0.3
   config.sim_params_size = 0
   config.buffer_size = 0
+  config.early_termination = False
 
   return config
 
@@ -901,12 +902,12 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.NormalizeActions(env)
   elif suite == 'kitchen':
     if config.dr is None or real_world:
-      env = wrappers.Kitchen(use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
+      env = wrappers.Kitchen(use_state=config.use_state, early_termination=config.early_termination, real_world=real_world, dr_shape=config.sim_params_size,
                              task=task, simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size)
     else:
-      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, use_state=config.use_state, real_world=real_world,
+      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination, use_state=config.use_state, real_world=real_world,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,

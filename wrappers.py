@@ -153,7 +153,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, use_state=False, step_repeat=200,
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, early_termination=False, use_state=False, step_repeat=200,
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
     if 'rope' in task:
@@ -172,6 +172,7 @@ class Kitchen:
     self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
     self.task = task
     self._size = size
+    self.early_termination = early_termination
     self.mean_only = mean_only
     self.real_world = real_world
     self.use_state = use_state
@@ -367,7 +368,7 @@ class Kitchen:
     elif 'rope' in self.task:
       cylinder_loc = self._env.sim.data.site_xpos[self.cylinder_index]
       reward = -np.linalg.norm(cylinder_loc - self.goal)
-      done = np.abs(reward) < 0.05
+      done = np.abs(reward) < 0.1
 
     elif 'open_microwave' in self.task:
       end_effector = self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']]
@@ -899,6 +900,9 @@ class Kitchen:
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if done else 0.0
+
+    if not self.early_termination:
+      done = False
     return obs, reward, done, info
 
 
