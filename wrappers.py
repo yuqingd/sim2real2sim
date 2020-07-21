@@ -434,7 +434,7 @@ class Kitchen:
     if param_name in self.dr:
       if self.mean_only:
         mean = self.dr[param_name]
-        range = 0.1 * mean #TODO: tune this?
+        range = max(0.1 * mean, eps) #TODO: tune this?
       else:
         mean, range = self.dr[param_name]
         range = max(range, eps)
