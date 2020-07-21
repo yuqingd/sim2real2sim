@@ -157,6 +157,7 @@ def define_config():
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.3
   config.sim_params_size = 0
+  config.buffer_size = 0
 
   return config
 
@@ -324,12 +325,12 @@ def config_dr(config):
         raise NotImplementedError(dr_option)
 
       #Keep mean only
-      if config.mean_only and config.dr is not None:
-        dr = {}
-        for key, vals in config.dr.items():
-          dr[key] = vals[0] #only keep mean
-        config.sim_params_size = int(config.sim_params_size / 2)
-        config.dr = dr
+  if config.mean_only and config.dr is not None:
+    dr = {}
+    for key, vals in config.dr.items():
+      dr[key] = vals[0] #only keep mean
+    config.sim_params_size = int(config.sim_params_size / 2)
+    config.dr = dr
 
   elif config.task == 'metaworld_reach':
       return {}
@@ -572,7 +573,7 @@ class Dreamer(tools.Module):
 
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
-        sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
 
         likes.sim_params = tf.reduce_mean(sim_param_obj)
@@ -636,7 +637,7 @@ class Dreamer(tools.Module):
       if not self._c.mean_only:
         dr_std = tf.exp(self.learned_dr_std)
       else:
-        dr_std = max(dr_mean * 0.1, 1e-3) #TODO : Change this if needed, corresponds to wrappers.py
+        dr_std = tf.maximum(dr_mean * 0.1, 1e-3) #TODO : Change this if needed, corresponds to wrappers.py
       random_num = tf.random.normal(dr_mean.shape, dtype=dr_mean.dtype)
       sampled_dr = random_num * dr_std + dr_mean
       desired_shape = (embed.shape[0], embed.shape[1], dr_mean.shape[0])
@@ -843,19 +844,19 @@ def count_steps(datadir, config):
 
 def load_dataset(directory, config, use_sim=None, use_real=None):
   if config.outer_loop_version != 2:
-    episode = next(tools.load_episodes(directory, 1))
+    episode = next(tools.load_episodes(directory, 1, buffer_size=config.buffer_size))
   else:
-    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
+    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real, buffer_size=config.buffer_size))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
   if config.outer_loop_version != 2:
     generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance, real_world_prob=config.real_world_prob)
+      config.dataset_balance, real_world_prob=config.real_world_prob, buffer_size=config.buffer_size)
   else:
     generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real)
+      config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real, buffer_size=config.buffer_size)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
   dataset = dataset.batch(config.batch_size, drop_remainder=True)
   dataset = dataset.map(functools.partial(preprocess, config=config))
@@ -1173,6 +1174,7 @@ def main(config):
     elif config.outer_loop_version == 1:
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      real_pred_sim_params = np.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
           for i, param in enumerate(sorted(config.dr.keys())):
@@ -1186,7 +1188,10 @@ def main(config):
               pred_range = real_pred_sim_params[i * 2 + 1]
               print(f"Learned {param}", pred_mean, pred_range)
             else:
-              pred_mean = real_pred_sim_params[i]
+              try:
+                pred_mean = real_pred_sim_params[i]
+              except:
+                pred_mean = real_pred_sim_params
               print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
