@@ -1167,11 +1167,14 @@ def main(config):
               prev_mean = env.dr[param]
             else:
               prev_mean, prev_range = env.dr[param]
-            pred_mean = real_pred_sim_params[i * 2]
 
             if not config.mean_only:
+              pred_mean = real_pred_sim_params[i * 2]
               pred_range = real_pred_sim_params[i * 2 + 1]
               print(f"Learned {param}", pred_mean, pred_range)
+            else:
+              pred_mean = real_pred_sim_params[i]
+              print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
             new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
