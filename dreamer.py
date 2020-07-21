@@ -325,12 +325,12 @@ def config_dr(config):
         raise NotImplementedError(dr_option)
 
       #Keep mean only
-      if config.mean_only and config.dr is not None:
-        dr = {}
-        for key, vals in config.dr.items():
-          dr[key] = vals[0] #only keep mean
-        config.sim_params_size = int(config.sim_params_size / 2)
-        config.dr = dr
+  if config.mean_only and config.dr is not None:
+    dr = {}
+    for key, vals in config.dr.items():
+      dr[key] = vals[0] #only keep mean
+    config.sim_params_size = int(config.sim_params_size / 2)
+    config.dr = dr
 
   elif config.task == 'metaworld_reach':
       return {}
