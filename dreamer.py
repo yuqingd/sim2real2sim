@@ -428,7 +428,10 @@ def config_dr(config):
 
   for k, v in config.dr.items():
     print(k)
-    print(np.log(v[0]), np.log(v[1]))
+    if config.mean_only:
+      print(np.log(v))
+    else:
+      print(np.log(v[0]), np.log(v[1]))
 
   # dr_list = list(config.real_dr_params.keys())
   # config.dr_list = dr_list
