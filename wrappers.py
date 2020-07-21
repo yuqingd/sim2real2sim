@@ -497,60 +497,60 @@ class Kitchen:
       xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if
                                 "xarm_collision" in name or "end_effector" in name]
 
-      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b',  indices=xarm_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_friction[xarm_collision_indices, 0], 'robot_friction')
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
+      # self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b',  indices=xarm_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_friction[xarm_collision_indices, 0], 'robot_friction')
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
 
       #cylinder
       cylinder_viz = self._env.sim.model.geom_name2id('cylinder_viz')
       cylinder_body = self._env.sim.model.body_name2id('cylinder')
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'cylinder_b', indices=cylinder_viz)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'cylinder_g', indices=cylinder_viz)
-      self.update_dr_param( self._env.sim.model.geom_rgba[:, 0], 'cylinder_r', indices=cylinder_viz)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'cylinder_b', indices=cylinder_viz)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'cylinder_g', indices=cylinder_viz)
+      # self.update_dr_param( self._env.sim.model.geom_rgba[:, 0], 'cylinder_r', indices=cylinder_viz)
       self.update_dr_param(self._env.sim.model.body_mass[cylinder_body:cylinder_body+1], 'cylinder_mass')
 
       #box
-      box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
-      box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
-      box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
-      box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
-      box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
-      box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
-      box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
-      box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
+      # box_viz_1 = self._env.sim.model.geom_name2id('box_viz_1')
+      # box_viz_2 = self._env.sim.model.geom_name2id('box_viz_2')
+      # box_viz_3 = self._env.sim.model.geom_name2id('box_viz_3')
+      # box_viz_4 = self._env.sim.model.geom_name2id('box_viz_4')
+      # box_viz_5 = self._env.sim.model.geom_name2id('box_viz_5')
+      # box_viz_6 = self._env.sim.model.geom_name2id('box_viz_6')
+      # box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
+      # box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
 
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box1_r', indices=box_viz_1)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box1_g', indices=box_viz_1)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box1_b', indices=box_viz_1)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box2_r', indices=box_viz_2)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box2_g', indices=box_viz_2)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box2_b', indices=box_viz_2)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box3_r', indices=box_viz_3)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box3_g', indices=box_viz_3)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box3_b', indices=box_viz_3)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box4_r', indices=box_viz_4)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box4_g', indices=box_viz_4)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box4_b', indices=box_viz_4)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box5_r', indices=box_viz_5)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box5_g', indices=box_viz_5)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box5_b', indices=box_viz_5)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box6_r', indices=box_viz_6)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box6_g', indices=box_viz_6)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box6_b', indices=box_viz_6)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box7_r', indices=box_viz_7)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box7_g', indices=box_viz_7)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box7_b', indices=box_viz_7)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box8_r', indices=box_viz_8)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box8_g', indices=box_viz_8)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box8_b', indices=box_viz_8)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box1_r', indices=box_viz_1)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box1_g', indices=box_viz_1)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box1_b', indices=box_viz_1)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box2_r', indices=box_viz_2)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box2_g', indices=box_viz_2)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box2_b', indices=box_viz_2)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box3_r', indices=box_viz_3)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box3_g', indices=box_viz_3)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box3_b', indices=box_viz_3)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box4_r', indices=box_viz_4)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box4_g', indices=box_viz_4)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box4_b', indices=box_viz_4)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box5_r', indices=box_viz_5)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box5_g', indices=box_viz_5)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box5_b', indices=box_viz_5)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box6_r', indices=box_viz_6)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box6_g', indices=box_viz_6)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box6_b', indices=box_viz_6)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box7_r', indices=box_viz_7)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box7_g', indices=box_viz_7)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box7_b', indices=box_viz_7)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'box8_r', indices=box_viz_8)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'box8_g', indices=box_viz_8)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'box8_b', indices=box_viz_8)
 
       #rope params
       self.update_dr_param(self._env.sim.model.tendon_damping, 'rope_damping')
@@ -558,7 +558,7 @@ class Kitchen:
       self.update_dr_param(self._env.sim.model.tendon_stiffness, 'rope_stiffness')
 
       # misc
-      self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
+      # self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
     else:
       geom_dict = self._env.sim.model._geom_name2id
@@ -574,56 +574,56 @@ class Kitchen:
       cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name]
       cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name]
 
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'cabinet_b', indices=cabinet_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'cabinet_b', indices=cabinet_viz_indices)
       self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'cabinet_friction', indices=cabinet_collision_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'cabinet_g', indices=cabinet_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'cabinet_g', indices=cabinet_viz_indices)
       self.update_dr_param(self._env.sim.model.body_mass[cabinet_index: cabinet_index + 1], 'cabinet_mass')
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'cabinet_r', indices=cabinet_viz_indices)
-      # Robot
-      self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
-      self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'cabinet_r', indices=cabinet_viz_indices)
+      # # Robot
+      # self.update_dr_param(self._env.sim.model.dof_damping[0:1], 'joint1_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[1:2], 'joint2_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[2:3], 'joint3_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[3:4], 'joint4_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[4:5], 'joint5_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[5:6], 'joint6_damping')
+      # self.update_dr_param(self._env.sim.model.dof_damping[6:7], 'joint7_damping')
 
       # Kettle
       if self.has_kettle:
         kettle_index = self._env.sim.model.body_name2id('kettleroot')
-        kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
+        # kettle_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name]
         kettle_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name]
-        self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'kettle_b', indices=kettle_viz_indices)
+        # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'kettle_b', indices=kettle_viz_indices)
         self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'kettle_friction', indices=kettle_collision_indices)
-        self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'kettle_g', indices=kettle_viz_indices)
+        # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'kettle_g', indices=kettle_viz_indices)
         self.update_dr_param(self._env.sim.model.body_mass[kettle_index: kettle_index + 1], 'kettle_mass')
-        self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'kettle_r', indices=kettle_viz_indices)
+        # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'kettle_r', indices=kettle_viz_indices)
 
       # Random other stuff
       self.update_dr_param(self._env.sim.model.body_mass, 'knob_mass', indices=[22, 24, 26, 28])
       self.update_dr_param(self._env.sim.model.light_diffuse[:3], 'lighting')
 
       # Microwave
-      microwave_index = self._env.sim.model.body_name2id('microdoorroot')
-      microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name]
-      microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name]
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'microwave_b', indices=microwave_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'microwave_friction', indices=microwave_collision_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'microwave_g', indices=microwave_viz_indices)
-      self.update_dr_param(self._env.sim.model.body_mass[microwave_index: microwave_index + 1], 'microwave_mass')
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'microwave_r', indices=microwave_viz_indices)
+      # microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+      # microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name]
+      # microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name]
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'microwave_b', indices=microwave_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'microwave_friction', indices=microwave_collision_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'microwave_g', indices=microwave_viz_indices)
+      # self.update_dr_param(self._env.sim.model.body_mass[microwave_index: microwave_index + 1], 'microwave_mass')
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'microwave_r', indices=microwave_viz_indices)
 
       # Robot
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b', indices=xarm_viz_indices)
-      # self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'robot_friction', indices=xarm_collision_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'robot_b', indices=xarm_viz_indices)
+      # # self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'robot_friction', indices=xarm_collision_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'robot_g', indices=xarm_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'robot_r', indices=xarm_viz_indices)
 
       # Stove
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'stove_b', indices=stove_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 2], 'stove_b', indices=stove_viz_indices)
       self.update_dr_param(self._env.sim.model.geom_friction[:, 0], 'stove_friction', indices=stove_collision_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'stove_g', indices=stove_viz_indices)
-      self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'stove_r', indices=stove_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 1], 'stove_g', indices=stove_viz_indices)
+      # self.update_dr_param(self._env.sim.model.geom_rgba[:, 0], 'stove_r', indices=stove_viz_indices)
 
 
   def get_dr(self):
@@ -652,46 +652,46 @@ class Kitchen:
       box_viz_7 = self._env.sim.model.geom_name2id('box_viz_7')
       box_viz_8 = self._env.sim.model.geom_name2id('box_viz_8')
       arr = np.array([
-        self._env.sim.model.dof_damping[0],
-        self._env.sim.model.dof_damping[1],
-        self._env.sim.model.dof_damping[2],
-        self._env.sim.model.dof_damping[3],
-        self._env.sim.model.dof_damping[4],
-        self._env.sim.model.dof_damping[5],
-        self._env.sim.model.dof_damping[6],
-        self._env.sim.model.geom_rgba[2, 2],
-        self._env.sim.model.geom_friction[2, 0],
-        self._env.sim.model.geom_rgba[2, 1],
-        self._env.sim.model.geom_rgba[2, 0],
-        self._env.sim.model.geom_rgba[cylinder_viz, 2],
-        self._env.sim.model.geom_rgba[cylinder_viz, 1],
+        # self._env.sim.model.dof_damping[0],
+        # self._env.sim.model.dof_damping[1],
+        # self._env.sim.model.dof_damping[2],
+        # self._env.sim.model.dof_damping[3],
+        # self._env.sim.model.dof_damping[4],
+        # self._env.sim.model.dof_damping[5],
+        # self._env.sim.model.dof_damping[6],
+        # self._env.sim.model.geom_rgba[2, 2],
+        # self._env.sim.model.geom_friction[2, 0],
+        # self._env.sim.model.geom_rgba[2, 1],
+        # self._env.sim.model.geom_rgba[2, 0],
+        # self._env.sim.model.geom_rgba[cylinder_viz, 2],
+        # self._env.sim.model.geom_rgba[cylinder_viz, 1],
         self._env.sim.model.body_mass[cylinder_body],
-        self._env.sim.model.geom_rgba[cylinder_viz, 0],
-        self._env.sim.model.light_diffuse[0, 0],
-        self._env.sim.model.geom_rgba[box_viz_1, 0],
-        self._env.sim.model.geom_rgba[box_viz_1, 1],
-        self._env.sim.model.geom_rgba[box_viz_1, 2],
-        self._env.sim.model.geom_rgba[box_viz_2, 0],
-        self._env.sim.model.geom_rgba[box_viz_2, 1],
-        self._env.sim.model.geom_rgba[box_viz_2, 2],
-        self._env.sim.model.geom_rgba[box_viz_3, 0],
-        self._env.sim.model.geom_rgba[box_viz_3, 1],
-        self._env.sim.model.geom_rgba[box_viz_3, 2],
-        self._env.sim.model.geom_rgba[box_viz_4, 0],
-        self._env.sim.model.geom_rgba[box_viz_4, 1],
-        self._env.sim.model.geom_rgba[box_viz_4, 2],
-        self._env.sim.model.geom_rgba[box_viz_5, 0],
-        self._env.sim.model.geom_rgba[box_viz_5, 1],
-        self._env.sim.model.geom_rgba[box_viz_5, 2],
-        self._env.sim.model.geom_rgba[box_viz_6, 0],
-        self._env.sim.model.geom_rgba[box_viz_6, 1],
-        self._env.sim.model.geom_rgba[box_viz_6, 2],
-        self._env.sim.model.geom_rgba[box_viz_7, 0],
-        self._env.sim.model.geom_rgba[box_viz_7, 1],
-        self._env.sim.model.geom_rgba[box_viz_7, 2],
-        self._env.sim.model.geom_rgba[box_viz_8, 0],
-        self._env.sim.model.geom_rgba[box_viz_8, 1],
-        self._env.sim.model.geom_rgba[box_viz_8, 2],
+        # self._env.sim.model.geom_rgba[cylinder_viz, 0],
+        # self._env.sim.model.light_diffuse[0, 0],
+        # self._env.sim.model.geom_rgba[box_viz_1, 0],
+        # self._env.sim.model.geom_rgba[box_viz_1, 1],
+        # self._env.sim.model.geom_rgba[box_viz_1, 2],
+        # self._env.sim.model.geom_rgba[box_viz_2, 0],
+        # self._env.sim.model.geom_rgba[box_viz_2, 1],
+        # self._env.sim.model.geom_rgba[box_viz_2, 2],
+        # self._env.sim.model.geom_rgba[box_viz_3, 0],
+        # self._env.sim.model.geom_rgba[box_viz_3, 1],
+        # self._env.sim.model.geom_rgba[box_viz_3, 2],
+        # self._env.sim.model.geom_rgba[box_viz_4, 0],
+        # self._env.sim.model.geom_rgba[box_viz_4, 1],
+        # self._env.sim.model.geom_rgba[box_viz_4, 2],
+        # self._env.sim.model.geom_rgba[box_viz_5, 0],
+        # self._env.sim.model.geom_rgba[box_viz_5, 1],
+        # self._env.sim.model.geom_rgba[box_viz_5, 2],
+        # self._env.sim.model.geom_rgba[box_viz_6, 0],
+        # self._env.sim.model.geom_rgba[box_viz_6, 1],
+        # self._env.sim.model.geom_rgba[box_viz_6, 2],
+        # self._env.sim.model.geom_rgba[box_viz_7, 0],
+        # self._env.sim.model.geom_rgba[box_viz_7, 1],
+        # self._env.sim.model.geom_rgba[box_viz_7, 2],
+        # self._env.sim.model.geom_rgba[box_viz_8, 0],
+        # self._env.sim.model.geom_rgba[box_viz_8, 1],
+        # self._env.sim.model.geom_rgba[box_viz_8, 2],
         self._env.sim.model.tendon_damping,
         self._env.sim.model.tendon_frictionloss,
         self._env.sim.model.tendon_stiffness,
@@ -714,19 +714,20 @@ class Kitchen:
       model = self._env.sim.model
       arr = np.array([
         # Cabinet
-        self._env.sim.model.geom_rgba[cabinet_viz_indices, 2],
+        # self._env.sim.model.geom_rgba[cabinet_viz_indices, 2],
         self._env.sim.model.geom_friction[cabinet_collision_indices, 0],
-        self._env.sim.model.geom_rgba[cabinet_viz_indices, 1],
+        # self._env.sim.model.geom_rgba[cabinet_viz_indices, 1],
         self._env.sim.model.body_mass[cabinet_index],
-        self._env.sim.model.geom_rgba[cabinet_viz_indices, 0],
+        # self._env.sim.model.geom_rgba[cabinet_viz_indices, 0],
         # Robot arms
-        self._env.sim.model.dof_damping[0],
-        self._env.sim.model.dof_damping[1],
-        self._env.sim.model.dof_damping[2],
-        self._env.sim.model.dof_damping[3],
-        self._env.sim.model.dof_damping[4],
-        self._env.sim.model.dof_damping[5],
-        self._env.sim.model.dof_damping[6],])
+        # self._env.sim.model.dof_damping[0],
+        # self._env.sim.model.dof_damping[1],
+        # self._env.sim.model.dof_damping[2],
+        # self._env.sim.model.dof_damping[3],
+        # self._env.sim.model.dof_damping[4],
+        # self._env.sim.model.dof_damping[5],
+        # self._env.sim.model.dof_damping[6],
+      ])
 
       # Kettle
       if self.has_kettle:
@@ -734,32 +735,33 @@ class Kitchen:
         kettle_viz_index = [geom_dict[name] for name in geom_dict.keys() if "kettle_viz" in name][0]
         kettle_collision_index = [geom_dict[name] for name in geom_dict.keys() if "kettle_collision" in name][0]
         arr = np.concatenate([arr, [
-          self._env.sim.model.geom_rgba[kettle_viz_index, 2],
+          # self._env.sim.model.geom_rgba[kettle_viz_index, 2],
           self._env.sim.model.geom_friction[kettle_collision_index, 0],
-          self._env.sim.model.geom_rgba[kettle_viz_index, 1],
+          # self._env.sim.model.geom_rgba[kettle_viz_index, 1],
           self._env.sim.model.body_mass[kettle_index],
-          self._env.sim.model.geom_rgba[kettle_viz_index, 0],]])
+          # self._env.sim.model.geom_rgba[kettle_viz_index, 0],
+        ]])
 
       arr = np.concatenate([arr, [
         # Random stuff
-        self._env.sim.model.body_mass[22],
-        self._env.sim.model.light_diffuse[0, 0],
+        # self._env.sim.model.body_mass[22],
+        # self._env.sim.model.light_diffuse[0, 0],
         # Microwave
-        self._env.sim.model.geom_rgba[microwave_viz_indices, 2],
-        self._env.sim.model.geom_friction[microwave_collision_indices, 0],
-        self._env.sim.model.geom_rgba[microwave_viz_indices, 1],
-        self._env.sim.model.body_mass[microwave_index],
-        self._env.sim.model.geom_rgba[microwave_viz_indices, 0],
+        # self._env.sim.model.geom_rgba[microwave_viz_indices, 2],
+        # self._env.sim.model.geom_friction[microwave_collision_indices, 0],
+        # self._env.sim.model.geom_rgba[microwave_viz_indices, 1],
+        # self._env.sim.model.body_mass[microwave_index],
+        # self._env.sim.model.geom_rgba[microwave_viz_indices, 0],
         # Robot
-        self._env.sim.model.geom_rgba[xarm_viz_index, 2],
+        # self._env.sim.model.geom_rgba[xarm_viz_index, 2],
         # self._env.sim.model.geom_friction[xarm_collision_index, 0],
-        self._env.sim.model.geom_rgba[xarm_viz_index, 1],
-        self._env.sim.model.geom_rgba[xarm_viz_index, 0],
+        # self._env.sim.model.geom_rgba[xarm_viz_index, 1],
+        # self._env.sim.model.geom_rgba[xarm_viz_index, 0],
         # Stove
-        self._env.sim.model.geom_rgba[stove_viz_index, 2],
+        # self._env.sim.model.geom_rgba[stove_viz_index, 2],
         self._env.sim.model.geom_friction[stove_collision_index, 0],
-        self._env.sim.model.geom_rgba[stove_viz_index, 1],
-        self._env.sim.model.geom_rgba[stove_viz_index, 0],
+        # self._env.sim.model.geom_rgba[stove_viz_index, 1],
+        # self._env.sim.model.geom_rgba[stove_viz_index, 0],
       ]])
     arr = arr.astype(np.float32)
     return arr
