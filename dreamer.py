@@ -639,7 +639,7 @@ class Dreamer(tools.Module):
       if not self._c.mean_only:
         dr_std = tf.exp(self.learned_dr_std)
       else:
-        dr_std = dr_mean * 0.1 #TODO : Change this if needed
+        dr_std = max(dr_mean * 0.1, 1e-3) #TODO : Change this if needed, corresponds to wrappers.py
       random_num = tf.random.normal(dr_mean.shape, dtype=dr_mean.dtype)
       sampled_dr = random_num * dr_std + dr_mean
       desired_shape = (embed.shape[0], embed.shape[1], dr_mean.shape[0])
