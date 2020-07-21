@@ -324,13 +324,13 @@ def config_dr(config):
       else:
         raise NotImplementedError(dr_option)
 
-      #Keep mean only
-  if config.mean_only and config.dr is not None:
-    dr = {}
-    for key, vals in config.dr.items():
-      dr[key] = vals[0] #only keep mean
-    config.sim_params_size = int(config.sim_params_size / 2)
-    config.dr = dr
+        #Keep mean only
+    if config.mean_only and config.dr is not None:
+      dr = {}
+      for key, vals in config.dr.items():
+        dr[key] = vals[0] #only keep mean
+      config.sim_params_size = int(config.sim_params_size / 2)
+      config.dr = dr
 
   elif config.task == 'metaworld_reach':
       return {}
@@ -692,7 +692,7 @@ class Dreamer(tools.Module):
         dr_mean = np.array([self._c.dr[k] for k in sorted(self._c.dr.keys())])
       else:
         dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
-        dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+        dr_range = np.array([self._c.dr[k][1] for k in sorted(self._c.dr.keys())])
 
       self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
       if not self._c.mean_only:
