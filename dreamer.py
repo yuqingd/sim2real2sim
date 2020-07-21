@@ -636,7 +636,10 @@ class Dreamer(tools.Module):
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
       dr_mean = tf.exp(self.learned_dr_mean)
-      dr_std = tf.exp(self.learned_dr_std)
+      if not self._c.mean_only:
+        dr_std = tf.exp(self.learned_dr_std)
+      else:
+        dr_std = dr_mean * 0.1 #TODO : Change this if needed
       random_num = tf.random.normal(dr_mean.shape, dtype=dr_mean.dtype)
       sampled_dr = random_num * dr_std + dr_mean
       desired_shape = (embed.shape[0], embed.shape[1], dr_mean.shape[0])
@@ -652,7 +655,8 @@ class Dreamer(tools.Module):
       self._metrics['sim_param_norm'].update_state(sim_param_norm)
       for i, key in enumerate(self._c.dr.keys()):
         self._metrics['learned_ + ' + key].update_state(dr_mean[i])
-        self._metrics['learned_std' + key].update_state(dr_std[i])
+        if not self._c.mean_only:
+          self._metrics['learned_std' + key].update_state(dr_std[i])
     return sim_param_loss
 
 
