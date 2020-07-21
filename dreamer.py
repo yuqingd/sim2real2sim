@@ -686,16 +686,23 @@ class Dreamer(tools.Module):
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
     if self._c.outer_loop_version == 2:
-      dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
-      dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+      if self._c.mean_only:
+        dr_mean = np.array([self._c.dr[k] for k in sorted(self._c.dr.keys())])
+      else:
+        dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
+        dr_range = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
 
       self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
-      self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
+      if not self._c.mean_only:
+        self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
     if self._c.outer_loop_version == 2:
-      self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
+      if self._c.mean_only:
+        self._dr_opt = Optimizer('dr', [self.learned_dr_mean], self._c.dr_lr)
+      else:
+        self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
