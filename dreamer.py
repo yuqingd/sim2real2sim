@@ -157,6 +157,7 @@ def define_config():
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.3
   config.sim_params_size = 0
+  config.buffer_size = 0
 
   return config
 
@@ -843,19 +844,19 @@ def count_steps(datadir, config):
 
 def load_dataset(directory, config, use_sim=None, use_real=None):
   if config.outer_loop_version != 2:
-    episode = next(tools.load_episodes(directory, 1))
+    episode = next(tools.load_episodes(directory, 1, buffer_size=config.buffer_size))
   else:
-    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real))
+    episode = next(tools.load_episodes(directory, 1, use_sim=use_sim, use_real=use_real, buffer_size=config.buffer_size))
   types = {k: v.dtype for k, v in episode.items()}
   shapes = {k: (None,) + v.shape[1:] for k, v in episode.items()}
   if config.outer_loop_version != 2:
     generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance, real_world_prob=config.real_world_prob)
+      config.dataset_balance, real_world_prob=config.real_world_prob, buffer_size=config.buffer_size)
   else:
     generator = lambda: tools.load_episodes(
       directory, config.train_steps, config.batch_length,
-      config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real)
+      config.dataset_balance, real_world_prob=config.real_world_prob, use_sim=use_sim, use_real=use_real, buffer_size=config.buffer_size)
   dataset = tf.data.Dataset.from_generator(generator, types, shapes)
   dataset = dataset.batch(config.batch_size, drop_remainder=True)
   dataset = dataset.map(functools.partial(preprocess, config=config))
