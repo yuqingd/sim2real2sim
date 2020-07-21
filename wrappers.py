@@ -1035,7 +1035,7 @@ class DeepMindControl:
     self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.zeros(self.dr_shape)
+        self.sim_params = np.ones(self.dr_shape)
       return
     if self.simple_randomization:
       mean, range = self.dr["ball_mass"]
