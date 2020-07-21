@@ -575,7 +575,7 @@ class Dreamer(tools.Module):
 
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
-        sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+        sim_param_obj = sim_param_pred.log_prob(np.log(data['sim_params']))
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
 
         likes.sim_params = tf.reduce_mean(sim_param_obj)
@@ -1174,6 +1174,7 @@ def main(config):
     elif config.outer_loop_version == 1:
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      real_pred_sim_params = np.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
           for i, param in enumerate(sorted(config.dr.keys())):

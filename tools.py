@@ -160,7 +160,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
 
     #predict sim params
     action, agent_state, pred_sim_params = predict_sim_params(obs, done, agent_state)
-    pred_sim_params_list.append(pred_sim_params.sample())
+    pred_sim_params_list.append(pred_sim_params.mode())
     action = np.array(action)
 
     assert len(action) == len(envs)
