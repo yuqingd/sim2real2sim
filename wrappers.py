@@ -448,7 +448,10 @@ class Kitchen:
         except:
           param[indices:indices+1] = new_value
 
-      self.sim_params += [mean, range]
+      if self.mean_only:
+        self.sim_params += [mean]
+      else:
+        self.sim_params += [mean, range]
 
   def set_workspace_bounds(self, bounds):
     if bounds == 'no_restrictions':
