@@ -85,7 +85,7 @@ def define_config():
   config.logdir = pathlib.Path('.')
   config.seed = 0
   config.steps = 2e6
-  config.eval_every = 1e4
+  config.eval_every = 1e5
   config.log_every = 1e3
   config.log_scalars = True
   config.log_images = True
@@ -115,7 +115,7 @@ def define_config():
   config.weight_decay_pattern = r'.*'
   # Training.
   config.batch_size = 50
-  config.batch_length = 25 # TODO: consider changing back
+  config.batch_length = 10
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
@@ -140,9 +140,9 @@ def define_config():
   config.num_dr_grad_steps = 100
   config.control_version = 'mocap_ik'
   config.generate_videos = False  # If true, it doesn't train; just generates videos
-  config.step_repeat = 200
+  config.step_repeat = 50
   config.bounds = 'stove_area'
-  config.step_size = 0.02
+  config.step_size = 0.01
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -199,85 +199,85 @@ def config_dr(config):
     else:
       if 'rope' in config.task:
         config.real_dr_params = {
-          "joint1_damping": 10,
-          "joint2_damping": 10,
-          "joint3_damping": 5,
-          "joint4_damping": 5,
-          "joint5_damping": 5,
-          "joint6_damping": 2,
-          "joint7_damping": 2,
-          "robot_b": 0.95,
-          "robot_friction": 1.0,
-          "robot_g": 0.95,
-          "robot_r": 0.95,
-          "cylinder_b": .2,
-          "cylinder_g": .2,
-          "cylinder_r": 1.,
+          # "joint1_damping": 10,
+          # "joint2_damping": 10,
+          # "joint3_damping": 5,
+          # "joint4_damping": 5,
+          # "joint5_damping": 5,
+          # "joint6_damping": 2,
+          # "joint7_damping": 2,
+          # "robot_b": 0.95,
+          # "robot_friction": 1.0,
+          # "robot_g": 0.95,
+          # "robot_r": 0.95,
+          # "cylinder_b": .2,
+          # "cylinder_g": .2,
+          # "cylinder_r": 1.,
           "cylinder_mass": 0.5,
-          "box1_r": .2,
-          "box1_g": 1,
-          "box1_b": .2,
-          "box2_r": .2,
-          "box2_g": 1,
-          "box2_b": .2,
-          "box3_r": .2,
-          "box3_g": 1,
-          "box3_b": .2,
-          "box4_r": .2,
-          "box4_g": 1,
-          "box4_b": .2,
-          "box5_r": .2,
-          "box5_g": 1,
-          "box5_b": .2,
-          "box6_r": .2,
-          "box6_g": 1,
-          "box6_b": .2,
-          "box7_r": .2,
-          "box7_g": 1,
-          "box7_b": .2,
-          "box8_r": .2,
-          "box8_g": 1,
-          "box8_b": .2,
+          # "box1_r": .2,
+          # "box1_g": 1,
+          # "box1_b": .2,
+          # "box2_r": .2,
+          # "box2_g": 1,
+          # "box2_b": .2,
+          # "box3_r": .2,
+          # "box3_g": 1,
+          # "box3_b": .2,
+          # "box4_r": .2,
+          # "box4_g": 1,
+          # "box4_b": .2,
+          # "box5_r": .2,
+          # "box5_g": 1,
+          # "box5_b": .2,
+          # "box6_r": .2,
+          # "box6_g": 1,
+          # "box6_b": .2,
+          # "box7_r": .2,
+          # "box7_g": 1,
+          # "box7_b": .2,
+          # "box8_r": .2,
+          # "box8_g": 1,
+          # "box8_b": .2,
           "rope_damping": 0,
           "rope_friction": 0,
           "rope_stiffness": 0,
-          "lighting": 0.3
+          # "lighting": 0.3
         }
 
       else:
         config.real_dr_params = {
-          "cabinet_b": 0.5,
+          # "cabinet_b": 0.5,
           "cabinet_friction": 1,
-          "cabinet_g": 0.5,
+          # "cabinet_g": 0.5,
           "cabinet_mass": 3.4,
-          "cabinet_r": 0.5,
-          "joint1_damping": 10,
-          "joint2_damping": 10,
-          "joint3_damping": 5,
-          "joint4_damping": 5,
-          "joint5_damping": 5,
-          "joint6_damping": 2,
-          "joint7_damping": 2,
-          "kettle_b": 0.5,
+          # "cabinet_r": 0.5,
+          # "joint1_damping": 10,
+          # "joint2_damping": 10,
+          # "joint3_damping": 5,
+          # "joint4_damping": 5,
+          # "joint5_damping": 5,
+          # "joint6_damping": 2,
+          # "joint7_damping": 2,
+          # "kettle_b": 0.5,
           "kettle_friction": 1.0,
-          "kettle_g": 0.5,
+          # "kettle_g": 0.5,
           "kettle_mass": 1.08,
-          "kettle_r": 0.5,
-          "knob_mass": 0.02,
-          "lighting": 0.3,
-          "microwave_b": 0.5,
-          "microwave_friction": 1,
-          "microwave_g": 0.5,
-          "microwave_mass": .26,
-          "microwave_r": 0.5,
-          "robot_b": 0.92,
+          # "kettle_r": 0.5,
+          # "knob_mass": 0.02,
+          # "lighting": 0.3,
+          # "microwave_b": 0.5,
+          # "microwave_friction": 1,
+          # "microwave_g": 0.5,
+          # "microwave_mass": .26,
+          # "microwave_r": 0.5,
+          # "robot_b": 0.92,
           # "robot_friction": 1.0,
-          "robot_g": .99,
-          "robot_r": 0.95,
-          "stove_b": 0.5,
+          # "robot_g": .99,
+          # "robot_r": 0.95,
+          # "stove_b": 0.5,
           "stove_friction": 1.,
-          "stove_g": 0.5,
-          "stove_r": 0.5,
+          # "stove_g": 0.5,
+          # "stove_r": 0.5,
         }
 
         if 'slide' in config.task:
@@ -1146,8 +1146,10 @@ def main(config):
           # dr_list.append(new_mean)
           with writer.as_default():
             tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
+            tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
             if not config.mean_only:
               tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
+              tf.summary.scalar(f'agent-sim_param/{param}/pred_range', pred_range, step)
 
             real_dr_param = config.real_dr_params[param]
             if not real_dr_param == 0:

@@ -10,53 +10,13 @@ ABSENT = 'absent'
 
 
 sweep_params = [
-    [
-      {"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle"],
-       "mass_mean": [np.round(1.08 * .1, 2)],
-       "mass_range": [.01]},
-      {"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle"],
-       "mass_mean": [np.round(1.08 * 2, 2), np.round(1.08 * 10)],
-       "mass_range": [.1]},
-      {"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle"],
-       "mass_mean": [1.08],
-       "mass_range": [.5]},
-
-      {"task": ["kitchen_open_microwave"],
-       "mass_mean": [np.round(.26 * .1, 2)],
-       "mass_range": [.01]},
-      {"task": ["kitchen_open_microwave"],
-       "mass_mean": [np.round(.26 * 2, 2), np.round(.26 * 10)],
-       "mass_range": [.1]},
-      {"task": ["kitchen_open_microwave"],
-       "mass_mean": [.26],
-       "mass_range": [.5]},
-
-      {"task": ["kitchen_open_cabinet"],
-       "mass_mean": [np.round(3.4 * .1, 2)],
-       "mass_range": [.01]},
-      {"task": ["kitchen_open_cabinet"],
-       "mass_mean": [np.round(3.4 * 2, 2), np.round(3.4 * 10)],
-       "mass_range": [.1]},
-      {"task": ["kitchen_open_cabinet"],
-       "mass_mean": [3.4],
-       "mass_range": [.5]},
-
-      {"task": ["kitchen_rope"],
-       "mass_mean": [np.round(.5 * .1, 2)],
-       "mass_range": [.01]},
-      {"task": ["kitchen_rope"],
-       "mass_mean": [np.round(.5 * 2, 2), np.round(.5 * 10)],
-       "mass_range": [.1]},
-      {"task": ["kitchen_rope"],
-       "mass_mean": [.5],
-       "mass_range": [.5]},
-    ],
-
-    [{"outer_loop_version": [0], "sample_real_every": [3e6], "real_world_prob": [0]},
-     {"outer_loop_version": [1], "sample_real_every": [100], "alpha": [.3]},
-     {"outer_loop_version": [2], "sample_real_every": [100], "alpha": [.5]},
-    ],
-
+    [{"task": ["kitchen_push_kettle", "kitchen_slide_kettle", "kitchen_open_cabinet", "kitchen_rope"]}],
+    [{"sample_real_every": [100]}],
+    [{"alpha": [.1, .3, .6, .9]}],
+    [{"dr_option": ["inaccurate_small_range"]}],
+    [{"eval_every": [25000, 50000, 100000]}],
+    [{"task": ["kitchen_push_kettle", "kitchen_slide_kettle", "kitchen_open_cabinet", "kitchen_rope"]}],
+    [{"outer_loop_version": [1, 2]}],
     [{"batch_length": [10]}],
     [{"step_size": [.01]}],
     [{"step_repeat": [50]}],
@@ -65,6 +25,7 @@ sweep_params = [
     [{"seed": [0, 1]}],
     [{"simple_randomization": [PRESENT]}],
     [{"dr": [PRESENT]}],
+    [{"log_images": False}],
 
 ]
 
@@ -94,30 +55,11 @@ param_args = [{k: v for d in param_set0 for k, v in d.items()} for param_set0 in
 
 
 
-
-# sweep_params = {
-#    "task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle"],
-#    "outer_loop_version": [1],  # GO back and try with OL0 but no outer loop
-#    "sample_real_every": [100],
-#    "seed": [0, 1],
-#    "steps": [2000000],
-#    "time_limit": [200],
-#    "step_repeat": [50],
-#    "step_size": [.01],
-#    "batch_length": [10],
-#    "alpha": [.3],
-#    "kettle_mass": [np.round(1.08 * .1, 2), np.round(1.08 * 2, 2), np.round(1.08 * 10)],
-#    "kettle_range": [.1],
-# }
-# keys, values = zip(*sweep_params.items())
-# param_args = [dict(zip(keys, vals)) for vals in product(*values)]
-
-# print(param_args)
 print(len(param_args))
 
 
 
-starting_id = 122
+starting_id = 332
 
 command_strs = []
 arg_mapping_strs = []
