@@ -176,6 +176,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     length *= (1 - done)
 
   # Return new state to allow resuming the simulation.
+
   return np.squeeze(np.mean(pred_sim_params_list, axis=0))
 
 def count_episodes(directory):
@@ -251,7 +252,7 @@ def load_episodes(directory, rescan, length=None, balance=False, seed=0, real_wo
 
     if buffer_size > 0:
       start = max(len(keys) - buffer_size, 0)
-      buffer_idx = np.arange(start, len(keys))
+      buffer_idx = int(np.arange(start, len(keys)))
     else:
       buffer_idx = len(keys)
 
