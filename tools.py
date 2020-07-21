@@ -491,7 +491,7 @@ def args_type(default):
 def static_scan(fn, inputs, start, reverse=False):
   last = start
   outputs = [[] for _ in tf.nest.flatten(start)]
-  indices = range(len(tf.nest.flatten(inputs)[0]))
+  indices = range(tf.nest.flatten(inputs)[0].shape[0])
   if reverse:
     indices = reversed(indices)
   for index in indices:
