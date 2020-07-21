@@ -324,7 +324,7 @@ def config_dr(config):
         raise NotImplementedError(dr_option)
 
       #Keep mean only
-      if config.mean_only:
+      if config.mean_only and config.dr is not None:
         dr = {}
         for key, vals in config.dr:
           dr[key] = vals[0] #only keep mean
