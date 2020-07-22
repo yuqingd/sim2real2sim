@@ -152,6 +152,8 @@ def define_config():
   # these values are for testing dmc_cup_catch
   config.mass_mean = 0.2
   config.mass_range = 0.01
+  config.mean_scale = 0.1
+  config.range_scale = 0.1
   config.mean_only = False
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
@@ -166,7 +168,7 @@ def define_config():
 def config_dr(config):
   dr_option = config.dr_option
   if 'kitchen' in config.task:
-    if config.simple_randomization:dreamer.py
+    if config.simple_randomization:
       if 'rope' in config.task:
         config.real_dr_params = {
           "cylinder_mass": .5
@@ -296,7 +298,15 @@ def config_dr(config):
 
 
       config.sim_params_size = 2 * len(config.real_dr_params.keys())
-      if dr_option == 'accurate_small_range':
+      if dr_option == 'all_dr':
+        mean_scale = config.mean_scale
+        range_scale = config.range_scale
+        config.dr = {}  # (mean, range)
+        for key, real_val in config.real_dr_params.items():
+          if real_val == 0:
+            real_val = 5e-2
+          config.dr[key] = (real_val * mean_scale, real_val * range_scale)
+      elif dr_option == 'accurate_small_range':
         range_scale = 0.1
         config.dr = {}  # (mean, range)
         for key, real_val in config.real_dr_params.items():
