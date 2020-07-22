@@ -40,6 +40,12 @@ class Module(tf.Module):
       self._modules[name] = ctor(*args, **kwargs)
     return self._modules[name]
 
+  def get_weights(self):
+    return self._modules
+
+  def set_weights(self, other_modules):
+    for key in self._modules.keys():
+      self._modules[key].set_weights(other_modules[key].get_weights())
 
 def nest_summary(structure):
   if isinstance(structure, dict):

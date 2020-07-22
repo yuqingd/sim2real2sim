@@ -158,6 +158,7 @@ def define_config():
   config.alpha = 0.3
   config.sim_params_size = 0
   config.buffer_size = 0
+  config.update_target_every = 100
 
   return config
 
@@ -452,6 +453,7 @@ def config_debug(config):
   config.time_limit = 15
   config.batch_size = 50
   config.batch_length = 6
+  config.update_target_every = 1
 
   return config
 
@@ -542,6 +544,9 @@ class Dreamer(tools.Module):
     super().load(filename)
     self._should_pretrain()
 
+  def update_target(self, original, target):  # TODO: should this be @tf.function?
+    target.set_weights(original.get_weights())
+
   @tf.function()
   def train(self, data, log_images=False):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
@@ -596,7 +601,7 @@ class Dreamer(tools.Module):
         pcont = self._pcont(imag_feat).mean()
       else:
         pcont = self._c.discount * tf.ones_like(reward)
-      value = self._value(imag_feat).mode()
+      value = self._target_value(imag_feat).mode()
       returns = tools.lambda_return(
           reward[:-1], value[:-1], pcont[:-1],
           bootstrap=value[-1], lambda_=self._c.disclam, axis=0)
@@ -675,6 +680,7 @@ class Dreamer(tools.Module):
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
     self._value = models.DenseDecoder((), 3, self._c.num_units, act=act)
+    self._target_value = models.DenseDecoder((), 3, self._c.num_units, act=act)
     self._actor = models.ActionDecoder(
         self._actdim, 4, self._c.num_units, self._c.action_dist,
         init_std=self._c.action_init_std, act=act)
@@ -714,6 +720,7 @@ class Dreamer(tools.Module):
       self.train(next(self._train_dataset_sim_only))
       # self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
+    self.update_target(self._value, self._target_value)
 
 
   def _exploration(self, action, training):
@@ -1078,6 +1085,7 @@ def main(config):
       tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
+  update_target_step_target = config.update_target_every * config.time_limit
 
   # Train and regularly evaluate the agent.
   step = count_steps(datadir, config)
@@ -1116,6 +1124,11 @@ def main(config):
     agent.save(config.logdir / 'variables.pkl')
     with open(config.logdir / 'dr_dict.pkl', 'wb') as f:
       pkl.dump(config.dr, f)
+
+    # Update target net
+    if step > update_target_step_target:
+      agent.update_target(agent._value, agent._target_value)
+      update_target_step_target += config.update_target_every * config.time_limit
 
     if config.outer_loop_version == 2:
       # train_with_real = check_train_with_real(dr_list)
