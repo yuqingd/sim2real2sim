@@ -315,7 +315,7 @@ def config_dr(config):
               config.dr[key] = (real_val, range_scale)
             else:
               config.dr[key] = (real_val, real_val * range_scale)
-      if dr_option == 'inaccurate_small_range':
+      elif dr_option == 'inaccurate_small_range':
         range_scale = 0.1
         offset = 0.1
         config.dr = {}  # (mean, range)
