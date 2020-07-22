@@ -166,7 +166,7 @@ def define_config():
 def config_dr(config):
   dr_option = config.dr_option
   if 'kitchen' in config.task:
-    if config.simple_randomization:dreamer.py
+    if config.simple_randomization:
       if 'rope' in config.task:
         config.real_dr_params = {
           "cylinder_mass": .5
@@ -508,6 +508,8 @@ class Dreamer(tools.Module):
             self.train(next(self._dataset), log_images)
           else:
             self.train(next(dataset), log_images)
+          if (train_step + 1) % self._c.update_target_every == 0:
+            self.update_target(self._value, self._target_value)
       if log:
         self._write_summaries()
     action, state = self.policy(obs, state, training)
@@ -1086,7 +1088,7 @@ def main(config):
       tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
-  update_target_step_target = config.update_target_every * config.time_limit
+  #update_target_step_target = config.update_target_every * config.time_limit
 
   # Train and regularly evaluate the agent.
   step = count_steps(datadir, config)
@@ -1127,9 +1129,9 @@ def main(config):
       pkl.dump(config.dr, f)
 
     # Update target net
-    if step > update_target_step_target:
-      agent.update_target(agent._value, agent._target_value)
-      update_target_step_target += config.update_target_every * config.time_limit
+    # if step > update_target_step_target:
+    #   agent.update_target(agent._value, agent._target_value)
+    #   update_target_step_target += config.update_target_every * config.time_limit
 
     if config.outer_loop_version == 2:
       # train_with_real = check_train_with_real(dr_list)
