@@ -247,8 +247,6 @@ class Kitchen:
         self.goal = np.clip(self.goal, [-.5, 0.45, 0], [.5, 1, 0])
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1]  # set z pos to be same as kettle, since we only want to push in x,y
 
-        self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to slide in x,y
-
     elif 'pick' in self.task:
       self.set_workspace_bounds('full_workspace')
       self.use_gripper = True
