@@ -9,17 +9,60 @@ ABSENT = 'absent'
 # This is to grid search. If you don't want to grid search, manually write in the param_args list.
 
 
+# sweep_params = [
+#     [{"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle",],
+#       "eval_every": [25000],
+#       # "alpha": [0.1],
+#       },
+#      {"task": ["kitchen_open_cabinet"],
+#       "eval_every": [50000],
+#       # "alpha": [0.3],
+#       },
+#      {"task": ["kitchen_rope"],
+#       "eval_every": [25000],
+#       # "alpha": [0.3],
+#       }],
+#     [{"sample_real_every": [3e6]}],
+#     [{"real_world_prob": [0]}],
+#     [{"dr_option": ["all_dr"]}],
+#     [{"mean_scale": [.1,], "range_scale": [.01]},
+#      {"mean_scale": [2], "range_scale": [.2]},
+#      {"mean_scale": [10], "range_scale": [1]},
+#      {"mean_scale": [1], "range_scale": [5]},
+#       ],
+#     [{"outer_loop_version": [0]}],
+#     [{"seed": [0, 1]}],
+#     [{"dr": [PRESENT]}],
+#     [{"log_images": [False]}],
+#     [{"buffer_size": [2000]}],
+#     [{"early_termination": [False]}],
+# ]
 sweep_params = [
-    [{"task": ["kitchen_push_kettle", "kitchen_slide_kettle", "kitchen_open_cabinet", "kitchen_rope"]}],
+    [{"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle",],
+      "eval_every": [25000],
+      "alpha": [0.1],
+      },
+     {"task": ["kitchen_open_cabinet"],
+      "eval_every": [50000],
+      "alpha": [0.3],
+      },
+     {"task": ["kitchen_rope"],
+      "eval_every": [25000],
+      "alpha": [0.3],
+      }],
     [{"sample_real_every": [100]}],
-    [{"alpha": [.1, .3, .6, .9]}],
-    [{"dr_option": ["inaccurate_small_range"]}],
-    [{"eval_every": [25000, 50000, 100000]}],
+    [{"dr_option": ["all_dr"]}],
+    [{"mean_scale": [.1,], "range_scale": [.01]},
+     {"mean_scale": [2], "range_scale": [.2]},
+     {"mean_scale": [10], "range_scale": [1]},
+     {"mean_scale": [1], "range_scale": [5]},
+      ],
     [{"outer_loop_version": [1, 2]}],
     [{"seed": [0, 1]}],
     [{"dr": [PRESENT]}],
-    [{"log_images": False}],
-
+    [{"log_images": [False]}],
+    [{"buffer_size": [2000]}],
+    [{"early_termination": [False]}],
 ]
 
 # Each param set has a group of parameters.  We will find each product of groups of parameters
@@ -52,7 +95,7 @@ print(len(param_args))
 
 
 
-starting_id = 332
+starting_id = 572
 
 command_strs = []
 arg_mapping_strs = []
@@ -81,12 +124,12 @@ for args in param_args:
 print("=" * 20)
 print("\n".join(command_strs))
 
-print("=" * 20)
-print("\n".join(arg_mapping_strs))
+# print("=" * 20)
+# print("\n".join(arg_mapping_strs))
 
 # We save this object in case it's easier to load it into Jupyter notebook later and extract info from it for plotting
 # rather than doing it manually.
-print(args_dict)
-with open('args_dict.pkl', 'wb') as f:
-    pickle.dump(args_dict, f)
+# print(args_dict)
+# with open('args_dict.pkl', 'wb') as f:
+#     pickle.dump(args_dict, f)
 
