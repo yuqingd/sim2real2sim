@@ -1226,9 +1226,12 @@ def main(config):
             else:
               env.dr[param] = new_mean
             with writer.as_default():
-              tf.summary.scalar(f'agent/sim_param/{param}/mean', new_mean, step)
+              print("NEW MEAN", param, new_mean, step, pred_mean, "!" * 30)
+              tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
+              tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
               if not config.mean_only:
-                tf.summary.scalar(f'agent/sim_param/{param}/range', new_range, step)
+                tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
+                tf.summary.scalar(f'agent-sim_param/{param}/pred_range', pred_range, step)
 
               real_dr_param = config.real_dr_params[param]
               if not real_dr_param == 0:
