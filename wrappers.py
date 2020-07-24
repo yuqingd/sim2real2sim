@@ -964,18 +964,90 @@ class Kitchen:
     return img
 
 class MetaWorld:
-  def __init__(self, name, size=(64, 64), real_world=False, dr=None, use_state=False):
-    from metaworld.benchmarks import ML1
-    self._env = ML1.get_train_tasks(name + "-v1")
+  #real_world=False, dr=None, mean_only=False,
+               # early_termination=False, use_state=False, step_repeat=200, dr_list=[],
+               # step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               # control_version='mocap_ik', distance=2., azimuth=50, elevation=-40
+
+  def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
+               real_world=False, dr=None, use_state=False):
+    from metaworld import ML1
+    import random
+    self._ml1 = ML1(name + "-v1")
+    self._env = self._ml1.train_classes[name + "-v1"]()
+    self.name = name
+    task = random.choice(self._ml1.train_tasks)
+    self._env.set_task(task)
+
     self._size = size
+
+    self.mean_only = mean_only
+    self.early_termination = early_termination
+    self.dr_list = dr_list
+    self.simple_randomization = simple_randomization
+    self.dr_shape = dr_shape
+    self.outer_loop_version = outer_loop_version
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
 
     self.apply_dr()
 
+  def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
+    if param_name in self.dr:
+      if self.mean_only:
+        mean = self.dr[param_name]
+        range = max(0.1 * mean, eps) #TODO: tune this?
+      else:
+        mean, range = self.dr[param_name]
+        range = max(range, eps)
+      new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      if indices is None:
+        param[:] = new_value
+      else:
+        try:
+          for i in indices:
+            param[i:i+1] = new_value
+        except:
+          param[indices:indices+1] = new_value
+
+      if self.mean_only:
+        self.sim_params += [mean]
+      else:
+        self.sim_params += [mean, range]
+
   def apply_dr(self):
-    pass
+    self.sim_params = []
+    if self.dr is None or self.real_world:
+      if self.outer_loop_version == 1:
+        self.sim_params = np.zeros(self.dr_shape)
+      return
+
+    if 'stick-pull' or 'stick-push' in self.name:
+      geom_dict = self._env.sim.model._geom_name2id
+      model = self._env.sim.model
+
+      dr_update_dict = {
+      #TODO: add params here
+      }
+      for dr_param in self.dr_list:
+        arr, indices = dr_update_dict[dr_param]
+        self.update_dr_param(arr, dr_param, indices=indices)
+
+    elif 'basketball' in self.name:
+      geom_dict = self._env.sim.model._geom_name2id
+      model = self._env.sim.model
+
+      dr_update_dict = {
+      #TODO: add params here
+      }
+      for dr_param in self.dr_list:
+        arr, indices = dr_update_dict[dr_param]
+        self.update_dr_param(arr, dr_param, indices=indices)
+
+    else:
+      raise NotImplementedError
+
 
   @property
   def observation_space(self):
@@ -1002,14 +1074,56 @@ class MetaWorld:
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if info['success'] else 0.0
+
+    if not self.early_termination:
+      done = False
+
     return obs, reward, done, info
 
   def get_dr(self):
-    return np.array([0])  # TODO: add this!
+    if self.simple_randomization:
+      if 'stick-pull' or 'stick-push' in self.name:
+        cylinder_body = self._env.sim.model.body_name2id('cylinder')
+        return np.array([self._env.sim.model.body_mass[cylinder_body]])
+      elif 'basketball' in self.name:
+        microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+        return np.array([self._env.sim.model.body_mass[microwave_index]])
+      else:
+        raise NotImplementedError
+
+    if 'stick-pull' or 'stick-push' in self.name:
+      geom_dict = self._env.sim.model._geom_name2id
+      model = self._env.sim.model
+
+      dr_update_dict = {
+        #TODO: add params here
+      }
+
+
+      dr_list = []
+      for dr_param in self.dr_list:
+        dr_list.append(dr_update_dict[dr_param])
+      arr = np.array(dr_list)
+    elif 'basketball' in self.name:
+      geom_dict = self._env.sim.model._geom_name2id
+      model = self._env.sim.model
+
+      dr_update_dict = {
+        #TODO: add params here
+      }
+
+      dr_list = []
+      for dr_param in self.dr_list:
+        dr_list.append(dr_update_dict[dr_param])
+      arr = np.array(dr_list)
+
+    arr = arr.astype(np.float32)
+    return arr
 
   def reset(self):
-    self.apply_dr()
     state_obs = self._env.reset()
+    self.apply_dr()
+
     obs = {}
     if self.use_state:
       obs['state'] = state_obs[:3]  # Only include robot state
@@ -1023,7 +1137,7 @@ class MetaWorld:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     width, height = self._size
-    return self._env.active_env.sim.render(mode='offscreen', width=width, height=height)
+    return self._env.sim.render(mode='offscreen', width=width, height=height)
 
 class DeepMindControl:
 
