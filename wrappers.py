@@ -287,7 +287,7 @@ class Kitchen:
         self.step(diff)
 
     else:
-      raise NotImplementedError
+      raise NotImplementedError(self.task)
 
 
 

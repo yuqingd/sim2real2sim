@@ -255,8 +255,6 @@ def config_dr(config):
         }
         if dr_option == 'partial_dr':
           config.real_dr_list = ["cylinder_mass", "rope_damping", "rope_friction", "rope_stiffness"]
-          config.real_dr_list = ["cylinder_mass", "rope_damping", "rope_friction", "rope_stiffness"] + ["joint1_damping", "joint2_damping", "joint3_damping", "joint4_damping", "joint5_damping",  "joint6_damping",
-            "joint7_damping"]
         elif dr_option == 'all_dr':
           config.real_dr_list = [
             "joint1_damping", "joint2_damping", "joint3_damping", "joint4_damping", "joint5_damping",  "joint6_damping",
@@ -324,7 +322,7 @@ def config_dr(config):
               del config.real_dr_params[k]
 
 
-      config.sim_params_size = 2 * len(config.real_dr_params.keys())
+      config.sim_params_size = 2 * len(config.real_dr_list)
       if dr_option in ['all_dr', 'partial_dr']:
         mean_scale = config.mean_scale
         range_scale = config.range_scale
