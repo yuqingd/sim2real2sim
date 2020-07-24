@@ -226,7 +226,7 @@ class Kitchen:
         self.goal[1] += 0.5
       else:
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
-        self.goal += np.random.normal(loc=0, scale=0.5) #randomly select goal location in workspace
+        self.goal += np.random.normal(loc=0, scale=0.3) #randomly select goal location in workspace
         self.goal[1] += 0.4 # move forward in y
         self.goal = np.clip(self.goal, self.end_effector_bound_low, self.end_effector_bound_high)
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1] #set z pos to be same as kettle, since we only want to push in x,y
@@ -244,7 +244,7 @@ class Kitchen:
         self.goal[1] += .5
       else:
         self.goal = np.squeeze(init_xpos[XPOS_INDICES['kettle']])
-        self.goal += np.random.normal(loc=0, scale=0.5) #randomly select goal location in workspace
+        self.goal += np.random.normal(loc=0, scale=0.3) #randomly select goal location in workspace
         self.goal[1] += 0.5  # move forward in y
         self.goal = np.clip(self.goal, [-.5, 0.45, 0], [.5, 1, 0])
         self.goal[-1] = np.squeeze(init_xpos[XPOS_INDICES['kettle']])[-1]  # set z pos to be same as kettle, since we only want to push in x,y
