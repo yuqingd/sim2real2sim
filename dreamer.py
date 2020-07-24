@@ -1,5 +1,6 @@
 import argparse
 import collections
+import copy
 import functools
 import json
 import os
@@ -162,6 +163,7 @@ def define_config():
   config.buffer_size = 0
   config.update_target_every = 100
   config.early_termination = False
+  config.sim_param_regularization = .0001
 
   return config
 
@@ -176,6 +178,7 @@ def config_dr(config):
         config.dr = {  # (mean, range)
           "cylinder_mass": (config.mass_mean, config.mass_range)
         }
+        config.real_dr_list = ["cylinder_mass"]
         config.sim_params_size = 2
       elif 'open_microwave' in config.task:
         config.real_dr_params = {
@@ -184,6 +187,7 @@ def config_dr(config):
         config.dr = {  # (mean, range)
           "microwave_mass": (config.mass_mean, config.mass_range)
         }
+        config.real_dr_list = ['microwave_mass']
         config.sim_params_size = 2
       elif 'open_cabinet' in config.task:
         config.real_dr_params = {
@@ -192,6 +196,7 @@ def config_dr(config):
         config.dr = {  # (mean, range)
           "cabinet_mass": (config.mass_mean, config.mass_range)
         }
+        config.real_dr_list = ['cabinet_mass']
         config.sim_params_size = 2
       else:
         config.real_dr_params = {
@@ -200,90 +205,112 @@ def config_dr(config):
         config.dr = {  # (mean, range)
           "kettle_mass": (config.mass_mean, config.mass_range)
         }
+        config.real_dr_list = ['kettle_mass']
         config.sim_params_size = 2
     else:
       if 'rope' in config.task:
         config.real_dr_params = {
-          # "joint1_damping": 10,
-          # "joint2_damping": 10,
-          # "joint3_damping": 5,
-          # "joint4_damping": 5,
-          # "joint5_damping": 5,
-          # "joint6_damping": 2,
-          # "joint7_damping": 2,
-          # "robot_b": 0.95,
-          # "robot_friction": 1.0,
-          # "robot_g": 0.95,
-          # "robot_r": 0.95,
-          # "cylinder_b": .2,
-          # "cylinder_g": .2,
-          # "cylinder_r": 1.,
+          "joint1_damping": 10,
+          "joint2_damping": 10,
+          "joint3_damping": 5,
+          "joint4_damping": 5,
+          "joint5_damping": 5,
+          "joint6_damping": 2,
+          "joint7_damping": 2,
+          "robot_b": 0.95,
+          "robot_g": 0.95,
+          "robot_r": 0.95,
+          "cylinder_b": .2,
+          "cylinder_g": .2,
+          "cylinder_r": 1.,
           "cylinder_mass": 0.5,
-          # "box1_r": .2,
-          # "box1_g": 1,
-          # "box1_b": .2,
-          # "box2_r": .2,
-          # "box2_g": 1,
-          # "box2_b": .2,
-          # "box3_r": .2,
-          # "box3_g": 1,
-          # "box3_b": .2,
-          # "box4_r": .2,
-          # "box4_g": 1,
-          # "box4_b": .2,
-          # "box5_r": .2,
-          # "box5_g": 1,
-          # "box5_b": .2,
-          # "box6_r": .2,
-          # "box6_g": 1,
-          # "box6_b": .2,
-          # "box7_r": .2,
-          # "box7_g": 1,
-          # "box7_b": .2,
-          # "box8_r": .2,
-          # "box8_g": 1,
-          # "box8_b": .2,
+          "box1_r": .2,
+          "box1_g": 1,
+          "box1_b": .2,
+          "box2_r": .2,
+          "box2_g": 1,
+          "box2_b": .2,
+          "box3_r": .2,
+          "box3_g": 1,
+          "box3_b": .2,
+          "box4_r": .2,
+          "box4_g": 1,
+          "box4_b": .2,
+          "box5_r": .2,
+          "box5_g": 1,
+          "box5_b": .2,
+          "box6_r": .2,
+          "box6_g": 1,
+          "box6_b": .2,
+          "box7_r": .2,
+          "box7_g": 1,
+          "box7_b": .2,
+          "box8_r": .2,
+          "box8_g": 1,
+          "box8_b": .2,
           "rope_damping": 0,
           "rope_friction": 0,
           "rope_stiffness": 0,
-          # "lighting": 0.3
+          "lighting": 0.3
         }
+        if dr_option == 'partial_dr':
+          config.real_dr_list = ["cylinder_mass", "rope_damping", "rope_friction", "rope_stiffness"]
+          config.real_dr_list = ["cylinder_mass", "rope_damping", "rope_friction", "rope_stiffness"] + ["joint1_damping", "joint2_damping", "joint3_damping", "joint4_damping", "joint5_damping",  "joint6_damping",
+            "joint7_damping"]
+        elif dr_option == 'all_dr':
+          config.real_dr_list = [
+            "joint1_damping", "joint2_damping", "joint3_damping", "joint4_damping", "joint5_damping",  "joint6_damping",
+            "joint7_damping",  "robot_b",  "robot_g", "robot_r", "cylinder_b", "cylinder_g",
+            "cylinder_r", "cylinder_mass", "box1_r", "box1_g", "box1_b", "box2_r", "box2_g", "box2_b", "box3_r",
+            "box3_g", "box3_b", "box4_r",  "box4_g",  "box4_b", "box5_r", "box5_g", "box5_b", "box6_r", "box6_g",
+            "box6_b", "box7_r",  "box7_g", "box7_b", "box8_r", "box8_g", "box8_b", "rope_damping", "rope_friction",
+            "rope_stiffness", "lighting",
+          ]
 
       else:
         config.real_dr_params = {
-          # "cabinet_b": 0.5,
+          "cabinet_b": 0.5,
           "cabinet_friction": 1,
-          # "cabinet_g": 0.5,
+          "cabinet_g": 0.5,
           "cabinet_mass": 3.4,
-          # "cabinet_r": 0.5,
-          # "joint1_damping": 10,
-          # "joint2_damping": 10,
-          # "joint3_damping": 5,
-          # "joint4_damping": 5,
-          # "joint5_damping": 5,
-          # "joint6_damping": 2,
-          # "joint7_damping": 2,
-          # "kettle_b": 0.5,
+          "cabinet_r": 0.5,
+          "joint1_damping": 10,
+          "joint2_damping": 10,
+          "joint3_damping": 5,
+          "joint4_damping": 5,
+          "joint5_damping": 5,
+          "joint6_damping": 2,
+          "joint7_damping": 2,
+          "kettle_b": 0.5,
           "kettle_friction": 1.0,
-          # "kettle_g": 0.5,
+          "kettle_g": 0.5,
           "kettle_mass": 1.08,
-          # "kettle_r": 0.5,
-          # "knob_mass": 0.02,
-          # "lighting": 0.3,
-          # "microwave_b": 0.5,
-          # "microwave_friction": 1,
-          # "microwave_g": 0.5,
-          # "microwave_mass": .26,
-          # "microwave_r": 0.5,
-          # "robot_b": 0.92,
-          # "robot_friction": 1.0,
-          # "robot_g": .99,
-          # "robot_r": 0.95,
-          # "stove_b": 0.5,
+          "kettle_r": 0.5,
+          "knob_mass": 0.02,
+          "lighting": 0.3,
+          "microwave_b": 0.5,
+          "microwave_friction": 1,
+          "microwave_g": 0.5,
+          "microwave_mass": .26,
+          "microwave_r": 0.5,
+          "robot_b": 0.92,
+          "robot_g": .99,
+          "robot_r": 0.95,
+          "stove_b": 0.5,
           "stove_friction": 1.,
-          # "stove_g": 0.5,
-          # "stove_r": 0.5,
+          "stove_g": 0.5,
+          "stove_r": 0.5,
         }
+        if dr_option == 'partial_dr':
+          config.real_dr_list = ["cabinet_friction", "cabinet_mass", "kettle_friction", "kettle_mass", "stove_friction"]
+        elif dr_option == 'all_dr':
+          config.real_dr_list = [
+            "cabinet_b", "cabinet_friction", "cabinet_g", "cabinet_mass", "cabinet_r", "joint1_damping", "joint2_damping",
+            "joint3_damping", "joint4_damping", "joint5_damping", "joint6_damping", "joint7_damping", "kettle_b", "kettle_friction",
+            "kettle_g", "kettle_mass", "kettle_r",  "knob_mass", "lighting", "microwave_b", "microwave_friction",
+            "microwave_g",  "microwave_mass", "microwave_r", "robot_b", "robot_g",  "robot_r", "stove_b",
+            "stove_friction",  "stove_g", "stove_r",
+          ]
 
         if 'slide' in config.task:
           config.real_dr_params['stove_friction'] = 1e-3
@@ -298,7 +325,7 @@ def config_dr(config):
 
 
       config.sim_params_size = 2 * len(config.real_dr_params.keys())
-      if dr_option == 'all_dr':
+      if dr_option in ['all_dr', 'partial_dr']:
         mean_scale = config.mean_scale
         range_scale = config.range_scale
         config.dr = {}  # (mean, range)
@@ -306,33 +333,6 @@ def config_dr(config):
           if real_val == 0:
             real_val = 5e-2
           config.dr[key] = (real_val * mean_scale, real_val * range_scale)
-      elif dr_option == 'accurate_small_range':
-        range_scale = 0.1
-        config.dr = {}  # (mean, range)
-        for key, real_val in config.real_dr_params.items():
-          if not "_b" in key:
-            if real_val == 0:
-              config.dr[key] = (real_val, range_scale)
-            else:
-              config.dr[key] = (real_val, real_val * range_scale)
-      elif dr_option == 'inaccurate_small_range':
-        range_scale = 0.1
-        offset = 0.1
-        config.dr = {}  # (mean, range)
-        for key, real_val in config.real_dr_params.items():
-          if real_val == 0:
-            config.dr[key] = (0.1, 0.1)
-          else:
-            config.dr[key] = (real_val * offset, real_val * range_scale)
-      elif dr_option == 'inaccurate_large_range':
-        range_scale = 1
-        offset = 1.5
-        config.dr = {}  # (mean, range)
-        for key, real_val in config.real_dr_params.items():
-          if real_val == 0:
-            config.dr[key] = (0.5, 0.5)
-          else:
-            config.dr[key] = (real_val * offset, real_val * range_scale)
       else:
         raise NotImplementedError(dr_option)
 
@@ -443,8 +443,11 @@ def config_dr(config):
     print(k)
     print(v)
 
-  # dr_list = list(config.real_dr_params.keys())
-  # config.dr_list = dr_list
+  if config.mean_only:
+    config.initial_dr_mean = np.array([config.dr[param] for param in config.real_dr_list])
+  else:
+    config.initial_dr_mean = np.array([config.dr[param][0] for param in config.real_dr_list])
+    config.initial_dr_range = np.array([config.dr[param][1] for param in config.real_dr_list])
   return config
 
 
@@ -660,17 +663,20 @@ class Dreamer(tools.Module):
       sampled_dr = random_num * dr_std + dr_mean
       desired_shape = (embed.shape[0], embed.shape[1], dr_mean.shape[0])
       sampled_dr = tf.broadcast_to(sampled_dr, desired_shape)
-      embed = tf.concat([sampled_dr, embed], axis=-1)
-      post, prior = self._dynamics.observe(embed, data['action'])
+      embed1 = tf.concat([sampled_dr, embed], axis=-1)
+      post, prior = self._dynamics.observe(embed1, data['action'])
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
-      sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image']))
+      scale = tf.constant(self._c.sim_param_regularization)
+      regularization = scale * (tf.norm(dr_mean - config.initial_dr_mean) + tf.norm(dr_std - config.initial_dr_range))
+      sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image'])) + regularization
     if update:
-      sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)
+      sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)  # TODO: revert
       self._metrics['sim_param_loss'].update_state(sim_param_loss)
       self._metrics['sim_param_norm'].update_state(sim_param_norm)
-      for i, key in enumerate(self._c.dr.keys()):
-        self._metrics['learned_ + ' + key].update_state(dr_mean[i])
+      self._metrics['sim_param_loss_regularization'].update_state(regularization)
+      for i, key in enumerate(self._c.real_dr_list):
+        self._metrics['learned_mean' + key].update_state(dr_mean[i])
         if not self._c.mean_only:
           self._metrics['learned_std' + key].update_state(dr_std[i])
     return sim_param_loss
@@ -708,10 +714,10 @@ class Dreamer(tools.Module):
         wdpattern=self._c.weight_decay_pattern)
     if self._c.outer_loop_version == 2:
       if self._c.mean_only:
-        dr_mean = np.array([self._c.dr[k] for k in sorted(self._c.dr.keys())])
+        dr_mean = np.array([self._c.dr[k] for k in config.real_dr_list])
       else:
-        dr_mean = np.array([self._c.dr[k][0] for k in sorted(self._c.dr.keys())])
-        dr_range = np.array([self._c.dr[k][1] for k in sorted(self._c.dr.keys())])
+        dr_mean = np.array([self._c.dr[k][0] for k in config.real_dr_list])
+        dr_range = np.array([self._c.dr[k][1] for k in config.real_dr_list])
 
       self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
       if not self._c.mean_only:
@@ -921,12 +927,14 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.NormalizeActions(env)
   elif suite == 'kitchen':
     if config.dr is None or real_world:
-      env = wrappers.Kitchen(use_state=config.use_state, early_termination=config.early_termination, real_world=real_world, dr_shape=config.sim_params_size,
+      env = wrappers.Kitchen(use_state=config.use_state, early_termination=config.early_termination, real_world=real_world,
+                             dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                              task=task, simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size)
     else:
-      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination, use_state=config.use_state, real_world=real_world,
+      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
+                             use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
@@ -1163,7 +1171,7 @@ def main(config):
         agent.update_sim_params(next(agent._real_world_dataset))
 
       for env in train_sim_envs:
-        for i, param in enumerate(sorted(config.dr.keys())):
+        for i, param in enumerate(config.real_dr_list):
           if config.mean_only:
             prev_mean = env.dr[param]
             pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
@@ -1202,7 +1210,7 @@ def main(config):
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
       for env in train_sim_envs:
         if env.dr is not None:
-          for i, param in enumerate(sorted(config.dr.keys())):
+          for i, param in enumerate(config.real_dr_list):
             if config.mean_only:
               prev_mean = env.dr[param]
             else:
