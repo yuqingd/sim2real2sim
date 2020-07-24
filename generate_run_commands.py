@@ -9,33 +9,33 @@ ABSENT = 'absent'
 # This is to grid search. If you don't want to grid search, manually write in the param_args list.
 
 
-sweep_params = [
-    [{"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle",],
-      # "eval_every": [25000],
-      "dr_option": ["partial_dr"],
-      },
-     {"task": ["kitchen_open_cabinet"],
-      # "eval_every": [50000],
-      "dr_option": ["all_dr"],
-      },
-     {"task": ["kitchen_rope"],
-      # "eval_every": [25000],
-      "dr_option": ["all_dr"],
-      }],
-    [{"sample_real_every": [3e6]}],
-    [{"real_world_prob": [0]}],
-    [{"mean_scale": [.1], "range_scale": [.01]},
-     {"mean_scale": [2], "range_scale": [.2]},
-     {"mean_scale": [5], "range_scale": [.5]},
-     {"mean_scale": [1], "range_scale": [5]},
-      ],
-    [{"outer_loop_version": [0]}],
-    [{"seed": [0, 1]}],
-    [{"dr": [PRESENT, ABSENT]}],
-    [{"log_images": [False]}],
-    [{"buffer_size": [2000]}],
-    [{"early_termination": [False]}],
-]
+# sweep_params = [
+#     [{"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle",],
+#       # "eval_every": [25000],
+#       "dr_option": ["partial_dr"],
+#       },
+#      {"task": ["kitchen_open_cabinet"],
+#       # "eval_every": [50000],
+#       "dr_option": ["all_dr"],
+#       },
+#      {"task": ["kitchen_rope"],
+#       # "eval_every": [25000],
+#       "dr_option": ["all_dr"],
+#       }],
+#     [{"sample_real_every": [3e6]}],
+#     [{"real_world_prob": [0]}],
+#     [{"mean_scale": [.1], "range_scale": [.01]},
+#      # {"mean_scale": [2], "range_scale": [.2]},
+#      {"mean_scale": [5], "range_scale": [.5]},
+#      {"mean_scale": [1], "range_scale": [5]},
+#       ],
+#     [{"outer_loop_version": [0]}],
+#     [{"seed": [0, 1]}],
+#     [{"dr": [PRESENT, ABSENT]}],
+#     [{"log_images": [False]}],
+#     [{"buffer_size": [2000]}],
+#     [{"early_termination": [False]}],
+# ]
 sweep_params = [
     [{"task": ["kitchen_push_kettle_burner", "kitchen_slide_kettle_burner", "kitchen_push_kettle", "kitchen_slide_kettle",],
       # "eval_every": [25000],
@@ -54,7 +54,7 @@ sweep_params = [
       }],
     [{"sample_real_every": [100]}],
     [{"mean_scale": [.1,], "range_scale": [.01]},
-     {"mean_scale": [2], "range_scale": [.2]},
+     # {"mean_scale": [2], "range_scale": [.2]},
      {"mean_scale": [5], "range_scale": [.5]},
      {"mean_scale": [1], "range_scale": [5]},
       ],
@@ -96,7 +96,7 @@ print(len(param_args))
 
 
 
-starting_id = 668
+starting_id = 740
 
 command_strs = []
 arg_mapping_strs = []

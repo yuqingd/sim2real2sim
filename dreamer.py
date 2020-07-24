@@ -436,6 +436,7 @@ def config_dr(config):
     }
   else:
     config.dr = {}
+    config.real_dr_list = []
 
   for k, v in config.dr.items():
     print(k)
@@ -1274,6 +1275,7 @@ if __name__ == '__main__':
     config = config_dr(config)
   else:
     config.dr = None
+    config.real_dr_list = []
 
   try:
     print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
