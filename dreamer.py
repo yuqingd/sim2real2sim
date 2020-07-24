@@ -530,7 +530,7 @@ class Dreamer(tools.Module):
     sys.stdout.flush()
     return action, state
 
-  @tf.function
+  # @tf.function
   def policy(self, obs, state, training):
     if state is None:
       latent = self._dynamics.initial(obs['image'].shape[0])
@@ -543,6 +543,9 @@ class Dreamer(tools.Module):
       embed = tf.concat([state, embed], axis=-1)
     if 'dr_params' in obs and self._c.outer_loop_version == 2:
       dr_values = obs['dr_params']
+      # If there are no sim params, this is presumably the real world
+      if dr_values.size == 0:
+        dr_values = tf.expand_dims(self.learned_dr_mean, 0)
       dr_params = tf.dtypes.cast(dr_values, embed.dtype)
       embed = tf.concat([dr_params, embed], axis=-1)
     latent, _ = self._dynamics.obs_step(latent, action, embed)
@@ -927,8 +930,8 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'kitchen':
     if config.dr is None or real_world:
       env = wrappers.Kitchen(use_state=config.use_state, early_termination=config.early_termination, real_world=real_world,
-                             dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
-                             task=task, simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
+                             dr_shape=config.sim_params_size, dr_list=[],
+                             task=task, simple_randomization=False, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size)
     else:
