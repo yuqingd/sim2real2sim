@@ -87,6 +87,9 @@ def video_summary(name, video, step=None, fps=20):
 def encode_gif(frames, fps):
   from subprocess import Popen, PIPE
   h, w, c = frames[0].shape
+  if c == 4: #if depth, only make gif from rbg
+    c = 3
+    frames = frames[:,:,:-1]
   pxfmt = {1: 'gray', 3: 'rgb24'}[c]
   cmd = ' '.join([
       f'ffmpeg -y -f rawvideo -vcodec rawvideo',
