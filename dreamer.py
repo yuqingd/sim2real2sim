@@ -164,6 +164,7 @@ def define_config():
   config.update_target_every = 100
   config.early_termination = False
   config.sim_param_regularization = .0001
+  config.use_depth = False
 
   return config
 
@@ -1023,12 +1024,12 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'metaworld':
     if config.dr is None or real_world:
       env = wrappers.MetaWorld(task, use_state=config.use_state, early_termination=config.early_termination, real_world=real_world, dr_shape=config.sim_params_size, dr_list=[],
-                             simple_randomization=False, outer_loop_version=config.outer_loop_version)
+                             simple_randomization=False, outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
     else:
       env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version)
+                             outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
       env = wrappers.ActionRepeat(env, config.action_repeat)
       env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':

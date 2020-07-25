@@ -964,14 +964,9 @@ class Kitchen:
     return img
 
 class MetaWorld:
-  #real_world=False, dr=None, mean_only=False,
-               # early_termination=False, use_state=False, step_repeat=200, dr_list=[],
-               # step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               # control_version='mocap_ik', distance=2., azimuth=50, elevation=-40
-
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False, azimuth=-30, distance=2, elevation=-20):
-    from environments.metaworld.metaworld import ML1
+               real_world=False, dr=None, use_state=False, azimuth=-30, distance=2, elevation=-20, use_depth=False):
+    from metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
     self._env = self._ml1.train_classes[name + "-v1"]()
@@ -990,6 +985,7 @@ class MetaWorld:
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
+    self.use_depth = use_depth
 
     if self._env.viewer is None:
       from mujoco_py import MjRenderContextOffscreen
@@ -1162,8 +1158,9 @@ class MetaWorld:
     time_out = self._env.curr_path_length == self._env.max_path_length
     done = done or time_out
     obs = {}
+    obs['state'] = self._env._get_pos_goal()
     if self.use_state:
-      obs['state'] = state_obs[:3]  # Only include robot state
+      obs['state'] = np.concatenate([obs['state'], state_obs[:3]])  # Only include robot state (endeffector pos)
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
@@ -1307,8 +1304,9 @@ class MetaWorld:
     self.apply_dr()
 
     obs = {}
+    obs['state'] = self._env._get_pos_goal()
     if self.use_state:
-      obs['state'] = state_obs[:3]  # Only include robot state
+      obs['state'] = np.concatenate([obs['state'], state_obs[:3]])  # Only include robot state (endeffector pos)
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -1324,7 +1322,10 @@ class MetaWorld:
       self.viewer.update_sim(self._env.sim)
       self.viewer.render(*self._size)
 
-      data = self.viewer.read_pixels(*self._size, depth=False)
+      data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
+      if self.use_depth:
+        return data[::-1, :, :]
+
       return data[::-1]
 
     return self._env.sim.render(mode='offscreen', width=width, height=height)
