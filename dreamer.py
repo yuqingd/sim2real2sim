@@ -790,7 +790,10 @@ class Dreamer(tools.Module):
     self._encode = models.ConvEncoder(self._c.cnn_depth, cnn_act)
     self._dynamics = models.RSSM(
         self._c.stoch_size, self._c.deter_size, self._c.deter_size)
-    self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
+    if self._c.use_depth:
+      self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act, shape=(64,64,4))
+    else:
+      self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
     if self._c.outer_loop_version == 1:
       self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
