@@ -7,8 +7,62 @@ import moviepy.editor as mpy
 from matplotlib import pyplot as plt
 
 
-# env1 = wrappers.Kitchen(size=(512, 512), step_repeat=50, control_version='mocap_ik')
+dr_list = [
+    "stick_mass",
+    "stick_friction",
+    "stick_r",
+    "stick_g",
+    "stick_b",
+    "object_mass",
+    "object_friction",
+    "object_r",
+    "object_g",
+    "object_b",
+    "table_friction",
+    "table_r",
+    "table_g",
+    "table_b",
+    "robot_friction",
+    "robot_r",
+    "robot_g",
+    "robot_b",
 
+]
+
+real_dr = {
+    "stick_mass": 1.,
+    "stick_friction": 1.,
+    "stick_r": 1.,
+    "stick_g": .3,
+    "stick_b": .3,
+    "object_mass": .128,
+    "object_friction": 1.,
+    "object_r": 0.,
+    "object_g": 0.,
+    "object_b": 1., # TODO: multicolor
+    "table_friction": 2.,
+    "table_r": 2.,
+    "table_g": .1,
+    "table_b": .002,
+    "robot_friction": 1.,
+    "robot_r": .5,
+    "robot_g": .1,
+    "robot_b": .1,
+}
+
+
+dr = {}
+for k, v in real_dr.items():
+    dr[k] = (100, .0001)
+
+
+
+env1 = wrappers.MetaWorld(name="stick-pull", size=(512, 512), dr_list=dr_list, dr=dr)
+o = env1.render(mode='rgb_array')
+plt.imshow(o)
+plt.show()
+model = env1._env.sim.model
+x = 3
 
 
 

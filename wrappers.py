@@ -485,7 +485,7 @@ class Kitchen:
     self.end_effector_bound_low = [x_low, y_low, z_low]
     self.end_effector_bound_high = [x_high, y_high, z_high]
 
-  def apply_dr(self):
+  def apply_dr(self):  # penguin
     self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
@@ -990,6 +990,7 @@ class MetaWorld:
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
+    x = self.get_dr()
 
     if self._env.viewer is None:
       from mujoco_py import MjRenderContextOffscreen
@@ -1027,7 +1028,7 @@ class MetaWorld:
       else:
         self.sim_params += [mean, range]
 
-  def apply_dr(self):
+  def apply_dr(self): # peacock
     self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
@@ -1035,15 +1036,82 @@ class MetaWorld:
       return
 
     if 'stick-pull' or 'stick-push' in self.name:
-      geom_dict = self._env.sim.model._geom_name2id
+      before = self.get_dr().copy()
+
       model = self._env.sim.model
+      geom_dict = model._geom_name2id
+      body_dict = model._body_name2id
+
+      stick_body = body_dict['stick']
+      stick_geom = geom_dict['stick_geom_1']
+
+      object_body = body_dict['object']
+      object_geom = [
+        geom_dict['object_geom_1'],
+        geom_dict['object_geom_2'],
+        geom_dict['object_geom_3'],
+        geom_dict['handle']
+      ]
+
+      robot_body = [
+        body_dict['right_l0'],
+        body_dict['right_l1'],
+        body_dict['right_l2'],
+        body_dict['right_l3'],
+        body_dict['right_l4'],
+        body_dict['right_l5'],
+        body_dict['right_l6'],
+      ]
+      robot_geom = [
+        geom_dict['right_l0_geom'],
+        geom_dict['right_l1_geom'],
+        geom_dict['right_l2_geom'],
+        geom_dict['right_l3_geom'],
+        geom_dict['right_l4_geom'],
+        geom_dict['right_l5_geom'],
+        geom_dict['right_l6_geom'],
+      ]
+
+      table_geom = geom_dict['tableTop']
 
       dr_update_dict = {
-      #TODO: add params here
-      }
+          # Stick
+          "stick_mass": (model.body_mass[stick_body: stick_body + 1], None),
+          "stick_friction": (model.geom_friction[stick_geom: stick_geom + 1, 0], None),
+          "stick_r": (model.geom_rgba[stick_geom: stick_geom + 1, 0], None),
+          "stick_g": (model.geom_rgba[stick_geom: stick_geom + 1, 1], None),
+          "stick_b": (model.geom_rgba[stick_geom: stick_geom + 1, 2], None),  # TODO:
+
+          # Object
+          "object_mass": (model.body_mass[object_body: object_body + 1], None),
+          "object_friction": (model.geom_friction[:, 0], object_geom),
+          "object_r": (model.geom_rgba[:, 0], object_geom),
+          "object_g": (model.geom_rgba[:, 1], object_geom),
+          "object_b": (model.geom_rgba[:, 2], object_geom),  # TODO: multicolored object?
+
+          # Table
+          "table_friction": (model.geom_friction[table_geom: table_geom + 1], None),
+          "table_r": (model.geom_friction[table_geom: table_geom + 1, 0], None),
+          "table_g": (model.geom_friction[table_geom: table_geom + 1, 0], None),
+          "table_b": (model.geom_friction[table_geom: table_geom + 1, 0], None),
+
+          # Robot
+          'joint_damping': (model.dof_damping[:], robot_body),  # TODO: correct?
+          'robot_r': (model.geom_rgba[:, 0], robot_geom),
+          'robot_g': (model.geom_rgba[:, 1], robot_geom),
+          'robot_b': (model.geom_rgba[:, 2], robot_geom),
+          'robot_friction': (model.geom_friction[:, 0], robot_geom),
+        }
+
       for dr_param in self.dr_list:
         arr, indices = dr_update_dict[dr_param]
+        print(dr_param, arr, indices)
         self.update_dr_param(arr, dr_param, indices=indices)
+
+
+      after = self.get_dr().copy()
+      diff = after - before
+      x = 3
 
     elif 'basketball' in self.name:
       geom_dict = self._env.sim.model._geom_name2id
@@ -1091,7 +1159,7 @@ class MetaWorld:
 
     return obs, reward, done, info
 
-  def get_dr(self):
+  def get_dr(self):  # kangaroo
     if self.simple_randomization:
       if 'stick-pull' or 'stick-push' in self.name:
         cylinder_body = self._env.sim.model.body_name2id('cylinder')
@@ -1103,18 +1171,66 @@ class MetaWorld:
         raise NotImplementedError
 
     if 'stick-pull' or 'stick-push' in self.name:
-      geom_dict = self._env.sim.model._geom_name2id
       model = self._env.sim.model
+      geom_dict = model._geom_name2id
+      body_dict = model._body_name2id
+
+      stick_body = body_dict['stick']
+      stick_geom = geom_dict['stick_geom_1']
+
+      object_body = body_dict['object']
+      object_geom = [
+        geom_dict['object_geom_1'],
+        geom_dict['object_geom_2'],
+        geom_dict['object_geom_3'],
+        geom_dict['handle'],
+      ]
+
+      robot_geom = [
+        geom_dict['right_l0_geom'],
+        geom_dict['right_l1_geom'],
+        geom_dict['right_l2_geom'],
+        geom_dict['right_l3_geom'],
+        geom_dict['right_l4_geom'],
+        geom_dict['right_l5_geom'],
+        geom_dict['right_l6_geom'],
+      ]
+
+      table_geom = geom_dict['tableTop']
 
       dr_update_dict = {
-        #TODO: add params here
-      }
+        # Stick
+        "stick_mass": model.body_mass[stick_body],
+        "stick_friction": model.geom_friction[stick_geom, 0],
+        "stick_r": model.geom_rgba[stick_geom, 0],
+        "stick_g": model.geom_rgba[stick_geom, 1],
+        "stick_b": model.geom_rgba[stick_geom, 2],
 
+        # Object
+        "object_mass": model.body_mass[object_body],
+        "object_friction": model.geom_friction[object_geom[0], 0],
+        "object_r": model.geom_rgba[object_geom[0], 0],
+        "object_g": model.geom_rgba[object_geom[0], 1],
+        "object_b": model.geom_rgba[object_geom[0], 2],  # TODO: multicolored object?
+
+        # Table
+        "table_friction": model.geom_friction[table_geom, 0],
+        "table_r": model.geom_friction[table_geom, 0],
+        "table_g": model.geom_friction[table_geom, 1],
+        "table_b": model.geom_friction[table_geom, 2],
+
+        # Robot
+        'robot_r': model.geom_rgba[robot_geom[0], 0],
+        'robot_g': model.geom_rgba[robot_geom[0], 1],
+        'robot_b': model.geom_rgba[robot_geom[0], 2],
+        'robot_friction': model.geom_friction[robot_geom[0], 0],
+      }
 
       dr_list = []
       for dr_param in self.dr_list:
         dr_list.append(dr_update_dict[dr_param])
       arr = np.array(dr_list)
+      x = 3
     elif 'basketball' in self.name:
       geom_dict = self._env.sim.model._geom_name2id
       model = self._env.sim.model
