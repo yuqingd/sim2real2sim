@@ -14,7 +14,6 @@ import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -647,14 +646,17 @@ class Dreamer(tools.Module):
 
   def _random_crop(self, data):
     obs = data['image']
-    # top_row = tf.repeat(obs[:, :, :1], 4, axis=2)
-    # bottom_row = tf.repeat(obs[:, :, -1:], 4, axis=2)
-    # new_img = tf.concat([top_row, obs, bottom_row], axis=2)
-    # left_row = tf.repeat(new_img[:, :, :, :1], 4, axis=3)
-    # right_row = tf.repeat(new_img[:, :, :, -1:], 4, axis=3)
-    # new_img = tf.concat([left_row, new_img, right_row], axis=3)
-    # # start_index = np.random.randint(0, 1, size=)
-    # data['image'] = new_img
+    top_row = tf.repeat(obs[:, :, :1], 4, axis=2)
+    bottom_row = tf.repeat(obs[:, :, -1:], 4, axis=2)
+    new_img = tf.concat([top_row, obs, bottom_row], axis=2)
+    left_row = tf.repeat(new_img[:, :, :, :1], 4, axis=3)
+    right_row = tf.repeat(new_img[:, :, :, -1:], 4, axis=3)
+    new_img = tf.concat([left_row, new_img, right_row], axis=3)
+    b, t, h, w, c = obs.shape
+    vert_crop = np.random.randint(0, 9)
+    horiz_crop = np.random.randint(0, 9)
+    cropped = new_img[:, :, vert_crop:vert_crop + h, horiz_crop: horiz_crop + w]
+    data['image'] = cropped
 
   @tf.function()
   def train(self, data, log_images=False):
