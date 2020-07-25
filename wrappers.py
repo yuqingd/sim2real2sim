@@ -970,7 +970,7 @@ class MetaWorld:
                # control_version='mocap_ik', distance=2., azimuth=50, elevation=-40
 
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False, distance=2., azimuth=50, elevation=-40):
+               real_world=False, dr=None, use_state=False, azimuth=-30, distance=2, elevation=-20):
     from metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
