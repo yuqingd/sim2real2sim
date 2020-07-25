@@ -966,7 +966,7 @@ class Kitchen:
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
                real_world=False, dr=None, use_state=False, azimuth=-30, distance=2, elevation=-20, use_depth=False):
-    from metaworld import ML1
+    from environments.metaworld.metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
     self._env = self._ml1.train_classes[name + "-v1"]()
@@ -1323,7 +1323,11 @@ class MetaWorld:
 
       data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
       if self.use_depth:
-        return data[::-1, :, :]
+        img, depth = data
+        img = img[::-1]
+        depth = depth[::-1]
+        depth = depth[..., None]
+        return np.concatenate([img, depth], axis=-1)
 
       return data[::-1]
 
