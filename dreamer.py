@@ -166,7 +166,7 @@ def define_config():
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
-  config.random_crop = True
+  config.random_crop = False
 
   return config
 
