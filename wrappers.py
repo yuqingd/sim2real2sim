@@ -1324,7 +1324,8 @@ class MetaWorld:
 
       data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
       if self.use_depth:
-        return data[::-1, :, :]
+        img, depth = data
+        return np.concatenate([img[::-1], depth[::-1]])
 
       return data[::-1]
 
