@@ -7,12 +7,41 @@ import moviepy.editor as mpy
 from matplotlib import pyplot as plt
 
 
+
 dr_list = [
     "stick_mass",
     "stick_friction",
     "stick_r",
     "stick_g",
     "stick_b",
+    "object_mass",
+    "object_friction",
+    "object_body_r",
+    "object_body_g",
+    "object_body_b",
+    "object_handle_r",
+    "object_handle_g",
+    "object_handle_b",
+    "table_friction",
+    "table_r",
+    "table_g",
+    "table_b",
+    "robot_friction",
+    "robot_r",
+    "robot_g",
+    "robot_b",
+
+]
+
+
+dr_list = [
+    "basket_friction",
+    "basket_goal_r",
+    "basket_goal_g",
+    "basket_goal_b",
+    "backboard_r",
+    "backboard_g",
+    "backboard_b",
     "object_mass",
     "object_friction",
     "object_r",
@@ -37,13 +66,39 @@ real_dr = {
     "stick_b": .3,
     "object_mass": .128,
     "object_friction": 1.,
+    "object_body_r": 0.,
+    "object_body_g": 0.,
+    "object_body_b": 1.,
+    "object_handle_r": 0,
+    "object_handle_g": 0,
+    "object_handle_b": 0,
+    "table_friction": 2.,
+    "table_r": .6,
+    "table_g": .6,
+    "table_b": .5,
+    "robot_friction": 1.,
+    "robot_r": .5,
+    "robot_g": .1,
+    "robot_b": .1,
+}
+
+real_dr = {
+    "basket_friction": .5,
+    "basket_goal_r": .5,
+    "basket_goal_g": .5,
+    "basket_goal_b": .5,
+    "backboard_r": .5,
+    "backboard_g": .5,
+    "backboard_b": .5,
+    "object_mass": .01,
+    "object_friction": 1.,
     "object_r": 0.,
     "object_g": 0.,
-    "object_b": 1., # TODO: multicolor
+    "object_b": 0.,
     "table_friction": 2.,
-    "table_r": 2.,
-    "table_g": .1,
-    "table_b": .002,
+    "table_r": .6,
+    "table_g": .6,
+    "table_b": .5,
     "robot_friction": 1.,
     "robot_r": .5,
     "robot_g": .1,
@@ -53,11 +108,9 @@ real_dr = {
 
 dr = {}
 for k, v in real_dr.items():
-    dr[k] = (100, .0001)
+    dr[k] = (v * 2 + 200, .0001)
 
-
-
-env1 = wrappers.MetaWorld(name="stick-pull", size=(512, 512), dr_list=dr_list, dr=dr)
+env1 = wrappers.MetaWorld(name="basketball", size=(512, 512), dr_list=dr_list, dr=dr)
 o = env1.render(mode='rgb_array')
 plt.imshow(o)
 plt.show()
