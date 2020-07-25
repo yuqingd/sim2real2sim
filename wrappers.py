@@ -970,7 +970,7 @@ class MetaWorld:
                # control_version='mocap_ik', distance=2., azimuth=50, elevation=-40
 
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False):
+               real_world=False, dr=None, use_state=False, distance=2., azimuth=50, elevation=-40):
     from metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
@@ -990,6 +990,17 @@ class MetaWorld:
     self.real_world = real_world
     self.use_state = use_state
     self.dr = dr
+
+    if self._env.viewer is None:
+      from mujoco_py import MjRenderContextOffscreen
+
+      self.viewer = MjRenderContextOffscreen(self._env.sim, device_id=-1)
+      self.viewer.cam.elevation = elevation
+      self.viewer.cam.azimuth = azimuth
+      self.viewer.cam.distance = distance
+
+
+
 
     self.apply_dr()
 
@@ -1064,7 +1075,7 @@ class MetaWorld:
 
   def step(self, action):
     state_obs, reward, done, info = self._env.step(action)
-    time_out = self._env.active_env.curr_path_length == self._env.active_env.max_path_length
+    time_out = self._env.curr_path_length == self._env.max_path_length
     done = done or time_out
     obs = {}
     if self.use_state:
@@ -1137,6 +1148,14 @@ class MetaWorld:
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
     width, height = self._size
+
+    if self.viewer is not None:
+      self.viewer.update_sim(self._env.sim)
+      self.viewer.render(*self._size)
+
+      data = self.viewer.read_pixels(*self._size, depth=False)
+      return data[::-1]
+
     return self._env.sim.render(mode='offscreen', width=width, height=height)
 
 class DeepMindControl:
@@ -1289,6 +1308,8 @@ class DeepMindControl:
   def render(self, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
+
+
     return self._env.physics.render(*self._size, camera_id=self._camera)
 
 
