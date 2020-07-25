@@ -945,10 +945,15 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
-      env = wrappers.MetaWorld(task, use_state=config.use_state, real_world=real_world)
+      env = wrappers.MetaWorld(task, use_state=config.use_state, early_termination=config.early_termination, real_world=real_world, dr_shape=config.sim_params_size, dr_list=[],
+                             simple_randomization=False, outer_loop_version=config.outer_loop_version)
     else:
-      env = wrappers.MetaWorld(task, dr=config.dr, use_state=config.use_state,
-                                     real_world=real_world)
+      env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
+                             use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
+                             dr_shape=config.sim_params_size, simple_randomization=config.simple_randomization,
+                             outer_loop_version=config.outer_loop_version)
+      env = wrappers.ActionRepeat(env, config.action_repeat)
+      env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':
     if config.dr is None or real_world:
       env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size,
