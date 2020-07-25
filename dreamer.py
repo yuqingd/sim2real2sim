@@ -14,6 +14,7 @@ import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -165,6 +166,7 @@ def define_config():
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
+  config.random_crop = False
 
   return config
 
@@ -643,12 +645,27 @@ class Dreamer(tools.Module):
   def update_target(self, original, target):  # TODO: should this be @tf.function?
     target.set_weights(original.get_weights())
 
+  def _random_crop(self, data):
+    obs = data['image']
+    # top_row = tf.repeat(obs[:, :, :1], 4, axis=2)
+    # bottom_row = tf.repeat(obs[:, :, -1:], 4, axis=2)
+    # new_img = tf.concat([top_row, obs, bottom_row], axis=2)
+    # left_row = tf.repeat(new_img[:, :, :, :1], 4, axis=3)
+    # right_row = tf.repeat(new_img[:, :, :, -1:], 4, axis=3)
+    # new_img = tf.concat([left_row, new_img, right_row], axis=3)
+    # # start_index = np.random.randint(0, 1, size=)
+    # data['image'] = new_img
+
   @tf.function()
   def train(self, data, log_images=False):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
+
+      if self._c.random_crop:
+        self._random_crop(data)
+
       if 'success' in data:
         success_rate = tf.reduce_sum(data['success']) / data['success'].shape[1]
       else:

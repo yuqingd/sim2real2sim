@@ -1215,7 +1215,6 @@ class MetaWorld:
     }
 
     if self.name in ['stick-pull', 'stick-push']:
-      print('stick-pull' or 'stick-push' in self.name, 'stick-pull' in self.name)
       model = self._env.sim.model
       geom_dict = model._geom_name2id
       body_dict = model._body_name2id
@@ -1223,7 +1222,7 @@ class MetaWorld:
       stick_body = body_dict['stick']
       stick_geom = geom_dict['stick_geom_1']
 
-      object_body = body_dict['obj']
+      object_body = body_dict['object']
       object_geom_body = [
         geom_dict['object_geom_1'],
       ]
