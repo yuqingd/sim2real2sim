@@ -607,7 +607,7 @@ class Dreamer(tools.Module):
     sys.stdout.flush()
     return action, state
 
-  # @tf.function
+  @tf.function
   def policy(self, obs, state, training):
     if state is None:
       latent = self._dynamics.initial(obs['image'].shape[0])
