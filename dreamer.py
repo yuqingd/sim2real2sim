@@ -14,6 +14,7 @@ import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -634,8 +635,10 @@ class Dreamer(tools.Module):
       embed = tf.concat([state, embed], axis=-1)
     if 'dr_params' in obs and self._c.outer_loop_version == 2:
       dr_values = obs['dr_params']
+      print("DR VALUES", dr_values)
       # If there are no sim params, this is presumably the real world
-      if dr_values.size == 0:
+      if np.prod(dr_values.shape) == 0:
+      # if dr_values.size == 0:
         dr_values = tf.expand_dims(self.learned_dr_mean, 0)
       dr_params = tf.dtypes.cast(dr_values, embed.dtype)
       embed = tf.concat([dr_params, embed], axis=-1)
@@ -1068,7 +1071,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':
     if config.dr is None or real_world:
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version, mean_only=False)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
