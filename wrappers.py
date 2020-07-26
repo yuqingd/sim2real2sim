@@ -1325,9 +1325,9 @@ class MetaWorld:
       if self.use_depth:
         img, depth = data
         img = img[::-1]
-        depth = depth[::-1]
+        depth = depth[::-1] * 255
         depth = depth[..., None]
-        return np.concatenate([img, depth], axis=-1)
+        return np.concatenate([img, depth], axis=-1).astype(int)
 
       return data[::-1]
 
