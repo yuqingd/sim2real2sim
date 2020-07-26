@@ -1336,8 +1336,10 @@ class MetaWorld:
 class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
-                                     simple_randomization=False, dr_shape=None, outer_loop_type=0):
+                                     simple_randomization=False, dr_shape=None, outer_loop_type=0, dr_list=[],
+               mean_only=False):
 
+    self.task = name
     domain, task = name.split('_', 1)
     if domain == 'cup':  # Only domain with multiple words.
       domain = 'ball_in_cup'
@@ -1358,64 +1360,211 @@ class DeepMindControl:
     self.simple_randomization = simple_randomization
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_type
+    self.dr_list = dr_list
+    self.mean_only = mean_only
 
     self.apply_dr()
+
+  def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
+    if param_name in self.dr:
+      if self.mean_only:
+        mean = self.dr[param_name]
+        range = max(0.1 * mean, eps) #TODO: tune this?
+      else:
+        mean, range = self.dr[param_name]
+        range = max(range, eps)
+      new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      if indices is None:
+        param[:] = new_value
+      else:
+        try:
+          for i in indices:
+            param[i:i+1] = new_value
+        except:
+          param[indices:indices+1] = new_value
+
+      if self.mean_only:
+        self.sim_params += [mean]
+      else:
+        self.sim_params += [mean, range]
+
 
   def apply_dr(self):
     self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.ones(self.dr_shape)
-      return
-    if self.simple_randomization:
-      mean, range = self.dr["ball_mass"]
-      eps = 1e-3
-      range = max(range, eps)
-      self._env.physics.model.body_mass[2] = max(np.random.uniform(low=mean - range, high=mean + range), eps)
-      self.sim_params.append(mean)
-      self.sim_params.append(range)
-    else:
-      if "actuator_gain" in self.dr:
-        mean, range = self.dr["actuator_gain"]
-        eps = 1e-3
-        range = max(range, eps)
-        self._env.physics.model.actuator_gainprm[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-        self.sim_params.append(mean)
-        self.sim_params.append(range)
-      if "ball_mass" in self.dr:
-        mean, range = self.dr["ball_mass"]
-        eps = 1e-3
-        range = max(range, eps)
-        self._env.physics.model.body_mass[2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-        self.sim_params.append(mean)
-        self.sim_params.append(range)
-      # if "ball_size" in self.dr:
-      #   mean, range = self.dr["ball_size"]
-      #   eps = 1e-3
-      #   self._env.physics.model.geom_rbound[-1] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-      if "damping" in self.dr:
-        mean, range = self.dr["damping"]
-        eps = 1e-3
-        range = max(range, eps)
-        self._env.physics.model.dof_damping[:2] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-        self.sim_params.append(mean)
-        self.sim_params.append(range)
-      if "friction" in self.dr:
-        mean, range = self.dr["friction"]
-        eps = 1e-6
-        range = max(range, eps)
-        # Only adjust sliding friction
-        self._env.physics.model.geom_friction[:, 0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-        self.sim_params.append(mean)
-        self.sim_params.append(range)
-      # if "string_length" in self.dr:
-      #   mean, range = self.dr["string_length"]
-      #   eps = 1e-2
-      #   self._env.physics.model.tendon_length0[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
-      # if "string_stiffness" in self.dr:
-      #   mean, range = self.dr["string_stiffness"]
-      #   eps = 0
-      #   self._env.physics.model.tendon_stiffness[0] = np.random.uniform(low=max(mean-range, eps), high=max(mean+range, 2 * eps))
+        self.sim_params = np.zeros(self.dr_shape)
+      return  # TODO: start using XPOS_INDICES or equivalent for joints.
+
+    model = self._env.physics.model
+    if 'cup_catch' in self.task:
+      dr_update_dict = {
+        "cup_mass": model.body_mass[1:2],
+        "ball_mass": model.body_mass[2:3],
+        "cup_damping": model.dof_damping[0:2],
+        "ball_damping": model.dof_damping[2:4],
+        "actuator_gain": model.actuator_gainprm[:, 0],
+        "cup_r": model.geom_rgba[0:6, 0],
+        "cup_g": model.geom_rgba[0:6, 1],
+        "cup_b": model.geom_rgba[0:6, 2],
+        "ball_r": model.geom_rgba[6:7, 0],
+        "ball_g": model.geom_rgba[6:7, 1],
+        "ball_b": model.geom_rgba[6:7, 2],
+      }
+    elif "walker" in self.task:
+      dr_update_dict = {
+        "torso_mass": model.body_mass[1:2],
+        "right_thigh_mass": model.body_mass[2:3],
+        "right_leg_mass": model.body_mass[3:4],
+        "right_foot_mass": model.body_mass[4:5],
+        "left_thigh_mass": model.body_mass[5:6],
+        "left_leg_mass": model.body_mass[6:7],
+        "left_foot_mass": model.body_mass[7:8],
+        "right_hip": model.dof_damping[3:4],
+        "right_knee": model.dof_damping[4:5],
+        "right_ankle": model.dof_damping[5:6],
+        "left_hip": model.dof_damping[6:7],
+        "left_knee": model.dof_damping[7:8],
+        "left_ankle": model.dof_damping[8:9],
+        "ground_r": model.geom_rgba[0:1, 0],
+        "ground_g": model.geom_rgba[0:1, 1],
+        "ground_b": model.geom_rgba[0:1, 2],
+        "body_r": model.geom_rgba[1:8, 0],
+        "body_g": model.geom_rgba[1:8, 1],
+        "body_b": model.geom_rgba[1:8, 2],
+      }
+    elif "cheetah" in self.task:
+      dr_update_dict = {
+        "torso_mass": model.body_mass[1:2],
+        "bthigh_mass": model.body_mass[2:3],
+        "bshin_mass": model.body_mass[3:4],
+        "bfoot_mass": model.body_mass[4:5],
+        "fthigh_mass": model.body_mass[5:6],
+        "fshin_mass": model.body_mass[6:7],
+        "ffoot_mass": model.body_mass[7:8],
+        "bthigh_damping": model.dof_damping[3:4],
+        "bshin_damping": model.dof_damping[4:5],
+        "bfoot_damping": model.dof_damping[5:6],
+        "fthigh_damping": model.dof_damping[6:7],
+        "fshin_damping": model.dof_damping[7:8],
+        "ffoot_damping": model.dof_damping[8:9],
+        "ground_r": model.geom_rgba[0:1, 0],
+        "ground_g": model.geom_rgba[0:1, 1],
+        "ground_b": model.geom_rgba[0:1, 2],
+        "body_r": model.geom_rgba[1:9, 0],
+        "body_g": model.geom_rgba[1:9, 1],
+        "body_b": model.geom_rgba[1:9, 2],
+      }
+    elif "finger" in self.task:
+      dr_update_dict = {
+        "proximal_mass": model.body_mass[0:1],
+        "distal_mass": model.body_mass[1:2],
+        "spinner_mass": model.body_mass[2:3],
+        "proximal_damping": model.dof_damping[0:1],
+        "distal_damping": model.dof_damping[1:2],
+        "hinge_damping": model.dof_damping[2:3],
+        "ground_r": model.geom_rgba[0:1, 0],
+        "ground_g": model.geom_rgba[0:1, 1],
+        "ground_b": model.geom_rgba[0:1, 2],
+        "finger_r": model.geom_rgba[2:4, 0],
+        "finger_g": model.geom_rgba[2:4, 1],
+        "finger_b": model.geom_rgba[2:4, 2],
+        "hotdog_r": model.geom_rgba[5:7, 0],
+        "hotdog_g": model.geom_rgba[5:7, 1],
+        "hotdog_b": model.geom_rgba[5:7, 2],
+      }
+    # Actually Update
+    for dr_param in self.dr_list:
+      arr = dr_update_dict[dr_param]
+      self.update_dr_param(arr, dr_param)
+
+
+  def get_dr(self):
+    model = self._env.physics.model
+    if "cup_catch" in self.task:
+      dr_update_dict = {
+        "cup_mass": model.body_mass[1],
+        "ball_mass": model.body_mass[2],
+        "cup_damping": model.dof_damping[0],
+        "ball_damping": model.dof_damping[2],
+        "actuator_gain": model.actuator_gainprm[0, 0],
+        "cup_r": model.geom_rgba[0, 0],
+        "cup_g": model.geom_rgba[0, 1],
+        "cup_b": model.geom_rgba[0, 2],
+        "ball_r": model.geom_rgba[6, 0],
+        "ball_g": model.geom_rgba[6, 1],
+        "ball_b": model.geom_rgba[6, 2],
+      }
+    elif "walker" in self.task:
+      dr_update_dict = {
+        "torso_mass": model.body_mass[1],
+        "right_thigh_mass": model.body_mass[2],
+        "right_leg_mass": model.body_mass[3],
+        "right_foot_mass": model.body_mass[4],
+        "left_thigh_mass": model.body_mass[5],
+        "left_leg_mass": model.body_mass[6],
+        "left_foot_mass": model.body_mass[7],
+        "right_hip": model.dof_damping[3],
+        "right_knee": model.dof_damping[4],
+        "right_ankle": model.dof_damping[5],
+        "left_hip": model.dof_damping[6],
+        "left_knee": model.dof_damping[7],
+        "left_ankle": model.dof_damping[8],
+        "ground_r": model.geom_rgba[0, 0],
+        "ground_g": model.geom_rgba[0, 1],
+        "ground_b": model.geom_rgba[0, 2],
+        "body_r": model.geom_rgba[1, 0],
+        "body_g": model.geom_rgba[1, 1],
+        "body_b": model.geom_rgba[1, 2],
+      }
+    elif "cheetah" in self.task:
+      dr_update_dict = {
+        "torso_mass": model.body_mass[1],
+        "bthigh_mass": model.body_mass[2],
+        "bshin_mass": model.body_mass[3],
+        "bfoot_mass": model.body_mass[4],
+        "fthigh_mass": model.body_mass[5],
+        "fshin_mass": model.body_mass[6],
+        "ffoot_mass": model.body_mass[7],
+        "bthigh_damping": model.dof_damping[3],
+        "bshin_damping": model.dof_damping[4],
+        "bfoot_damping": model.dof_damping[5],
+        "fthigh_damping": model.dof_damping[6],
+        "fshin_damping": model.dof_damping[7],
+        "ffoot_damping": model.dof_damping[8],
+        "ground_r": model.geom_rgba[0, 0],
+        "ground_g": model.geom_rgba[0, 1],
+        "ground_b": model.geom_rgba[0, 2],
+        "body_r": model.geom_rgba[1, 0],
+        "body_g": model.geom_rgba[1, 1],
+        "body_b": model.geom_rgba[1, 2],
+      }
+    elif "finger" in self.task:
+      dr_update_dict = {
+        "proximal_mass": model.body_mass[0],
+        "distal_mass": model.body_mass[1],
+        "spinner_mass": model.body_mass[2],
+        "proximal_damping": model.dof_damping[0],
+        "distal_damping": model.dof_damping[1],
+        "hinge_damping": model.dof_damping[2],
+        "ground_r": model.geom_rgba[0, 0],
+        "ground_g": model.geom_rgba[0, 1],
+        "ground_b": model.geom_rgba[0, 2],
+        "finger_r": model.geom_rgba[2, 0],
+        "finger_g": model.geom_rgba[2, 1],
+        "finger_b": model.geom_rgba[2, 2],
+        "hotdog_r": model.geom_rgba[5, 0],
+        "hotdog_g": model.geom_rgba[5, 1],
+        "hotdog_b": model.geom_rgba[5, 2],
+      }
+
+    dr_list = []
+    for dr_param in self.dr_list:
+      dr_list.append(dr_update_dict[dr_param])
+    arr = np.array(dr_list)
+
+    arr = arr.astype(np.float32)
+    return arr
 
 
   @property
@@ -1433,18 +1582,18 @@ class DeepMindControl:
     spec = self._env.action_spec()
     return gym.spaces.Box(spec.minimum, spec.maximum, dtype=np.float32)
 
-  def get_dr(self):
-    if self.simple_randomization:
-      return np.array([self._env.physics.model.body_mass[2]])
-    return np.array([
-      self._env.physics.model.actuator_gainprm[0, 0],
-      self._env.physics.model.body_mass[2],
-      # self._env.physics.model.geom_rbound[-1],
-      self._env.physics.model.dof_damping[0],
-      self._env.physics.model.geom_friction[0, 0],
-      # self._env.physics.model.tendon_length0[0],
-      # self._env.physics.model.tendon_stiffness[0],
-    ])
+  # def get_dr(self):
+  #   if self.simple_randomization:
+  #     return np.array([self._env.physics.model.body_mass[2]])
+  #   return np.array([
+  #     self._env.physics.model.actuator_gainprm[0, 0],
+  #     self._env.physics.model.body_mass[2],
+  #     # self._env.physics.model.geom_rbound[-1],
+  #     self._env.physics.model.dof_damping[0],
+  #     self._env.physics.model.geom_friction[0, 0],
+  #     # self._env.physics.model.tendon_length0[0],
+  #     # self._env.physics.model.tendon_stiffness[0],
+  #   ])
 
   def step(self, action):
     time_step = self._env.step(action)
