@@ -149,6 +149,7 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2  # How often we should sample from the real world
+  config.num_real_world = 1  # Each time we sample from the real world, how many trajectories should we sample?
   config.simple_randomization = False
 
   # these values are for testing dmc_cup_catch
@@ -1262,7 +1263,7 @@ def main(config):
     state = tools.simulate(agent, train_sim_envs, dataset, steps, state=state)
     if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
-      state = tools.simulate(agent, train_real_envs, dataset, episodes=1, state=state)
+      state = tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
