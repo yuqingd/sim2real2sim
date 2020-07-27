@@ -1362,6 +1362,7 @@ class DeepMindControl:
     self.outer_loop_version = outer_loop_type
     self.dr_list = dr_list
     self.mean_only = mean_only
+    self.min_reward = 0
 
     self.apply_dr()
 
@@ -1583,27 +1584,49 @@ class DeepMindControl:
     return gym.spaces.Box(spec.minimum, spec.maximum, dtype=np.float32)
 
   def step(self, action):
-    time_step = self._env.step(action)
-    obs = dict(time_step.observation)
-    if self.use_state:
-      obs['state'] = np.concatenate([obs['position'], obs['velocity']])  # TODO: these are specific to ball_in_cup. We should have a more general representation.  Also -- are these position and velocity of the ball or the cup?
-    obs['image'] = self.render()
-    reward = time_step.reward or 0
-    done = time_step.last()
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = self.sim_params
-    info = {'discount': np.array(time_step.discount, np.float32)}
-    obs['real_world'] = 1.0 if self.real_world else 0.0
-    if self.outer_loop_version == 2:
-      obs['dr_params'] = self.get_dr()
-    if self.sparse_reward:
-      obs['success'] = 1.0 if reward > 0 else 0.0
+    try:
+      time_step = self._env.step(action)
+      obs = {}  # dict(time_step.observation)
+      if self.use_state:
+        obs['state'] = np.concatenate([obs['position'], obs[
+          'velocity']])  # TODO: these are specific to ball_in_cup. We should have a more general representation.  Also -- are these position and velocity of the ball or the cup?
+      obs['image'] = self.render()
+      reward = time_step.reward or 0
+      done = time_step.last()
+      if self.outer_loop_version == 1:
+        obs['sim_params'] = self.sim_params
+      info = {'discount': np.array(time_step.discount, np.float32)}
+      obs['real_world'] = 1.0 if self.real_world else 0.0
+      if self.outer_loop_version == 2:
+        obs['dr_params'] = self.get_dr()
+      if self.sparse_reward:
+        obs['success'] = 1.0 if reward > 0 else 0.0
+      self.min_reward = min(self.min_reward, reward)
+
+    except PhysicsError as e:
+      obs = {}
+      # if self.use_state:
+      #   obs['state'] = np.concatenate([obs['position'], obs['velocity']])
+      obs['image'] = self.render()
+      if self.outer_loop_version == 1:
+        obs['sim_params'] = self.sim_params
+      obs['real_world'] = 1.0 if self.real_world else 0.0
+      if self.outer_loop_version == 2:
+        obs['dr_params'] = self.get_dr()
+      if self.sparse_reward:
+        obs['success'] = 0.0
+      reward = self.min_reward
+      done = False
+      info = {'discount': np.array(1.)}
+      print("Physics error:", e)
+
+
     return obs, reward, done, info
 
   def reset(self):
     self.apply_dr()
     time_step = self._env.reset()
-    obs = dict(time_step.observation)
+    obs = {}#dict(time_step.observation)
     if self.use_state:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
