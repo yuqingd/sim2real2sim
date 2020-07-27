@@ -14,6 +14,7 @@ import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['MUJOCO_GL'] = 'osmesa'
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -148,6 +149,7 @@ def define_config():
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
   config.sample_real_every = 2  # How often we should sample from the real world
+  config.num_real_world = 1  # Each time we sample from the real world, how many trajectories should we sample?
   config.simple_randomization = False
 
   # these values are for testing dmc_cup_catch
@@ -634,8 +636,10 @@ class Dreamer(tools.Module):
       embed = tf.concat([state, embed], axis=-1)
     if 'dr_params' in obs and self._c.outer_loop_version == 2:
       dr_values = obs['dr_params']
+      print("DR VALUES", dr_values)
       # If there are no sim params, this is presumably the real world
-      if dr_values.size == 0:
+      if np.prod(dr_values.shape) == 0:
+      # if dr_values.size == 0:
         dr_values = tf.expand_dims(self.learned_dr_mean, 0)
       dr_params = tf.dtypes.cast(dr_values, embed.dtype)
       embed = tf.concat([dr_params, embed], axis=-1)
@@ -1068,7 +1072,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':
     if config.dr is None or real_world:
-      env = wrappers.DeepMindControl(task, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version, mean_only=False)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
@@ -1259,7 +1263,7 @@ def main(config):
     state = tools.simulate(agent, train_sim_envs, dataset, steps, state=state)
     if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
-      state = tools.simulate(agent, train_real_envs, dataset, episodes=1, state=state)
+      state = tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=state)
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
