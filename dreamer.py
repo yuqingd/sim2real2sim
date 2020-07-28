@@ -1415,6 +1415,7 @@ if __name__ == '__main__':
   if config.gpudevice is not None:
     print('Setting gpudevice to:', config.gpudevice)
     os.environ['CUDA_VISIBLE_DEVICES'] = config.gpudevice
+    os.environ['EGL_DEVICE_ID'] = config.gpudevice
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   config.logdir = path
