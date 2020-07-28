@@ -13,7 +13,6 @@ import cv2
 import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['MUJOCO_GL'] = 'osmesa'
 # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
@@ -28,7 +27,6 @@ sys.path.append(str(pathlib.Path(__file__).parent))
 
 import models
 import tools
-import wrappers
 
 
 # FB Cluster SBatch ======================================================
@@ -1395,6 +1393,13 @@ if __name__ == '__main__':
   for key, value in define_config().items():
     parser.add_argument(f'--{key}', type=tools.args_type(value), default=value)
   config = parser.parse_args()
+  if "dmc" in config.task:
+    print("USING EGL")
+    os.environ['MUJOCO_GL'] = 'egl'
+  else:
+    print("USING OSMESA")
+    os.environ['MUJOCO_GL'] = 'osmesa'
+  import  wrappers
 
   if config.dr:
     config = config_dr(config)
