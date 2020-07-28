@@ -1399,7 +1399,6 @@ if __name__ == '__main__':
   else:
     print("USING OSMESA")
     os.environ['MUJOCO_GL'] = 'osmesa'
-  import  wrappers
 
   if config.dr:
     config = config_dr(config)
@@ -1416,6 +1415,9 @@ if __name__ == '__main__':
     print('Setting gpudevice to:', config.gpudevice)
     os.environ['CUDA_VISIBLE_DEVICES'] = config.gpudevice
     os.environ['EGL_DEVICE_ID'] = config.gpudevice
+
+
+  import  wrappers
 
   path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
   config.logdir = path
