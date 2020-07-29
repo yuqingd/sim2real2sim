@@ -95,8 +95,8 @@ def define_config():
   config.task = 'dmc_cup_catch'
   config.envs = 1
   config.parallel = 'none'
-  config.action_repeat = 1
-  config.time_limit = 200
+  config.action_repeat = 2
+  config.time_limit = 1000
   config.prefill = 5000
   config.eval_noise = 0.0
   config.clip_rewards = 'none'
@@ -115,7 +115,7 @@ def define_config():
   config.weight_decay_pattern = r'.*'
   # Training.
   config.batch_size = 50
-  config.batch_length = 10
+  config.batch_length = 50
   config.train_every = 1000
   config.train_steps = 100
   config.pretrain = 100
