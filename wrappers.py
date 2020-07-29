@@ -975,7 +975,7 @@ class Kitchen:
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False, azimuth=-30, distance=2, elevation=-20, use_depth=False):
+               real_world=False, dr=None, use_state=False, azimuth=160, distance=1.75, elevation=-20, use_depth=False):
     from environments.metaworld.metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
@@ -1001,9 +1001,12 @@ class MetaWorld:
       from mujoco_py import MjRenderContextOffscreen
 
       self.viewer = MjRenderContextOffscreen(self._env.sim, device_id=-1)
-      self.viewer.cam.elevation = elevation
-      self.viewer.cam.azimuth = azimuth
-      self.viewer.cam.distance = distance
+      self.viewer.cam.elevation = -160
+      self.viewer.cam.azimuth = 205
+      self.viewer.cam.distance = 3
+      self.viewer.cam.lookat[0] = 1.1
+      self.viewer.cam.lookat[1] = 1.1
+      self.viewer.cam.lookat[2] = -0.1
 
     self.apply_dr()
 
@@ -1174,7 +1177,8 @@ class MetaWorld:
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if not (self.dr is None) and not self.real_world:
+      obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if info['success'] else 0.0
 
     if not self.early_termination:
@@ -1318,7 +1322,8 @@ class MetaWorld:
       obs['state'] = np.concatenate([obs['state'], state_obs[:3]])  # Only include robot state (endeffector pos)
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['dr_params'] = self.get_dr()
+    if not (self.dr is None) and not self.real_world:
+      obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
     return obs
 
@@ -1334,12 +1339,12 @@ class MetaWorld:
       data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
       if self.use_depth:
         img, depth = data
-        img = img[::-1]
-        depth = depth[::-1] * 255
-        depth = depth[..., None]
+        #img = img[::-1]
+        #depth = depth[::-1] * 255
+        depth = depth[..., None] * 255
         return np.concatenate([img, depth], axis=-1).astype(int)
 
-      return data[::-1]
+      return data#[::-1]
 
     return self._env.sim.render(mode='offscreen', width=width, height=height)
 
