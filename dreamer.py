@@ -166,6 +166,7 @@ def define_config():
   config.sim_param_regularization = .0001
   config.use_depth = False
   config.random_crop = False
+  config.initial_randomization_steps
 
   return config
 
@@ -1047,14 +1048,14 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              dr_shape=config.sim_params_size, dr_list=[],
                              task=task, simple_randomization=False, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
-                             step_size=config.step_size)
+                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps)
     else:
       env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
-                             step_size=config.step_size)
+                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':

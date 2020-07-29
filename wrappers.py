@@ -156,7 +156,8 @@ class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False,
                early_termination=False, use_state=False, step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               control_version='mocap_ik', distance=2., azimuth=50, elevation=-40):
+               control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
+               initial_randomization_steps=3):
     if 'rope' in task:
       distance = 1.5
       azimuth = 20
@@ -197,6 +198,7 @@ class Kitchen:
     self.dr_shape = dr_shape
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
+    self.initial_randomization_steps = initial_randomization_steps
 
     self.has_kettle = False if 'open_microwave' in task else True
 
@@ -289,6 +291,14 @@ class Kitchen:
     else:
       raise NotImplementedError(self.task)
 
+
+    self.randomize_start()
+
+  def randomize_start(self):
+    # Randomize start position
+    direction = np.random.uniform(-1, 1, size=(3,))
+    for i in range(self.initial_randomization_steps):
+      self.step(direction)
 
 
   def get_reward(self):
