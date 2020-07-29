@@ -166,7 +166,7 @@ def define_config():
   config.sim_param_regularization = .0001
   config.use_depth = False
   config.random_crop = False
-  config.initial_randomization_steps
+  config.initial_randomization_steps = 3
 
   return config
 
