@@ -161,7 +161,7 @@ def define_config():
   config.alpha = 0.3
   config.sim_params_size = 0
   config.buffer_size = 0
-  config.update_target_every = 100
+  config.update_target_every = 1#00
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
