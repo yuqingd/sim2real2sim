@@ -157,7 +157,7 @@ class Kitchen:
                early_termination=False, use_state=False, step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
-               initial_randomization_steps=3):
+               initial_randomization_steps=3, minimal=False):
     if 'rope' in task:
       distance = 1.5
       azimuth = 20
@@ -171,7 +171,19 @@ class Kitchen:
       azimuth = 140
       elevation = -30
 
-    self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task)
+    if minimal:
+      global XPOS_INDICES
+      XPOS_INDICES = {
+        'arm': [4, 5, 6, 7, 8, 9, 10],  # Arm,
+        'end_effector': [10],
+        'gripper': [11, 12, 13, 14, 15, 16],  # Gripper
+        'kettle': [20],
+        'kettle_root': [21],
+
+      }
+
+
+    self._env = KitchenTaskRelaxV1(distance=distance, azimuth=azimuth, elevation=elevation, task_type=task, minimal=minimal)
     self.task = task
     self._size = size
     self.early_termination = early_termination
@@ -201,6 +213,8 @@ class Kitchen:
     self.initial_randomization_steps = initial_randomization_steps
 
     self.has_kettle = False if 'open_microwave' in task else True
+    self.has_microwave = False if minimal else True
+    self.has_cabinet = False if minimal else True
 
     self.apply_dr()
 
@@ -576,19 +590,7 @@ class Kitchen:
       stove_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_collision" in name]
       stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name]
       xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name]
-      xarm_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_collision" in name or "end_effector" in name]
-      data = self._env.sim.data
       model = self._env.sim.model
-
-      # Cabinet
-      cabinet_index = self._env.sim.model.body_name2id('slidelink')
-      cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name]
-      cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name]
-
-      # Microwave
-      microwave_index = self._env.sim.model.body_name2id('microdoorroot')
-      microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name]
-      microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name]
 
       dr_update_dict = {
         'joint1_damping': (model.dof_damping[0:1], None),
@@ -598,20 +600,10 @@ class Kitchen:
         'joint5_damping': (model.dof_damping[4:5], None),
         'joint6_damping': (model.dof_damping[5:6], None),
         'joint7_damping': (model.dof_damping[6:7], None),
-        'cabinet_r': (model.geom_rgba[:, 0], cabinet_viz_indices),
-        'cabinet_g': (model.geom_rgba[:, 1], cabinet_viz_indices),
-        'cabinet_b': (model.geom_rgba[:, 2], cabinet_viz_indices),
-        'cabinet_friction': (model.geom_friction[:, 0], cabinet_collision_indices),
-        'cabinet_mass': (model.body_mass[cabinet_index: cabinet_index + 1], None),
 
         'knob_mass': (model.body_mass, [22, 24, 26, 28]),
         'lighting': (model.light_diffuse[:3], None),
 
-        'microwave_r': (model.geom_rgba[:, 0], microwave_viz_indices),
-        'microwave_g': (model.geom_rgba[:, 1], microwave_viz_indices),
-        'microwave_b': (model.geom_rgba[:, 2], microwave_viz_indices),
-        'microwave_friction': (model.geom_friction[:, 0], microwave_collision_indices),
-        'microwave_mass': (model.body_mass[microwave_index: microwave_index + 1], None),
         'robot_r': (model.geom_rgba[:, 0], xarm_viz_indices),
         'robot_g': (model.geom_rgba[:, 1], xarm_viz_indices),
         'robot_b': (model.geom_rgba[:, 2], xarm_viz_indices),
@@ -621,6 +613,33 @@ class Kitchen:
         'stove_friction': (model.geom_friction[:, 0], stove_collision_indices),
 
       }
+
+      if self.has_microwave:
+        microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+        microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name]
+        microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name]
+        dr_update_dict_k = {
+          'microwave_r': (model.geom_rgba[:, 0], microwave_viz_indices),
+          'microwave_g': (model.geom_rgba[:, 1], microwave_viz_indices),
+          'microwave_b': (model.geom_rgba[:, 2], microwave_viz_indices),
+          'microwave_friction': (model.geom_friction[:, 0], microwave_collision_indices),
+          'microwave_mass': (model.body_mass[microwave_index: microwave_index + 1], None),
+        }
+        dr_update_dict.update(dr_update_dict_k)
+
+
+      if self.has_cabinet:
+        cabinet_index = self._env.sim.model.body_name2id('slidelink')
+        cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name]
+        cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name]
+        dr_update_dict_k = {
+          'cabinet_r': (model.geom_rgba[:, 0], cabinet_viz_indices),
+          'cabinet_g': (model.geom_rgba[:, 1], cabinet_viz_indices),
+          'cabinet_b': (model.geom_rgba[:, 2], cabinet_viz_indices),
+          'cabinet_friction': (model.geom_friction[:, 0], cabinet_collision_indices),
+          'cabinet_mass': (model.body_mass[cabinet_index: cabinet_index + 1], None),
+        }
+        dr_update_dict.update(dr_update_dict_k)
 
       # Kettle
       if self.has_kettle:
@@ -733,15 +752,6 @@ class Kitchen:
                                  "stove_collision" in name][0]
       stove_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "stove_viz" in name][0]
       xarm_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "xarm_viz" in name][0]
-      xarm_collision_index = [geom_dict[name] for name in geom_dict.keys() if
-                                "xarm_collision" in name or "end_effector" in name][0]
-      microwave_index = self._env.sim.model.body_name2id('microdoorroot')
-      microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name][0]
-      microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name][0]
-      cabinet_index = self._env.sim.model.body_name2id('slidelink')
-      cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name][0]
-      cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name][0]
-      data = self._env.sim.data
       model = self._env.sim.model
 
       dr_update_dict = {
@@ -752,20 +762,9 @@ class Kitchen:
         'joint5_damping': model.dof_damping[4],
         'joint6_damping': model.dof_damping[5],
         'joint7_damping': model.dof_damping[6],
-        'cabinet_r': model.geom_rgba[cabinet_viz_indices, 0],
-        'cabinet_g': model.geom_rgba[cabinet_viz_indices, 1],
-        'cabinet_b': model.geom_rgba[cabinet_viz_indices, 2],
-        'cabinet_friction': model.geom_friction[cabinet_collision_indices, 0],
-        'cabinet_mass': model.body_mass[cabinet_index],
 
-        'knob_mass': model.body_mass[22],
         'lighting': model.light_diffuse[0, 0],
 
-        'microwave_r': model.geom_rgba[microwave_viz_indices, 0],
-        'microwave_g': model.geom_rgba[microwave_viz_indices, 1],
-        'microwave_b': model.geom_rgba[microwave_viz_indices, 2],
-        'microwave_friction': model.geom_friction[microwave_collision_indices, 0],
-        'microwave_mass': model.body_mass[microwave_index],
         'robot_r': model.geom_rgba[xarm_viz_indices, 0],
         'robot_g': model.geom_rgba[xarm_viz_indices, 1],
         'robot_b': model.geom_rgba[xarm_viz_indices, 2],
@@ -774,6 +773,33 @@ class Kitchen:
         'stove_b': model.geom_rgba[stove_viz_indices, 2],
         'stove_friction': model.geom_friction[stove_collision_indices, 0],
       }
+
+      if self.has_cabinet:
+        cabinet_index = self._env.sim.model.body_name2id('slidelink')
+        cabinet_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_viz" in name][0]
+        cabinet_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "cabinet_collision" in name][0]
+        dr_update_dict_k = {
+          'cabinet_r': model.geom_rgba[cabinet_viz_indices, 0],
+          'cabinet_g': model.geom_rgba[cabinet_viz_indices, 1],
+          'cabinet_b': model.geom_rgba[cabinet_viz_indices, 2],
+          'cabinet_friction': model.geom_friction[cabinet_collision_indices, 0],
+          'cabinet_mass': model.body_mass[cabinet_index],
+          'knob_mass': model.body_mass[22],
+        }
+        dr_update_dict.update(dr_update_dict_k)
+
+      if self.has_microwave:
+        microwave_index = self._env.sim.model.body_name2id('microdoorroot')
+        microwave_viz_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_viz" in name][0]
+        microwave_collision_indices = [geom_dict[name] for name in geom_dict.keys() if "microwave_collision" in name][0]
+        dr_update_dict_k = {
+          'microwave_r': model.geom_rgba[microwave_viz_indices, 0],
+          'microwave_g': model.geom_rgba[microwave_viz_indices, 1],
+          'microwave_b': model.geom_rgba[microwave_viz_indices, 2],
+          'microwave_friction': model.geom_friction[microwave_collision_indices, 0],
+          'microwave_mass': model.body_mass[microwave_index],
+        }
+        dr_update_dict.update(dr_update_dict_k)
 
       if self.has_kettle:
         kettle_index = self._env.sim.model.body_name2id('kettleroot')

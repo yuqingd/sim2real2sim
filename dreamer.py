@@ -168,6 +168,16 @@ def define_config():
   config.random_crop = False
   config.initial_randomization_steps = 3
 
+  # Dataset Generation
+  config.generate_dataset = False
+  config.num_real_episodes = 100
+  config.num_sim_episodes = 10000
+  config.num_dr_steps = 10
+  config.starting_mean_scale = 5
+  config.starting_range_scale = .5
+  config.ending_mean_scale = 1
+  config.ending_range_scale = .5
+  config.minimal = False
   return config
 
 def config_dr(config):
@@ -312,6 +322,12 @@ def config_dr(config):
             "microwave_g",  "microwave_mass", "microwave_r", "robot_b", "robot_g",  "robot_r", "stove_b",
             "stove_friction",  "stove_g", "stove_r",
           ]
+        elif dr_option == 'visual':
+          config.real_dr_list = ["stove_r"]
+        elif dr_option == 'mass':
+          config.real_dr_list = ["kettle_mass" if "kettle" in config.task else "cabinet_mass"]
+        elif dr_option == 'friction':
+          config.real_dr_list = ["kettle_friction" if "kettle" in config.task else "cabinet_friction"]
 
         if 'slide' in config.task:
           config.real_dr_params['stove_friction'] = 1e-3
@@ -326,7 +342,7 @@ def config_dr(config):
 
 
       config.sim_params_size = 2 * len(config.real_dr_list)
-      if dr_option in ['all_dr', 'partial_dr']:
+      if dr_option in ['all_dr', 'partial_dr', 'mass', 'visual', 'friction']:
         mean_scale = config.mean_scale
         range_scale = config.range_scale
         config.dr = {}  # (mean, range)
@@ -559,6 +575,17 @@ def config_debug(config):
   config.batch_size = 50
   config.batch_length = 6
   config.update_target_every = 1
+
+  # TODO: remove
+  config.generate_dataset = True
+  config.num_real_episodes = 2
+  config.num_sim_episodes = 6
+  config.num_dr_steps = 3
+  config.starting_mean_scale = 5
+  config.starting_range_scale = .5
+  config.ending_mean_scale = 1
+  config.ending_range_scale = .5
+  config.minimal = True
 
   return config
 
@@ -1048,14 +1075,16 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              dr_shape=config.sim_params_size, dr_list=[],
                              task=task, simple_randomization=False, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
-                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps)
+                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
+                             minimal=config.minimal)
     else:
       env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
-                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps)
+                             step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
+                             minimal=config.minimal)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
@@ -1132,6 +1161,44 @@ def check_train_with_real(dr_list):
   return observed_std <= std_cutoff and observed_range <= range_
 
 
+
+def generate_dataset(config, sim_envs, real_envs):
+  real_dr_list = config.real_dr_list
+  real_dr = config.real_dr_params
+  num_real_episodes = config.num_real_episodes
+  num_sim_episodes = config.num_sim_episodes
+  num_dr_steps = config.num_dr_steps
+  episodes_per_dr_step = int(num_sim_episodes / num_dr_steps)
+  starting_mean_scale = config.starting_mean_scale
+  starting_range_scale = config.starting_range_scale
+  ending_mean_scale = config.ending_mean_scale
+  ending_range_scale = config.ending_range_scale
+  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  curr_mean_scale = starting_mean_scale
+  curr_range_scale = starting_range_scale
+
+  bot_agent = lambda o, d, da, s: ([np.array([0, 1, 0]) for _ in d], None)
+  for i in range(num_dr_steps):
+    dr = {}
+    for param in real_dr_list:
+      val = real_dr[param]
+      dr[param] = (val * curr_mean_scale, val * curr_range_scale)
+    sim_envs[0].dr = dr
+    sim_envs[0].apply_dr()
+
+    # Update sim params
+    tools.simulate(bot_agent, sim_envs, dataset=None, episodes=episodes_per_dr_step)
+
+    curr_mean_scale += mean_step_size
+    curr_range_scale += range_step_size
+
+  # Collect real-world dataset
+  tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
+
+
+
+
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
   # Only use a single env from each set
   train_env = train_envs[-1]
@@ -1185,7 +1252,7 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0 or config.outer_loop_version in [1, 2]:
+  if config.real_world_prob > 0 or config.outer_loop_version in [1, 2] or config.generate_dataset:
     train_real_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                   for _ in range(config.envs)]
@@ -1195,6 +1262,16 @@ def main(config):
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
   actspace = train_sim_envs[0].action_space
+
+  if config.generate_dataset:
+    generate_dataset(config, train_sim_envs, train_real_envs)
+    for env in train_sim_envs + test_envs:
+      env.close()
+    if train_real_envs is not None:
+      for env in train_real_envs:
+        env.close()
+    print("Done generating dataset!")
+    return
 
   if config.generate_videos:
     print("Collecting a trajectory so it doesn't die on us")
