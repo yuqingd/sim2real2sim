@@ -13,7 +13,7 @@ import cv2
 import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-# os.environ['CUDA_VISIBLE_DEVICES'] = ''
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -664,7 +664,6 @@ class Dreamer(tools.Module):
     step = self._step.numpy().item()
     tf.summary.experimental.set_step(step)
     step = self._step.numpy().item()  # TODO: not sure if this is being updated
-    print("STEP", step)
     log = self._should_log(step)
     n = self._c.pretrain if self._should_pretrain() else self._c.train_steps
     print(f'Training for {n} steps.')
@@ -672,6 +671,8 @@ class Dreamer(tools.Module):
       for train_step in range(n):
         log_images = self._c.log_images and log and train_step == 0
         self.train(next(dataset), log_images)
+    if log:
+      self._write_summaries()
     self._step.assign_add(n)
     sys.stdout.flush()
 
@@ -1242,17 +1243,14 @@ def generate_dataset(config, sim_envs, real_envs):
   tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
 
-def outer_loop_1_supervised(config, datadir):  # kangaroo
+def outer_loop_1_supervised(config, datadir, writer):  # kangaroo
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
   with open(dataset_datadir / "dataset_config.pkl", "rb") as f:
     dataset_config = pkl.load(f)
 
-
-  writer = tf.summary.create_file_writer(
-    str(config.logdir), max_queue=1000, flush_millis=20000)
-  writer.set_as_default()
+  writer.flush()
   actspace = dataset_config.actspace
 
   # Load dataset
@@ -1281,8 +1279,8 @@ def outer_loop_1_supervised(config, datadir):  # kangaroo
     for _ in range(num_train_steps_per_level):
       # Train
       agent.train_only(train_dataset)
+      writer.flush()
       # Log  # TODO: do this!
-
 
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
@@ -1336,12 +1334,6 @@ def main(config):
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
 
-  if config.supervised_model_learning:
-    outer_loop_1_supervised(config, datadir)
-    print("Done with sim param learning!")
-    return
-
-
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
@@ -1355,6 +1347,11 @@ def main(config):
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
   actspace = train_sim_envs[0].action_space
+
+  if config.supervised_model_learning:
+    outer_loop_1_supervised(config, datadir, writer)
+    print("Done with sim param learning!")
+    return
 
   if config.generate_dataset:
     generate_dataset(config, train_sim_envs, train_real_envs)
