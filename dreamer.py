@@ -13,7 +13,7 @@ import cv2
 import pickle as pkl
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 import numpy as np
 import tensorflow as tf
@@ -179,8 +179,9 @@ def define_config():
   config.ending_range_scale = .5
   config.minimal = False
 
-  # Supervised learning
+  # Using offline dataset
   config.use_offline_dataset = False
+  config.datadir = None
 
 
   return config
@@ -582,9 +583,7 @@ def config_debug(config):
   config.update_target_every = 1
 
   # TODO: remove
-  # config.use_offline_dataset = True
   config.datadir = "debug_dataset_creation-kitchen_push_kettle_burner-dataset"
-  # config.generate_dataset = True
   config.num_real_episodes = 2
   config.num_sim_episodes = 6
   config.num_dr_steps = 3
@@ -619,8 +618,8 @@ class Dreamer(tools.Module):
       self._strategy = tf.distribute.MirroredStrategy()
     else:
       self._strategy = strategy
-    if not config.use_offline_dataset:
-      with self._strategy.scope():
+    with self._strategy.scope():
+      if not config.use_offline_dataset:
         if self._c.outer_loop_version == 2:
           self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
               load_dataset(datadir, self._c, use_sim=True, use_real=False)))
@@ -631,7 +630,7 @@ class Dreamer(tools.Module):
         else:
           self._dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c)))
-    self._build_model(dataset)
+      self._build_model(dataset)
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
     step = self._step.numpy().item()
