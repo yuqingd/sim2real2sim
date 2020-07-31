@@ -178,6 +178,11 @@ def define_config():
   config.ending_mean_scale = 1
   config.ending_range_scale = .5
   config.minimal = False
+
+  # Supervised learning
+  config.supervised_model_learning = False
+
+
   return config
 
 def config_dr(config):
@@ -361,7 +366,7 @@ def config_dr(config):
       config.sim_params_size = int(config.sim_params_size / 2)
       config.dr = dr
 
-  elif "metaworld" in config.task:  # kangaroo
+  elif "metaworld" in config.task:
     if config.simple_randomization:
       if 'basketball' in config.task:
         config.real_dr_params = {
@@ -577,7 +582,9 @@ def config_debug(config):
   config.update_target_every = 1
 
   # TODO: remove
-  config.generate_dataset = True
+  # config.supervised_model_learning = True
+  config.datadir = "debug_dataset_creation-kitchen_push_kettle_burner-dataset"
+  # config.generate_dataset = True
   config.num_real_episodes = 2
   config.num_sim_episodes = 6
   config.num_dr_steps = 3
@@ -592,7 +599,7 @@ def config_debug(config):
 
 class Dreamer(tools.Module):
 
-  def __init__(self, config, datadir, actspace, writer):
+  def __init__(self, config, datadir, actspace, writer, dataset=None, strategy=None):
     self._c = config
     self._actspace = actspace
     self._actdim = actspace.n if hasattr(actspace, 'n') else actspace.shape[0]
@@ -608,19 +615,23 @@ class Dreamer(tools.Module):
     self._metrics = collections.defaultdict(tf.metrics.Mean)
     self._metrics['expl_amount']  # Create variable for checkpoint.
     self._float = prec.global_policy().compute_dtype
-    self._strategy = tf.distribute.MirroredStrategy()
-    with self._strategy.scope():
-      if self._c.outer_loop_version == 2:
-        self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
-            load_dataset(datadir, self._c, use_sim=True, use_real=False)))
-        # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
-        #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-        self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-            load_dataset(datadir, self._c, use_sim=False, use_real=True)))
-      else:
-        self._dataset = iter(self._strategy.experimental_distribute_dataset(
-          load_dataset(datadir, self._c)))
-      self._build_model()
+    if strategy is None:
+      self._strategy = tf.distribute.MirroredStrategy()
+    else:
+      self._strategy = strategy
+    if not config.supervised_model_learning:
+      with self._strategy.scope():
+        if self._c.outer_loop_version == 2:
+          self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
+              load_dataset(datadir, self._c, use_sim=True, use_real=False)))
+          # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
+          #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
+          self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+              load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+        else:
+          self._dataset = iter(self._strategy.experimental_distribute_dataset(
+            load_dataset(datadir, self._c)))
+    self._build_model(dataset)
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
     step = self._step.numpy().item()
@@ -648,6 +659,21 @@ class Dreamer(tools.Module):
       self._step.assign_add(len(reset) * self._c.action_repeat)
     sys.stdout.flush()
     return action, state
+
+  def train_only(self, dataset):
+    step = self._step.numpy().item()
+    tf.summary.experimental.set_step(step)
+    step = self._step.numpy().item()  # TODO: not sure if this is being updated
+    print("STEP", step)
+    log = self._should_log(step)
+    n = self._c.pretrain if self._should_pretrain() else self._c.train_steps
+    print(f'Training for {n} steps.')
+    with self._strategy.scope():
+      for train_step in range(n):
+        log_images = self._c.log_images and log and train_step == 0
+        self.train(next(dataset), log_images)
+    self._step.assign_add(n)
+    sys.stdout.flush()
 
   @tf.function
   def policy(self, obs, state, training):
@@ -704,6 +730,7 @@ class Dreamer(tools.Module):
   def train(self, data, log_images=False):
     self._strategy.experimental_run_v2(self._train, args=(data, log_images))
 
+
   def _train(self, data, log_images):
     with tf.GradientTape() as model_tape:
 
@@ -751,31 +778,39 @@ class Dreamer(tools.Module):
       model_loss = self._c.kl_scale * div - sum(likes.values())
       model_loss /= float(self._strategy.num_replicas_in_sync)
 
-    with tf.GradientTape() as actor_tape:
-      imag_feat = self._imagine_ahead(post)
-      reward = self._reward(imag_feat).mode()
-      if self._c.pcont:
-        pcont = self._pcont(imag_feat).mean()
-      else:
-        pcont = self._c.discount * tf.ones_like(reward)
-      value = self._target_value(imag_feat).mode()
-      returns = tools.lambda_return(
-          reward[:-1], value[:-1], pcont[:-1],
-          bootstrap=value[-1], lambda_=self._c.disclam, axis=0)
-      discount = tf.stop_gradient(tf.math.cumprod(tf.concat(
-          [tf.ones_like(pcont[:1]), pcont[:-2]], 0), 0))
-      actor_loss = -tf.reduce_mean(discount * returns)
-      actor_loss /= float(self._strategy.num_replicas_in_sync)
+    if not self._c.supervised_model_learning:
+      with tf.GradientTape() as actor_tape:
+        imag_feat = self._imagine_ahead(post)
+        reward = self._reward(imag_feat).mode()
+        if self._c.pcont:
+          pcont = self._pcont(imag_feat).mean()
+        else:
+          pcont = self._c.discount * tf.ones_like(reward)
+        value = self._target_value(imag_feat).mode()
+        returns = tools.lambda_return(
+            reward[:-1], value[:-1], pcont[:-1],
+            bootstrap=value[-1], lambda_=self._c.disclam, axis=0)
+        discount = tf.stop_gradient(tf.math.cumprod(tf.concat(
+            [tf.ones_like(pcont[:1]), pcont[:-2]], 0), 0))
+        actor_loss = -tf.reduce_mean(discount * returns)
+        actor_loss /= float(self._strategy.num_replicas_in_sync)
 
-    with tf.GradientTape() as value_tape:
-      value_pred = self._value(imag_feat)[:-1]
-      target = tf.stop_gradient(returns)
-      value_loss = -tf.reduce_mean(discount * value_pred.log_prob(target))
-      value_loss /= float(self._strategy.num_replicas_in_sync)
+      with tf.GradientTape() as value_tape:
+        value_pred = self._value(imag_feat)[:-1]
+        target = tf.stop_gradient(returns)
+        value_loss = -tf.reduce_mean(discount * value_pred.log_prob(target))
+        value_loss /= float(self._strategy.num_replicas_in_sync)
 
     model_norm = self._model_opt(model_tape, model_loss)
-    actor_norm = self._actor_opt(actor_tape, actor_loss)
-    value_norm = self._value_opt(value_tape, value_loss)
+    if not self._c.supervised_model_learning:
+      actor_norm = self._actor_opt(actor_tape, actor_loss)
+      value_norm = self._value_opt(value_tape, value_loss)
+    else:
+      # Fill with dummy values so logging isn't broken
+      value_norm = 0
+      actor_norm = 0
+      value_loss = 0
+      actor_loss = 0
 
     if tf.distribute.get_replica_context().replica_id_in_sync_group == 0:
       if self._c.log_scalars:
@@ -823,7 +858,7 @@ class Dreamer(tools.Module):
     return sim_param_loss
 
 
-  def _build_model(self):
+  def _build_model(self, dataset=None):
     acts = dict(
         elu=tf.nn.elu, relu=tf.nn.relu, swish=tf.nn.swish,
         leaky_relu=tf.nn.leaky_relu)
@@ -877,13 +912,16 @@ class Dreamer(tools.Module):
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
-    if self._c.outer_loop_version in [0, 1]:
+    if dataset is not None:
+      self.train(next(dataset))
+    elif self._c.outer_loop_version in [0, 1]:
       self.train(next(self._dataset))
     else:
       self.train(next(self._train_dataset_sim_only))
       # self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
-    self.update_target(self._value, self._target_value)
+    if not self._c.supervised_model_learning:
+      self.update_target(self._value, self._target_value)
 
 
   def _exploration(self, action, training):
@@ -1132,9 +1170,9 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   env = wrappers.TimeLimit(env, config.time_limit / config.action_repeat)
   callbacks = []
   if store:
-    callbacks.append(lambda ep: tools.save_episodes(datadir, [ep]))
+    callbacks.append(lambda ep, dataset_step: tools.save_episodes(datadir, [ep], dataset_step))
   callbacks.append(
-      lambda ep: summarize_episode(ep, config, datadir, writer, prefix))
+      lambda ep, _: summarize_episode(ep, config, datadir, writer, prefix))
   env = wrappers.Collect(env, callbacks, config.precision)
   env = wrappers.RewardObs(env)
   return env
@@ -1178,6 +1216,11 @@ def generate_dataset(config, sim_envs, real_envs):
   curr_mean_scale = starting_mean_scale
   curr_range_scale = starting_range_scale
 
+  # Save params
+  config.actspace = sim_envs[0].action_space
+  with open(config.logdir / "dataset_config.pkl", "wb") as f:
+    pkl.dump(config, f)
+
   bot_agent = lambda o, d, da, s: ([np.array([0, 1, 0]) for _ in d], None)
   for i in range(num_dr_steps):
     dr = {}
@@ -1186,6 +1229,7 @@ def generate_dataset(config, sim_envs, real_envs):
       dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     sim_envs[0].dr = dr
     sim_envs[0].apply_dr()
+    sim_envs[0].set_dataset_step(i)
 
     # Update sim params
     tools.simulate(bot_agent, sim_envs, dataset=None, episodes=episodes_per_dr_step)
@@ -1194,8 +1238,50 @@ def generate_dataset(config, sim_envs, real_envs):
     curr_range_scale += range_step_size
 
   # Collect real-world dataset
+  real_envs[0].set_dataset_step("test")
   tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
+
+def outer_loop_1_supervised(config, datadir):  # kangaroo
+
+  # Check dataset exists
+  dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
+  with open(dataset_datadir / "dataset_config.pkl", "rb") as f:
+    dataset_config = pkl.load(f)
+
+
+  writer = tf.summary.create_file_writer(
+    str(config.logdir), max_queue=1000, flush_millis=20000)
+  writer.set_as_default()
+  actspace = dataset_config.actspace
+
+  # Load dataset
+  strategy = tf.distribute.MirroredStrategy()
+  with strategy.scope():
+    test_dataset = iter(strategy.experimental_distribute_dataset(
+      load_dataset(dataset_datadir / "episodes" / "test", config)))
+    num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
+    print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
+
+
+  agent = Dreamer(config, datadir, actspace, writer, dataset=test_dataset, strategy=strategy)
+  if (config.logdir / 'variables.pkl').exists():
+    print('Load checkpoint.')
+    agent.load(config.logdir / 'variables.pkl')
+  else:
+    print("checkpoint not loaded")
+    print(config.logdir / 'variables.pkl')
+    print((config.logdir / 'variables.pkl').exists())
+
+  # Loop
+  for i in range(dataset_config.num_dr_steps):
+    train_dataset = iter(strategy.experimental_distribute_dataset(
+      load_dataset(dataset_datadir / "episodes" / str(i), config)))
+    print("Training with dataset", i)
+    for _ in range(num_train_steps_per_level):
+      # Train
+      agent.train_only(train_dataset)
+      # Log  # TODO: do this!
 
 
 
@@ -1249,6 +1335,13 @@ def main(config):
   writer = tf.summary.create_file_writer(
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
+
+  if config.supervised_model_learning:
+    outer_loop_1_supervised(config, datadir)
+    print("Done with sim param learning!")
+    return
+
+
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
@@ -1496,8 +1589,9 @@ if __name__ == '__main__':
 
 
   import  wrappers
-
-  path = pathlib.Path('.').joinpath('logdir', config.id + "-" + config.task + "-dreamer")
+  suffix = "-dataset" if config.generate_dataset else "-dreamer"
+  path_name = config.id + "-" + config.task + suffix
+  path = pathlib.Path('.').joinpath('logdir', path_name)
   config.logdir = path
   # Raise an error if this ID is already used, unless we're in debug mode or continuing a previous run
   if 'debug' in config.id:

@@ -195,8 +195,10 @@ def count_episodes(directory):
   return episodes, steps
 
 
-def save_episodes(directory, episodes):
+def save_episodes(directory, episodes, dataset_step=None):
   directory = pathlib.Path(directory).expanduser()
+  if dataset_step is not None:
+    directory = directory / str(dataset_step)
   directory.mkdir(parents=True, exist_ok=True)
   timestamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
   for episode in episodes:

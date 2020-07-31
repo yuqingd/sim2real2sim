@@ -157,7 +157,7 @@ class Kitchen:
                early_termination=False, use_state=False, step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
-               initial_randomization_steps=3, minimal=False):
+               initial_randomization_steps=3, minimal=False, dataset_step=None):
     if 'rope' in task:
       distance = 1.5
       azimuth = 20
@@ -215,8 +215,12 @@ class Kitchen:
     self.has_kettle = False if 'open_microwave' in task else True
     self.has_microwave = False if minimal else True
     self.has_cabinet = False if minimal else True
+    self.dataset_step = dataset_step
 
     self.apply_dr()
+
+  def set_dataset_step(self, step):
+    self.dataset_step = step
 
   def setup_task(self):
     init_xpos = self._env.sim.data.body_xpos
@@ -1001,7 +1005,8 @@ class Kitchen:
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False, azimuth=160, distance=1.75, elevation=-20, use_depth=False):
+               real_world=False, dr=None, use_state=False, azimuth=160, distance=1.75, elevation=-20, use_depth=False,
+               dataset_step=None):
     from environments.metaworld.metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
@@ -1022,6 +1027,7 @@ class MetaWorld:
     self.use_state = use_state
     self.dr = dr
     self.use_depth = use_depth
+    self.dataset_step = dataset_step
 
     if self._env.viewer is None:
       from mujoco_py import MjRenderContextOffscreen
@@ -1035,6 +1041,9 @@ class MetaWorld:
       self.viewer.cam.lookat[2] = -0.1
 
     self.apply_dr()
+
+  def set_dataset_step(self, step):
+    self.dataset_step = step
 
   def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
     if param_name in self.dr:
@@ -1378,7 +1387,7 @@ class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
                                      simple_randomization=False, dr_shape=None, outer_loop_type=0, dr_list=[],
-               mean_only=False):
+               mean_only=False, dataset_step=None):
 
     self.task = name
     domain, task = name.split('_', 1)
@@ -1404,8 +1413,12 @@ class DeepMindControl:
     self.dr_list = dr_list
     self.mean_only = mean_only
     self.min_reward = 0
+    self.dataset_step = dataset_step
 
     self.apply_dr()
+
+  def set_dataset_step(self, step):
+    self.dataset_step = step
 
   def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
     if param_name in self.dr:
@@ -1944,7 +1957,7 @@ class Collect:
       episode = {k: self._convert(v) for k, v in episode.items()}
       info['episode'] = episode
       for callback in self._callbacks:
-        callback(episode)
+        callback(episode, self._env.dataset_step)
     return obs, reward, done, info
 
   def reset(self):
