@@ -180,7 +180,7 @@ def define_config():
   config.minimal = False
 
   # Supervised learning
-  config.supervised_model_learning = False
+  config.use_offline_dataset = False
 
 
   return config
@@ -582,7 +582,7 @@ def config_debug(config):
   config.update_target_every = 1
 
   # TODO: remove
-  # config.supervised_model_learning = True
+  # config.use_offline_dataset = True
   config.datadir = "debug_dataset_creation-kitchen_push_kettle_burner-dataset"
   # config.generate_dataset = True
   config.num_real_episodes = 2
@@ -619,7 +619,7 @@ class Dreamer(tools.Module):
       self._strategy = tf.distribute.MirroredStrategy()
     else:
       self._strategy = strategy
-    if not config.supervised_model_learning:
+    if not config.use_offline_dataset:
       with self._strategy.scope():
         if self._c.outer_loop_version == 2:
           self._train_dataset_sim_only = iter(self._strategy.experimental_distribute_dataset(
@@ -779,7 +779,7 @@ class Dreamer(tools.Module):
       model_loss = self._c.kl_scale * div - sum(likes.values())
       model_loss /= float(self._strategy.num_replicas_in_sync)
 
-    if not self._c.supervised_model_learning:
+    if not self._c.use_offline_dataset:
       with tf.GradientTape() as actor_tape:
         imag_feat = self._imagine_ahead(post)
         reward = self._reward(imag_feat).mode()
@@ -803,7 +803,7 @@ class Dreamer(tools.Module):
         value_loss /= float(self._strategy.num_replicas_in_sync)
 
     model_norm = self._model_opt(model_tape, model_loss)
-    if not self._c.supervised_model_learning:
+    if not self._c.use_offline_dataset:
       actor_norm = self._actor_opt(actor_tape, actor_loss)
       value_norm = self._value_opt(value_tape, value_loss)
     else:
@@ -921,7 +921,7 @@ class Dreamer(tools.Module):
       self.train(next(self._train_dataset_sim_only))
       # self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
-    if not self._c.supervised_model_learning:
+    if not self._c.use_offline_dataset:
       self.update_target(self._value, self._target_value)
 
 
@@ -1243,7 +1243,7 @@ def generate_dataset(config, sim_envs, real_envs):
   tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
 
-def outer_loop_1_supervised(config, datadir, writer):  # kangaroo
+def train_with_offline_dataset(config, datadir, writer):  # kangaroo
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
@@ -1348,8 +1348,8 @@ def main(config):
       for _ in range(config.envs)]
   actspace = train_sim_envs[0].action_space
 
-  if config.supervised_model_learning:
-    outer_loop_1_supervised(config, datadir, writer)
+  if config.use_offline_dataset:
+    train_with_offline_dataset(config, datadir, writer)
     print("Done with sim param learning!")
     return
 
