@@ -181,7 +181,7 @@ def define_config():
 
   # Using offline dataset
   config.use_offline_dataset = False
-  config.datadir = None
+  config.datadir = "temp"
 
 
   return config
