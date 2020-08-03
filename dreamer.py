@@ -1487,7 +1487,7 @@ def main(config):
       # Call apply_dr so each time we collect an episode we sample a different trajectory from the environment
       for env in train_sim_envs:
         env.apply_dr()
-      tools.simulate(agent, train_sim_envs, dataset, episodes=1, state=None)
+      state = tools.simulate(agent, train_sim_envs, dataset, steps, state=state)
     if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
       tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=None)
