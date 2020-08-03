@@ -1552,6 +1552,7 @@ def main(config):
 
     #after train, update sim params
     elif config.outer_loop_version == 1:
+      predict_OL1(agent, train_sim_envs, writer, step, "train")
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
       for env in train_sim_envs:
