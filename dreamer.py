@@ -155,7 +155,7 @@ def define_config():
   config.mass_range = 0.01
   config.mean_scale = 0.1
   config.range_scale = 0.1
-  config.mean_only = False
+  config.mean_only = True
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
   config.alpha = 0.3
@@ -167,6 +167,7 @@ def define_config():
   config.use_depth = False
   config.random_crop = False
   config.initial_randomization_steps = 3
+  config.last_param_pred_only = False
 
   # Dataset Generation
   config.generate_dataset = False
@@ -764,6 +765,8 @@ class Dreamer(tools.Module):
       if self._c.outer_loop_version == 1:
         sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
+        if self._c.last_param_pred_only:
+          sim_param_obj = sim_param_obj[:, -1]
 
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
@@ -1110,7 +1113,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'kitchen':
     if config.dr is None or real_world:
       env = wrappers.Kitchen(use_state=config.use_state, early_termination=config.early_termination, real_world=real_world,
-                             dr_shape=config.sim_params_size, dr_list=[],
+                             dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                              task=task, simple_randomization=False, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
@@ -1232,7 +1235,10 @@ def generate_dataset(config, sim_envs, real_envs):
     sim_envs[0].set_dataset_step(i)
 
     # Update sim params
-    tools.simulate(bot_agent, sim_envs, dataset=None, episodes=episodes_per_dr_step)
+    for _ in range(episodes_per_dr_step):
+      for env in sim_envs:
+        env.apply_dr()
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=1)
 
     curr_mean_scale += mean_step_size
     curr_range_scale += range_step_size
@@ -1242,7 +1248,7 @@ def generate_dataset(config, sim_envs, real_envs):
   tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
 
-def train_with_offline_dataset(config, datadir, writer):  # kangaroo
+def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
@@ -1278,9 +1284,9 @@ def train_with_offline_dataset(config, datadir, writer):  # kangaroo
     for _ in range(num_train_steps_per_level):
       # Train
       agent.train_only(train_dataset)
+      step = agent._step.numpy().item()
+      eval_OL1(agent, test_envs, train_envs, writer, step)
       writer.flush()
-      # Log  # TODO: do this!
-
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
   # Only use a single env from each set
@@ -1316,6 +1322,55 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
         writer.write(frame)
     writer.release()
 
+def eval_OL1(agent, eval_envs, train_envs, writer, step):
+  predict_OL1(agent, eval_envs, writer, step, log_prefix="test")
+  for env in train_envs:
+    env.apply_dr()
+  predict_OL1(agent, train_envs, writer, step, log_prefix="train")
+
+  train_env = train_envs[0]
+  for i, param in enumerate(config.real_dr_list):
+    if config.mean_only:
+      prev_mean = train_env.dr[param]
+    else:
+      prev_mean, prev_range = train_env.dr[param]
+
+    with writer.as_default():
+      tf.summary.scalar(f'agent-sim_param/{param}/mean', prev_mean, step)
+      if not config.mean_only:
+        tf.summary.scalar(f'agent-sim_param/{param}/range', prev_range, step)
+
+
+def predict_OL1(agent, envs, writer, step, log_prefix):
+  real_pred_sim_params = tools.simulate_real(
+    functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1)
+
+  real_params = envs[0].get_dr()
+
+  for i, param in enumerate(config.real_dr_list):
+    if not config.mean_only:
+      pred_mean = real_pred_sim_params[i * 2]
+      pred_range = real_pred_sim_params[i * 2 + 1]
+      print(f"Learned {param}", pred_mean, pred_range)
+    else:
+      try:
+        pred_mean = real_pred_sim_params[i]
+      except:
+        pred_mean = real_pred_sim_params
+      print(f"Learned {param}", pred_mean)
+
+    with writer.as_default():
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', pred_mean, step)
+      if not config.mean_only:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_range', pred_range, step)
+
+      real_dr_param = real_params[i]
+
+      if not real_dr_param == 0:
+        tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (pred_mean - real_dr_param) / real_dr_param,
+                          step)
+    writer.flush()
+
 def main(config):
   if config.gpu_growth:
     for gpu in tf.config.experimental.list_physical_devices('GPU'):
@@ -1348,7 +1403,7 @@ def main(config):
   actspace = train_sim_envs[0].action_space
 
   if config.use_offline_dataset:
-    train_with_offline_dataset(config, datadir, writer)
+    train_with_offline_dataset(config, datadir, writer, train_sim_envs, test_envs)
     print("Done with sim param learning!")
     return
 
@@ -1424,11 +1479,18 @@ def main(config):
         functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
     steps = config.eval_every // config.action_repeat
+    episodes = int(steps / config.time_limit)
+    if episodes == 0:
+      episodes += 1
     print('Start collection from simulator.')
-    state = tools.simulate(agent, train_sim_envs, dataset, steps, state=state)
+    for _ in range(episodes):
+      # Call apply_dr so each time we collect an episode we sample a different trajectory from the environment
+      for env in train_sim_envs:
+        env.apply_dr()
+      tools.simulate(agent, train_sim_envs, dataset, episodes=1, state=None)
     if step >= train_real_step_target and train_real_envs is not None:
       print("Start collection from the real world")
-      state = tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=state)
+      tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=None)
       train_real_step_target += config.sample_real_every * config.time_limit
     step = count_steps(datadir, config)
     agent.save(config.logdir / 'variables.pkl')
@@ -1441,11 +1503,6 @@ def main(config):
     #   update_target_step_target += config.update_target_every * config.time_limit
 
     if config.outer_loop_version == 2:
-      # train_with_real = check_train_with_real(dr_list)
-      # if train_with_real:
-      #   dataset = agent._train_dataset_combined
-      #   tf.summary.scalar('sim/train_with_real', 1, step)
-      # else:
       dataset = agent._train_dataset_sim_only
       tf.summary.scalar('sim/train_with_real', 0, step)
 
