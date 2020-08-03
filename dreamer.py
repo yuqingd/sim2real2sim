@@ -763,7 +763,7 @@ class Dreamer(tools.Module):
 
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
-        sim_param_obj = sim_param_pred.log_prob(data['sim_params'])
+        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
         if self._c.last_param_pred_only:
           sim_param_obj = sim_param_obj[:, -1]
@@ -1555,6 +1555,7 @@ def main(config):
       predict_OL1(agent, train_sim_envs, writer, step, "train")
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+      real_pred_sim_params = tf.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
           for i, param in enumerate(config.real_dr_list):
