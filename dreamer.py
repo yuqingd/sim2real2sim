@@ -1367,7 +1367,7 @@ def predict_OL1(agent, envs, writer, step, log_prefix):
       real_dr_param = real_params[i]
 
       if not real_dr_param == 0:
-        tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (pred_mean - real_dr_param) / real_dr_param,
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', (pred_mean - real_dr_param) / real_dr_param,
                           step)
     writer.flush()
 
