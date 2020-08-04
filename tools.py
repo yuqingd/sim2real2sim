@@ -144,7 +144,7 @@ def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
     return (step - steps, episode - episodes, done, length, obs, agent_state)
 
 
-def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None):
+def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None, last_only=False):
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
@@ -186,6 +186,8 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
 
   # Return new state to allow resuming the simulation.
 
+  if last_only:
+    return np.squeeze(pred_sim_params_list[-1])
   return np.squeeze(np.mean(pred_sim_params_list, axis=0))
 
 def count_episodes(directory):

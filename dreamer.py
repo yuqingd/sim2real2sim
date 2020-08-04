@@ -157,7 +157,7 @@ def define_config():
   config.range_scale = 0.1
   config.mean_only = True
 
-  config.outer_loop_version = 0  # 0= no outer loop, 1 = regression, 2 = conditioning
+  config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
   config.alpha = 0.3
   config.sim_params_size = 0
   config.buffer_size = 0
@@ -1285,7 +1285,7 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       # Train
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
-      eval_OL1(agent, test_envs, train_envs, writer, step)
+      eval_OL1(agent, test_envs, train_envs, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
@@ -1322,11 +1322,11 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
         writer.write(frame)
     writer.release()
 
-def eval_OL1(agent, eval_envs, train_envs, writer, step):
-  predict_OL1(agent, eval_envs, writer, step, log_prefix="test")
+def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
+  predict_OL1(agent, eval_envs, writer, step, log_prefix="test", last_only=last_only)
   for env in train_envs:
     env.apply_dr()
-  predict_OL1(agent, train_envs, writer, step, log_prefix="train")
+  predict_OL1(agent, train_envs, writer, step, log_prefix="train", last_only=last_only)
 
   train_env = train_envs[0]
   for i, param in enumerate(config.real_dr_list):
@@ -1341,9 +1341,10 @@ def eval_OL1(agent, eval_envs, train_envs, writer, step):
         tf.summary.scalar(f'agent-sim_param/{param}/range', prev_range, step)
 
 
-def predict_OL1(agent, envs, writer, step, log_prefix):
-  real_pred_sim_params = tools.simulate_real(
-    functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1)
+def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
+  real_pred_sim_params = tf.exp(tools.simulate_real(
+    functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1,
+    last_only=last_only))
 
   real_params = envs[0].get_dr()
 
@@ -1552,9 +1553,10 @@ def main(config):
 
     #after train, update sim params
     elif config.outer_loop_version == 1:
-      predict_OL1(agent, train_sim_envs, writer, step, "train")
+      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only)
       real_pred_sim_params = tools.simulate_real(
-          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs, episodes=1)
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
+        episodes=1, last_only=config.last_param_pred_only)
       real_pred_sim_params = tf.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
