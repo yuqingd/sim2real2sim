@@ -845,7 +845,9 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       scale = tf.constant(self._c.sim_param_regularization)
-      regularization = scale * (tf.norm(dr_mean - config.initial_dr_mean) + tf.norm(dr_std - config.initial_dr_range))
+      regularization = scale * tf.norm(dr_mean - config.initial_dr_mean)
+      if not self._c.mean_only:
+        regularization = regularization + tf.norm(dr_std - config.initial_dr_range)
       sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image'])) + regularization
     if update:
       sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)  # TODO: revert
