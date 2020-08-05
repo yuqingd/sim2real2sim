@@ -1307,8 +1307,8 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       env.set_dr(dr)
       env.apply_dr()
 
-    curr_mean_scale += mean_step_size
-    curr_range_scale += range_step_size
+    # curr_mean_scale += mean_step_size
+    # curr_range_scale += range_step_size
 
     train_dataset = iter(strategy.experimental_distribute_dataset(
       load_dataset(dataset_datadir / "episodes" / str(i), config)))
