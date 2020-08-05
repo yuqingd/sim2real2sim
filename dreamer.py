@@ -1209,7 +1209,8 @@ def generate_dataset(config, sim_envs, real_envs):
   num_real_episodes = config.num_real_episodes
   num_sim_episodes = config.num_sim_episodes
   num_dr_steps = config.num_dr_steps
-  episodes_per_dr_step = int(num_sim_episodes / num_dr_steps)
+  episodes_per_dr_step = int(num_sim_episodes / num_dr_steps / config.envs)
+  episodes_per_dr_step = max(episodes_per_dr_step, 1)
   starting_mean_scale = config.starting_mean_scale
   starting_range_scale = config.starting_range_scale
   ending_mean_scale = config.ending_mean_scale
@@ -1233,15 +1234,16 @@ def generate_dataset(config, sim_envs, real_envs):
         dr[param] = curr_mean_scale * val
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
-    sim_envs[0].set_dr(dr)
-    sim_envs[0].apply_dr()
-    sim_envs[0].set_dataset_step(i)
+    for env in sim_envs:
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step(i)
 
     # Update sim params
     for _ in range(episodes_per_dr_step):
       for env in sim_envs:
         env.apply_dr()
-      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=1)
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=config.envs)
 
     curr_mean_scale += mean_step_size
     curr_range_scale += range_step_size
