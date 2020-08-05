@@ -470,7 +470,7 @@ class Kitchen:
       else:
         mean, range = self.dr[param_name]
         range = max(range, eps)
-      new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+      new_value = mean#np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
       if indices is None:
         param[:] = new_value
       else:

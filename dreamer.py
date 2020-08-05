@@ -1226,31 +1226,50 @@ def generate_dataset(config, sim_envs, real_envs):
     pkl.dump(config, f)
 
   bot_agent = lambda o, d, da, s: ([np.array([0, 1, 0]) for _ in d], None)
+
+
+  # Collect real-world dataset
+  real_envs[0].set_dataset_step("test")
+  tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
+
+
   for i in range(num_dr_steps):
     dr = {}
     for param in real_dr_list:
       val = real_dr[param]
       if config.mean_only:
         dr[param] = curr_mean_scale * val
-      else:
-        dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     for env in sim_envs:
       env.set_dr(dr)
       env.apply_dr()
       env.set_dataset_step(i)
 
     # Update sim params
-    for _ in range(episodes_per_dr_step):
+    for _ in range(int(episodes_per_dr_step/2)):
       for env in sim_envs:
         env.apply_dr()
       tools.simulate(bot_agent, sim_envs, dataset=None, episodes=config.envs)
 
+    dr = {}
+    for param in real_dr_list:
+      val = real_dr[param]
+      if config.mean_only:
+        dr[param] = (.5 * curr_mean_scale) * val
+    for env in sim_envs:
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step(i)
+
+      # Update sim params
+      for _ in range(int(episodes_per_dr_step / 2)):
+        for env in sim_envs:
+          env.apply_dr()
+        tools.simulate(bot_agent, sim_envs, dataset=None, episodes=config.envs)
+
     curr_mean_scale += mean_step_size
     curr_range_scale += range_step_size
+    assert False, "ALL DONE"
 
-  # Collect real-world dataset
-  real_envs[0].set_dataset_step("test")
-  tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
 
 def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
