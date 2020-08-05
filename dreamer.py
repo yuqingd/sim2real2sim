@@ -583,8 +583,6 @@ def config_debug(config):
   config.batch_length = 6
   config.update_target_every = 1
 
-  # TODO: remove
-  config.datadir = "debug_dataset_creation-kitchen_push_kettle_burner-dataset"
   config.num_real_episodes = 2
   config.num_sim_episodes = 6
   config.num_dr_steps = 3
@@ -1216,8 +1214,8 @@ def generate_dataset(config, sim_envs, real_envs):
   ending_range_scale = config.ending_range_scale
   mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
   range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
-  curr_mean_scale = starting_mean_scale
-  curr_range_scale = starting_range_scale
+  curr_mean_scale = float(starting_mean_scale)
+  curr_range_scale = float(starting_range_scale)
 
   # Save params
   config.actspace = sim_envs[0].action_space
@@ -1229,8 +1227,11 @@ def generate_dataset(config, sim_envs, real_envs):
     dr = {}
     for param in real_dr_list:
       val = real_dr[param]
-      dr[param] = (val * curr_mean_scale, val * curr_range_scale)
-    sim_envs[0].dr = dr
+      if config.mean_only:
+        dr[param] = curr_mean_scale * val
+      else:
+        dr[param] = (val * curr_mean_scale, val * curr_range_scale)
+    sim_envs[0].set_dr(dr)
     sim_envs[0].apply_dr()
     sim_envs[0].set_dataset_step(i)
 
@@ -1276,8 +1277,35 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
     print(config.logdir / 'variables.pkl')
     print((config.logdir / 'variables.pkl').exists())
 
+  real_dr_list = dataset_config.real_dr_list
+  real_dr = dataset_config.real_dr_params
+  num_dr_steps = dataset_config.num_dr_steps
+  starting_mean_scale = dataset_config.starting_mean_scale
+  starting_range_scale = dataset_config.starting_range_scale
+  ending_mean_scale = dataset_config.ending_mean_scale
+  ending_range_scale = dataset_config.ending_range_scale
+  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  curr_mean_scale = float(starting_mean_scale)
+  curr_range_scale = float(starting_range_scale)
+
   # Loop
   for i in range(dataset_config.num_dr_steps):
+    dr = {}
+    for param in real_dr_list:
+      val = real_dr[param]
+      if dataset_config.mean_only:
+        dr[param] = val * curr_mean_scale
+      else:
+        dr[param] = (val * curr_mean_scale, val * curr_range_scale)
+    print("DR", dr, dataset_config.mean_only, config.mean_only)
+    for env in train_envs:
+      env.set_dr(dr)
+      env.apply_dr()
+
+    curr_mean_scale += mean_step_size
+    curr_range_scale += range_step_size
+
     train_dataset = iter(strategy.experimental_distribute_dataset(
       load_dataset(dataset_datadir / "episodes" / str(i), config)))
     print("Training with dataset", i)
@@ -1336,9 +1364,14 @@ def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
       prev_mean, prev_range = train_env.dr[param]
 
     with writer.as_default():
-      tf.summary.scalar(f'agent-sim_param/{param}/mean', prev_mean, step)
+      tf.summary.scalar(f'agent-sim_param/{param}/train_mean', prev_mean, step)
       if not config.mean_only:
-        tf.summary.scalar(f'agent-sim_param/{param}/range', prev_range, step)
+        tf.summary.scalar(f'agent-sim_param/{param}/train_range', prev_range, step)
+
+  for i, param in enumerate(config.real_dr_list):
+    real_mean = config.real_dr_params[param]
+    with writer.as_default():
+      tf.summary.scalar(f'agent-sim_param/{param}/real_mean', real_mean, step)
 
 
 def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
@@ -1368,8 +1401,8 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
       real_dr_param = real_params[i]
 
       if not real_dr_param == 0:
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', (pred_mean - real_dr_param) / real_dr_param,
-                          step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
+                          (pred_mean - real_dr_param) / real_dr_param, step)
     writer.flush()
 
 def main(config):

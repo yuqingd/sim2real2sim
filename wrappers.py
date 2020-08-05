@@ -222,6 +222,9 @@ class Kitchen:
   def set_dataset_step(self, step):
     self.dataset_step = step
 
+  def set_dr(self, dr):
+    self.dr = dr
+
   def setup_task(self):
     init_xpos = self._env.sim.data.body_xpos
 
@@ -517,7 +520,7 @@ class Kitchen:
     self.sim_params = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.zeros(self.dr_shape)
+        self.sim_params = np.zeros(self.dr_shape, dtype=np.float32)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
@@ -945,7 +948,7 @@ class Kitchen:
     info = {}
     obs = {}
     if self.outer_loop_version == 1:
-      obs['sim_params'] = self.sim_params
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['state'] = self.goal
     if self.use_state:
       obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
@@ -981,7 +984,7 @@ class Kitchen:
     obs = {}
     obs['state'] = self.goal
     if self.outer_loop_version == 1:
-      obs['sim_params'] = self.sim_params
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if self.use_state:
       obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
       if self.has_kettle:
@@ -1041,6 +1044,9 @@ class MetaWorld:
       self.viewer.cam.lookat[2] = -0.1
 
     self.apply_dr()
+
+  def set_dr(self, dr):
+    self.dr = dr
 
   def set_dataset_step(self, step):
     self.dataset_step = step
@@ -1420,6 +1426,9 @@ class DeepMindControl:
   def set_dataset_step(self, step):
     self.dataset_step = step
 
+  def set_dr(self, dr):
+    self.dr = dr
+
   def update_dr_param(self, param, param_name, eps=1e-3, indices=None):
     if param_name in self.dr:
       if self.mean_only:
@@ -1648,7 +1657,7 @@ class DeepMindControl:
       reward = time_step.reward or 0
       done = time_step.last()
       if self.outer_loop_version == 1:
-        obs['sim_params'] = self.sim_params
+        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       info = {'discount': np.array(time_step.discount, np.float32)}
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
@@ -1663,7 +1672,7 @@ class DeepMindControl:
       #   obs['state'] = np.concatenate([obs['position'], obs['velocity']])
       obs['image'] = self.render()
       if self.outer_loop_version == 1:
-        obs['sim_params'] = self.sim_params
+        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
         obs['dr_params'] = self.get_dr()
@@ -1685,7 +1694,7 @@ class DeepMindControl:
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
     if self.outer_loop_version == 1:
-      obs['sim_params'] = self.sim_params
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
