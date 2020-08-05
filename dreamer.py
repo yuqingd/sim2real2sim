@@ -168,6 +168,7 @@ def define_config():
   config.random_crop = False
   config.initial_randomization_steps = 3
   config.last_param_pred_only = False
+  config.sim_params_loss_scale = 1e4
 
   # Dataset Generation
   config.generate_dataset = False
@@ -766,7 +767,7 @@ class Dreamer(tools.Module):
         if self._c.last_param_pred_only:
           sim_param_obj = sim_param_obj[:, -1]
 
-        likes.sim_params = tf.reduce_mean(sim_param_obj)
+        likes.sim_params = self._c.sim_params_loss_scale * tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
