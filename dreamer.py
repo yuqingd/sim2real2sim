@@ -156,6 +156,7 @@ def define_config():
   config.mean_scale = 0.1
   config.range_scale = 0.1
   config.mean_only = True
+  config.predict_val = True
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
   config.alpha = 0.3
@@ -1120,7 +1121,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
                              minimal=config.minimal)
     else:
-      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
+      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, predict_val=config.predict_val, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
