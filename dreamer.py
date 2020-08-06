@@ -1253,6 +1253,10 @@ def generate_dataset(config, sim_envs, real_envs):
   real_envs[0].set_dataset_step("test")
   tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
+  # Collect validation dataset
+  sim_envs[0].set_dataset_step("val")
+  tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
 
 def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
 
