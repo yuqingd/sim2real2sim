@@ -1317,7 +1317,7 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       # Train
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
-      eval_OL1(agent, test_envs, train_envs, writer, step, last_only=config.last_param_pred_only)
+      eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
@@ -1353,6 +1353,72 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
     for frame in frames:
         writer.write(frame)
     writer.release()
+
+
+def eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only):  # kangaroo
+  predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step)
+  predict_OL1_offline(agent, test_dataset, writer, last_only, "test", step)
+
+
+def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
+  data = next(dataset)
+  mean_only = agent._c.mean_only
+
+  if agent._c.random_crop:
+    agent._random_crop(data)
+
+  embed = agent._encode(data)
+  if 'state' in data:
+    embed = tf.concat([data['state'], embed], axis=-1)
+  post, prior = agent._dynamics.observe(embed, data['action'])
+  feat = agent._dynamics.get_feat(post)
+  sim_param_pred = tf.exp(agent._sim_params(feat).sample())
+  sim_param_real = data['sim_params']
+  assert np.array_equal(np.min(sim_param_real, axis=1), np.max(sim_param_real, axis=1))
+  if last_only:
+    sim_param_pred = sim_param_pred[:, -1]
+  else:
+    sim_param_pred = np.mean(sim_param_pred, axis=1)
+  if log_prefix == 'train':
+    if last_only:
+      sim_param_real = sim_param_real[:, -1]
+    else:
+      sim_param_real = np.mean(sim_param_real, axis=1)
+  elif log_prefix == 'test':
+    sim_param_real = agent._c.real_dr_params
+  else:
+    raise NotImplementedError(log_prefix)
+
+  for i, param in enumerate(agent._c.real_dr_list):
+    if mean_only:
+      pred_mean = sim_param_pred[:, i]
+      if log_prefix == 'train':
+        real_mean = sim_param_real[:, i]
+      elif log_prefix == 'test':
+        real_mean = np.zeros_like(pred_mean) + sim_param_real[param]
+      with writer.as_default():
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+        if not np.mean(real_mean) == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                            step)
+    else:
+      pred_mean = sim_param_pred[:, 2 * i]
+      pred_range = sim_param_pred[:, 2 * i + 1]
+      if log_prefix == 'train':
+        real_mean = sim_param_real[:, 2 * i]
+        real_range = sim_param_real[:, 2 * i + 1]
+      elif log_prefix == 'test':
+        real_mean = np.zeros_like(pred_mean) + sim_param_real[param]
+        real_range = np.zeros_like(pred_range)
+      with writer.as_default():
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_range', np.mean(pred_range), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_range', np.mean(real_range), step)
+        if not np.mean(real_mean) == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                            step)
 
 def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
   predict_OL1(agent, eval_envs, writer, step, log_prefix="test", last_only=last_only)
