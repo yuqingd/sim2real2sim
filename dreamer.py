@@ -155,8 +155,9 @@ def define_config():
   config.mass_range = 0.01
   config.mean_scale = 0.1
   config.range_scale = 0.1
-  config.mean_only = True
+  config.mean_only = False
   config.predict_val = True
+  config.range_only = True
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
   config.alpha = 0.3
@@ -1233,7 +1234,13 @@ def generate_dataset(config, sim_envs, real_envs):
     for param in real_dr_list:
       val = real_dr[param]
       if config.mean_only:
+        assert not config.range_only
         dr[param] = curr_mean_scale * val
+      elif config.range_only:
+        if 'kettle_mass' in param:
+          dr[param] = (1.15, 0.35)
+        elif '_b' in param or '_r' in param or '_g' in param:
+          dr[param] = (0.5, 0.17)
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     for env in sim_envs:
@@ -1250,9 +1257,60 @@ def generate_dataset(config, sim_envs, real_envs):
     curr_mean_scale += mean_step_size
     curr_range_scale += range_step_size
 
-  # Collect real-world dataset
-  real_envs[0].set_dataset_step("test")
-  tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
+  # Collect 4 real-world datasets
+  if config.range_only:
+    dr = {}
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.15, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.5, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_med")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (0.45, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.17, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_low")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.85, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.83, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_high")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.05, 1.05)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.5, 0.5)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_all")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+  else:
+    real_envs[0].set_dataset_step("test")
+    tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
   # Collect validation dataset
   sim_envs[0].set_dataset_step("val")
@@ -1272,8 +1330,18 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
   # Load dataset
   strategy = tf.distribute.MirroredStrategy()
   with strategy.scope():
-    test_dataset = iter(strategy.experimental_distribute_dataset(
-      load_dataset(dataset_datadir / "episodes" / "test", config)))
+    try:
+      test_low_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_low", config)))
+      test_med_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_med", config)))
+      test_high_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_high", config)))
+      test_full_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_full", config)))
+    except:
+      test_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test", config)))
     num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
     print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
 
@@ -1323,7 +1391,14 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       # Train
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
-      eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
+
+      if test_low_dataset is not None:
+        eval_OL1_offline(agent, train_dataset, test_low_dataset, writer, step, last_only=config.last_param_pred_only)
+        eval_OL1_offline(agent, train_dataset, test_med_dataset, writer, step, last_only=config.last_param_pred_only)
+        eval_OL1_offline(agent, train_dataset, test_high_dataset, writer, step, last_only=config.last_param_pred_only)
+        eval_OL1_offline(agent, train_dataset, test_full_dataset, writer, step, last_only=config.last_param_pred_only)
+      else:
+        eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
