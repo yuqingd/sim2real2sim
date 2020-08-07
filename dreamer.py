@@ -176,7 +176,7 @@ def define_config():
   config.generate_dataset = False
   config.num_real_episodes = 100
   config.num_sim_episodes = 10000
-  config.num_dr_steps = 10
+  config.num_dr_steps = 1 if config.range_only else 10
   config.starting_mean_scale = 5
   config.starting_range_scale = .5
   config.ending_mean_scale = 1
