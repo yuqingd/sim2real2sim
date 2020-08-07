@@ -228,6 +228,20 @@ class Kitchen:
 
   def setup_task(self):
     init_xpos = self._env.sim.data.body_xpos
+    #randomize kettle location
+    if 'push' in self.task or 'slide' in self.task:
+      kettle_loc = init_xpos[XPOS_INDICES['kettle']]
+      kettle_loc[:,:2] += np.random.normal(0, 5, (2,))
+      kettle_loc[:,:2] = np.clip(kettle_loc[:,:2], [-0.5, -0.1], [0.5, 1.0])
+      self._env.sim.model.body_pos[XPOS_INDICES['kettle']] = kettle_loc
+      self._env.sim.forward()
+
+    elif 'rope' in self.task:
+      body_id = self._env.sim.model.body_name2id('boxes_with_hole')
+      box_loc = self._env.sim.model.body_pos[body_id]
+      box_loc += np.random.normal(0, .1, (3,))
+      self._env.sim.model.body_pos[body_id] = box_loc
+      self._env.sim.forward()
 
     if 'reach' in self.task:
       self.set_workspace_bounds('full_workspace')
