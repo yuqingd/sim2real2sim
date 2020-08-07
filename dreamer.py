@@ -1461,6 +1461,7 @@ def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_onl
 def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
   data = next(dataset)
   mean_only = agent._c.mean_only
+  range_only = agent._c.range_only
 
   if agent._c.random_crop:
     agent._random_crop(data)
@@ -1500,6 +1501,45 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
         if not np.mean(real_mean) == 0:
           tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
                             step)
+    elif range_only:
+      pred_mean = tf.exp(sim_param_pred[:, i])
+      if log_prefix == 'train':
+        if 'kettle_mass' in param:
+          real_mean = 1.15
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+
+      elif log_prefix == 'test_low':
+        if 'kettle_mass' in param:
+          real_mean = .45
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.17
+      elif log_prefix == 'test_med':
+        if 'kettle_mass' in param:
+          real_mean = 1.15
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+      elif log_prefix == 'test_high':
+        if 'kettle_mass' in param:
+          real_mean = 1.85
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.83
+      elif log_prefix == 'test_all':
+        if 'kettle_mass' in param:
+          real_mean = 1.05
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+
+
+
+
+      with writer.as_default():
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+        if not np.mean(real_mean) == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                            step)
+
     else:
       pred_mean = sim_param_pred[:, 2 * i]
       pred_range = sim_param_pred[:, 2 * i + 1]
