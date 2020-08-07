@@ -154,7 +154,7 @@ BONUS_THRESH_HL = 0.3
 
 class Kitchen:
   def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, predict_val=False,
-               early_termination=False, use_state=False, step_repeat=200, dr_list=[],
+               early_termination=False, use_state="None", step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
                initial_randomization_steps=3, minimal=False, dataset_step=None):
@@ -837,11 +837,11 @@ class Kitchen:
   def observation_space(self):
     spaces = {}
 
-    if self.use_state:
+    if self.use_state is not "None":
       state_shape = 4 if self.use_gripper else 3  # 2 for fingers, 3 for end effector position
       state_shape = self.goal.shape + state_shape
-      if 'kettle' in self.task:
-        state_shape = 3 + state_shape #add in kettle xpos coodinates
+      if self.use_state == 'all':
+        state_shape += 3
       spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * state_shape), np.array([-float('inf')] * state_shape))
     else:
       spaces['state'] = gym.spaces.Box(np.array([-float('inf')] * self.goal.shape[0]),
@@ -954,12 +954,9 @@ class Kitchen:
     if self.outer_loop_version == 1:
       obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['state'] = self.goal
-    if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
-      if self.has_kettle:
-        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']])])
-      if self.use_gripper:
-        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])
+    if self.use_state is not "None":
+      state = self.get_state()
+      obs['state'] = np.concatenate([obs['state'], state])
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
@@ -970,6 +967,23 @@ class Kitchen:
       done = False
     return obs, reward, done, info
 
+  def get_state(self):
+    state_list = [np.squeeze(self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['end_effector']])]
+    if self.use_gripper:
+      state_list.append(np.squeeze(self._env.data.qpos[self.arm_njnts]))
+    if self.use_state == 'all':
+      if 'rope' in self.task:
+        state_list.append(np.squeeze(self._env.sim.data.site_xpos[self.cylinder_index]))
+      elif 'open_microwave' in self.task:
+        state_list.append(np.squeeze(self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['microwave_door']]))
+      elif 'open_cabinet' in self.task:
+        state_list.append(np.squeeze(self._env.sim.data.site_xpos[self._env.sim.model._site_name2id['cabinet_door']]))
+      elif 'kettle' in self.task:
+        state_list.append(np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']]))
+      else:
+        raise NotImplementedError("Unrecognized task" + self.task)
+    assert np.concatenate(state_list).shape == (6,), np.concatenate(state_list).shape
+    return np.concatenate(state_list)
 
   def reset(self):
 
@@ -989,12 +1003,9 @@ class Kitchen:
     obs['state'] = self.goal
     if self.outer_loop_version == 1:
       obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
-    if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.site_xpos[self.end_effector_index])])
-      if self.has_kettle:
-        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.sim.data.body_xpos[XPOS_INDICES['kettle']])])
-      if self.use_gripper:
-        obs['state'] = np.concatenate([obs['state'], np.squeeze(self._env.data.qpos[self.arm_njnts])])  # TODO: compute gripper position, include it
+    if self.use_state is not "None":
+      state = self.get_state()
+      obs['state'] = np.concatenate([obs['state'], state])
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
@@ -1012,7 +1023,7 @@ class Kitchen:
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state=False, azimuth=160, distance=1.75, elevation=-20, use_depth=False,
+               real_world=False, dr=None, use_state="None", azimuth=160, distance=1.75, elevation=-20, use_depth=False,
                dataset_step=None):
     from environments.metaworld.metaworld import ML1
     import random
@@ -1201,8 +1212,11 @@ class MetaWorld:
   @property
   def observation_space(self):
     spaces = {}
-    if self.use_state:
-      spaces['state'] = self._env.observation_space
+    if self.use_state is not "None":
+      if self.use_state == 'all':
+        spaces['state'] = self._env.observation_space
+      else:
+        spaces['state'] = 3
     spaces['image'] = gym.spaces.Box(
       0, 255, self._size + (3,), dtype=np.uint8)
     return gym.spaces.Dict(spaces)
@@ -1217,8 +1231,8 @@ class MetaWorld:
     done = done or time_out
     obs = {}
     obs['state'] = self._env._get_pos_goal()
-    if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], state_obs[:3]])  # Only include robot state (endeffector pos)
+    if self.use_state is not "None":
+      obs['state'] = np.concatenate([obs['state'], self.get_state(state_obs)])
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
@@ -1363,14 +1377,22 @@ class MetaWorld:
 
     obs = {}
     obs['state'] = self._env._get_pos_goal()
-    if self.use_state:
-      obs['state'] = np.concatenate([obs['state'], state_obs[:3]])  # Only include robot state (endeffector pos)
+    if self.use_state is not "None":
+      obs['state'] = np.concatenate([obs['state'], self.get_state(state_obs)])
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
     return obs
+
+  def get_state(self, state_obs):
+    if self.use_state == 'robot':
+      return state_obs[:3]   # Only include robot state (endeffector pos)
+    elif self.use_state == 'all':
+      return state_obs
+    else:
+      raise NotImplementedError(self.use_state)
 
   def render(self, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':

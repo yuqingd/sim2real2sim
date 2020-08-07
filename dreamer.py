@@ -136,7 +136,7 @@ def define_config():
   config.expl_decay = 0.0
   config.expl_min = 0.0
   config.id = 'debug'
-  config.use_state = False
+  config.use_state = 'None'  # Options are 'None', 'robot', or 'all'
   config.num_dr_grad_steps = 100
   config.control_version = 'mocap_ik'
   config.generate_videos = False  # If true, it doesn't train; just generates videos
@@ -592,7 +592,7 @@ def config_debug(config):
   config.starting_range_scale = .5
   config.ending_mean_scale = 1
   config.ending_range_scale = .5
-  config.minimal = True
+  # config.minimal = True
 
   return config
 
