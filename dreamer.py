@@ -1405,10 +1405,7 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       step = agent._step.numpy().item()
 
       if test_low_dataset is not None:
-        eval_OL1_offline(agent, train_dataset, test_low_dataset, writer, step, last_only=config.last_param_pred_only)
-        eval_OL1_offline(agent, train_dataset, test_med_dataset, writer, step, last_only=config.last_param_pred_only)
-        eval_OL1_offline(agent, train_dataset, test_high_dataset, writer, step, last_only=config.last_param_pred_only)
-        eval_OL1_offline(agent, train_dataset, test_full_dataset, writer, step, last_only=config.last_param_pred_only)
+        eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_full_dataset], writer, step, last_only=config.last_param_pred_only)
       else:
         eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
@@ -1448,9 +1445,17 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
     writer.release()
 
 
-def eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only):  # kangaroo
+def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):  # kangaroo
+  if isinstance(test_datasets, list):
+    predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step)
+    predict_OL1_offline(agent, test_datasets[1], writer, last_only, "test_med", step)
+    predict_OL1_offline(agent, test_datasets[2], writer, last_only, "test_high", step)
+    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_full", step)
+
+  else:
+    predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step)
+
   predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step)
-  predict_OL1_offline(agent, test_dataset, writer, last_only, "test", step)
 
 
 def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
