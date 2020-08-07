@@ -1218,8 +1218,12 @@ def generate_dataset(config, sim_envs, real_envs):
   starting_range_scale = config.starting_range_scale
   ending_mean_scale = config.ending_mean_scale
   ending_range_scale = config.ending_range_scale
-  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
-  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  if num_dr_steps > 1:
+    mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+    range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  else:
+    mean_step_size = range_step_size = 0
+
   curr_mean_scale = float(starting_mean_scale)
   curr_range_scale = float(starting_range_scale)
 
@@ -1362,8 +1366,11 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
   starting_range_scale = dataset_config.starting_range_scale
   ending_mean_scale = dataset_config.ending_mean_scale
   ending_range_scale = dataset_config.ending_range_scale
-  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
-  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  if num_dr_steps > 1:
+    mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+    range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  else:
+    mean_step_size = range_step_size = 0
   curr_mean_scale = float(starting_mean_scale)
   curr_range_scale = float(starting_range_scale)
 
@@ -1374,6 +1381,11 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       val = real_dr[param]
       if dataset_config.mean_only:
         dr[param] = val * curr_mean_scale
+      elif config.range_only:
+        if 'kettle_mass' in param:
+          dr[param] = (1.15, 0.35)
+        elif '_b' in param or '_r' in param or '_g' in param:
+          dr[param] = (0.5, 0.17)
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     print("DR", dr, dataset_config.mean_only, config.mean_only)
