@@ -332,7 +332,11 @@ class Kitchen:
 
   def randomize_start(self):
     # Randomize start position
-    direction = np.random.uniform(-1, 1, size=(3,))
+    x = np.random.uniform(-1, 1)
+    y = 0
+    z = np.random.uniform(0, 1)
+    direction = np.array([x, y, z])
+
     for i in range(self.initial_randomization_steps):
       self.step(direction)
 
