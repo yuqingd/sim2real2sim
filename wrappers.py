@@ -1676,7 +1676,7 @@ class DeepMindControl:
     try:
       time_step = self._env.step(action)
       obs = {}  # dict(time_step.observation)
-      if self.use_state:
+      if self.use_state is not "None":
         obs['state'] = np.concatenate([obs['position'], obs[
           'velocity']])  # TODO: these are specific to ball_in_cup. We should have a more general representation.  Also -- are these position and velocity of the ball or the cup?
       obs['image'] = self.render()
@@ -1716,7 +1716,7 @@ class DeepMindControl:
     self.apply_dr()
     time_step = self._env.reset()
     obs = {}#dict(time_step.observation)
-    if self.use_state:
+    if self.use_state is not "None":
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
     if self.outer_loop_version == 1:
