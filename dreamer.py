@@ -1487,7 +1487,6 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
     sim_param_real = data['sim_params']
 
-  # TODO: keep in mind that if we are NOT domain randomizing the test environment, this will give all zeros and it will be WRONG.
   distribution_mean = data['distribution_mean']
   assert np.array_equal(np.min(sim_param_real, axis=1), np.max(sim_param_real, axis=1))
   if last_only:
