@@ -155,8 +155,9 @@ def define_config():
   config.mass_range = 0.01
   config.mean_scale = 0.1
   config.range_scale = 0.1
-  config.mean_only = True
+  config.mean_only = False
   config.predict_val = True
+  config.range_only = True
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
   config.alpha = 0.3
@@ -176,7 +177,7 @@ def define_config():
   config.generate_dataset = False
   config.num_real_episodes = 100
   config.num_sim_episodes = 10000
-  config.num_dr_steps = 10
+  config.num_dr_steps = 1 if config.range_only else 10
   config.starting_mean_scale = 5
   config.starting_range_scale = .5
   config.ending_mean_scale = 1
@@ -1225,8 +1226,12 @@ def generate_dataset(config, sim_envs, real_envs):
   starting_range_scale = config.starting_range_scale
   ending_mean_scale = config.ending_mean_scale
   ending_range_scale = config.ending_range_scale
-  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
-  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  if num_dr_steps > 1:
+    mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+    range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  else:
+    mean_step_size = range_step_size = 0
+
   curr_mean_scale = float(starting_mean_scale)
   curr_range_scale = float(starting_range_scale)
 
@@ -1241,7 +1246,13 @@ def generate_dataset(config, sim_envs, real_envs):
     for param in real_dr_list:
       val = real_dr[param]
       if config.mean_only:
+        assert not config.range_only
         dr[param] = curr_mean_scale * val
+      elif config.range_only:
+        if 'kettle_mass' in param:
+          dr[param] = (1.15, 0.35)
+        elif '_b' in param or '_r' in param or '_g' in param:
+          dr[param] = (0.5, 0.17)
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     for env in sim_envs:
@@ -1258,9 +1269,60 @@ def generate_dataset(config, sim_envs, real_envs):
     curr_mean_scale += mean_step_size
     curr_range_scale += range_step_size
 
-  # Collect real-world dataset
-  real_envs[0].set_dataset_step("test")
-  tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
+  # Collect 4 real-world datasets
+  if config.range_only:
+    dr = {}
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.15, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.5, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_med")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (0.45, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.17, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_low")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.85, 0.35)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.83, 0.17)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_high")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+    for param in real_dr_list:
+      if 'kettle_mass' in param:
+        dr[param] = (1.05, 1.05)
+      elif '_b' in param or '_r' in param or '_g' in param:
+        dr[param] = (0.5, 0.5)
+    for env in sim_envs:
+      env.reset()
+      env.set_dr(dr)
+      env.apply_dr()
+      env.set_dataset_step("test_all")
+      tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+  else:
+    real_envs[0].set_dataset_step("test")
+    tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
   # Collect validation dataset
   sim_envs[0].set_dataset_step("val")
@@ -1280,8 +1342,18 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
   # Load dataset
   strategy = tf.distribute.MirroredStrategy()
   with strategy.scope():
-    test_dataset = iter(strategy.experimental_distribute_dataset(
-      load_dataset(dataset_datadir / "episodes" / "test", config)))
+    try:
+      test_low_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_low", config)))
+      test_med_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_med", config)))
+      test_high_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_high", config)))
+      test_full_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_full", config)))
+    except:
+      test_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test", config)))
     num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
     print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
 
@@ -1302,8 +1374,11 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
   starting_range_scale = dataset_config.starting_range_scale
   ending_mean_scale = dataset_config.ending_mean_scale
   ending_range_scale = dataset_config.ending_range_scale
-  mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
-  range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  if num_dr_steps > 1:
+    mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
+    range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
+  else:
+    mean_step_size = range_step_size = 0
   curr_mean_scale = float(starting_mean_scale)
   curr_range_scale = float(starting_range_scale)
 
@@ -1314,6 +1389,11 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       val = real_dr[param]
       if dataset_config.mean_only:
         dr[param] = val * curr_mean_scale
+      elif config.range_only:
+        if 'kettle_mass' in param:
+          dr[param] = (1.15, 0.35)
+        elif '_b' in param or '_r' in param or '_g' in param:
+          dr[param] = (0.5, 0.17)
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     print("DR", dr, dataset_config.mean_only, config.mean_only)
@@ -1331,7 +1411,11 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       # Train
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
-      eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
+
+      if test_low_dataset is not None:
+        eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_full_dataset], writer, step, last_only=config.last_param_pred_only)
+      else:
+        eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
@@ -1369,14 +1453,23 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
     writer.release()
 
 
-def eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only):  # kangaroo
+def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):  # kangaroo
+  if isinstance(test_datasets, list):
+    predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step)
+    predict_OL1_offline(agent, test_datasets[1], writer, last_only, "test_med", step)
+    predict_OL1_offline(agent, test_datasets[2], writer, last_only, "test_high", step)
+    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_full", step)
+
+  else:
+    predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step)
+
   predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step)
-  predict_OL1_offline(agent, test_dataset, writer, last_only, "test", step)
 
 
 def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
   data = next(dataset)
   mean_only = agent._c.mean_only
+  range_only = agent._c.range_only
 
   if agent._c.random_crop:
     agent._random_crop(data)
@@ -1414,6 +1507,48 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
       with writer.as_default():
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+        if not np.mean(real_mean) == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                            step)
+    elif range_only:
+      pred_mean = tf.exp(sim_param_pred[:, i])
+      if log_prefix == 'train':
+        if 'kettle_mass' in param:
+          real_mean = 1.15
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+
+      elif log_prefix == 'test_low':
+        if 'kettle_mass' in param:
+          real_mean = .45
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.17
+      elif log_prefix == 'test_med':
+        if 'kettle_mass' in param:
+          real_mean = 1.15
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+      elif log_prefix == 'test_high':
+        if 'kettle_mass' in param:
+          real_mean = 1.85
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.83
+      elif log_prefix == 'test_all':
+        if 'kettle_mass' in param:
+          real_mean = 1.05
+        elif '_b' in param or '_r' in param or '_g' in param:
+          real_mean = 0.5
+
+
+
+
+      with writer.as_default():
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+        if not np.mean(real_mean) == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                            step)
+
     else:
       pred_mean = sim_param_pred[:, 2 * i]
       pred_range = sim_param_pred[:, 2 * i + 1]
