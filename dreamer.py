@@ -439,14 +439,19 @@ def config_dr(config):
         }
         config.real_dr_params.update(real_dr_joint)
         config.real_dr_list = list(config.real_dr_params.keys())
-      config.sim_params_size = 2 * len(config.real_dr_list)
+      config.sim_params_size = len(config.real_dr_list)
+      if not config.mean_only:
+        config.sim_params_size *= 2
       mean_scale = config.mean_scale
       range_scale = config.range_scale
       config.dr = {}  # (mean, range)
       for key, real_val in config.real_dr_params.items():
         if real_val == 0:
           real_val = 5e-2
-        config.dr[key] = (real_val * mean_scale, real_val * range_scale)
+        if config.mean_only:
+          config.dr[key] = real_val * mean_scale
+        else:
+          config.dr[key] = (real_val * mean_scale, real_val * range_scale)
     else:
       config.dr = {}
       config.real_dr_params = {}
@@ -1625,10 +1630,12 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
           tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
         else:
           tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
-                            (pred_mean - real_dr_param) / distribution_mean, step)
+                            (pred_mean - real_dr_param) / distribution_mean[i], step)
     writer.flush()
 
 def main(config):
+  if config.binary_prediction:
+    assert config.use_offline_dataset or config.mean_only, "Cannot predict range while using binary predictions"
   if config.gpu_growth:
     for gpu in tf.config.experimental.list_physical_devices('GPU'):
       tf.config.experimental.set_memory_growth(gpu, True)
@@ -1862,7 +1869,7 @@ def main(config):
               else:
                 if not np.mean(distribution_mean) == 0:
                   tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
-                                    (new_mean - real_dr_param) / distribution_mean, step)
+                                    (new_mean - real_dr_param) / distribution_mean[i], step)
               writer.flush()
 
           env.apply_dr()
