@@ -1199,7 +1199,6 @@ class MetaWorld:
 
       for dr_param in self.dr_list:
         arr, indices = dr_update_dict[dr_param]
-        print(dr_param, arr, indices)
         self.update_dr_param(arr, dr_param, indices=indices)
 
     elif 'basketball' in self.name:
@@ -1270,6 +1269,8 @@ class MetaWorld:
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if info['success'] else 0.0
@@ -1420,6 +1421,8 @@ class MetaWorld:
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
     obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
