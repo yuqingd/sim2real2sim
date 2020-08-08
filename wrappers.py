@@ -502,10 +502,8 @@ class Kitchen:
 
       if self.predict_val:
         self.sim_params += [new_value]
-      elif self.mean_only:
-        self.sim_params += [mean]
       else:
-        self.sim_params += [mean, range]
+        self.sim_params += [mean]
       self.distribution_mean += [mean]
       self.distribution_range += [range]
 
@@ -1112,10 +1110,7 @@ class MetaWorld:
         except:
           param[indices:indices+1] = new_value
 
-      if self.mean_only:
-        self.sim_params += [mean]
-      else:
-        self.sim_params += [mean, range]
+      self.sim_params += [mean]
       self.distribution_mean += [mean]
       self.distribution_range += [range]
 
@@ -1514,10 +1509,7 @@ class DeepMindControl:
         except:
           param[indices:indices+1] = new_value
 
-      if self.mean_only:
-        self.sim_params += [mean]
-      else:
-        self.sim_params += [mean, range]
+      self.sim_params += [mean]
       self.distribution_mean += [mean]
       self.distribution_range += [range]
 

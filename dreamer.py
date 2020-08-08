@@ -157,7 +157,7 @@ def define_config():
   config.range_scale = 0.1
   config.mean_only = False
   config.predict_val = True
-  config.range_only = True
+  config.range_only = False
 
   config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
   config.alpha = 0.3
@@ -203,7 +203,7 @@ def config_dr(config):
           "cylinder_mass": (config.mass_mean, config.mass_range)
         }
         config.real_dr_list = ["cylinder_mass"]
-        config.sim_params_size = 2
+        config.sim_params_size = 1
       elif 'open_microwave' in config.task:
         config.real_dr_params = {
           "microwave_mass": .26
@@ -212,7 +212,7 @@ def config_dr(config):
           "microwave_mass": (config.mass_mean, config.mass_range)
         }
         config.real_dr_list = ['microwave_mass']
-        config.sim_params_size = 2
+        config.sim_params_size = 1
       elif 'open_cabinet' in config.task:
         config.real_dr_params = {
           "cabinet_mass": 3.4
@@ -221,7 +221,7 @@ def config_dr(config):
           "cabinet_mass": (config.mass_mean, config.mass_range)
         }
         config.real_dr_list = ['cabinet_mass']
-        config.sim_params_size = 2
+        config.sim_params_size = 1
       else:
         config.real_dr_params = {
           "kettle_mass": 1.08
@@ -230,7 +230,7 @@ def config_dr(config):
           "kettle_mass": (config.mass_mean, config.mass_range)
         }
         config.real_dr_list = ['kettle_mass']
-        config.sim_params_size = 2
+        config.sim_params_size = 1
     else:
       if 'rope' in config.task:
         config.real_dr_params = {
@@ -352,7 +352,7 @@ def config_dr(config):
               del config.real_dr_params[k]
 
 
-      config.sim_params_size = 2 * len(config.real_dr_list)
+      config.sim_params_size = len(config.real_dr_list)
       if dr_option in ['all_dr', 'partial_dr', 'mass', 'visual', 'friction']:
         mean_scale = config.mean_scale
         range_scale = config.range_scale
@@ -369,7 +369,6 @@ def config_dr(config):
       dr = {}
       for key, vals in config.dr.items():
         dr[key] = vals[0] #only keep mean
-      config.sim_params_size = int(config.sim_params_size / 2)
       config.dr = dr
 
   elif "metaworld" in config.task:
@@ -382,7 +381,7 @@ def config_dr(config):
           "object_mass": (config.mass_mean, config.mass_range)
         }
         config.real_dr_list = ["object_mass"]
-        config.sim_params_size = 2
+        config.sim_params_size = 1
       elif 'stick' in config.task:
         if 'basketball' in config.task:
           config.real_dr_params = {
@@ -392,7 +391,7 @@ def config_dr(config):
             "object_mass": (config.mass_mean, config.mass_range)
           }
           config.real_dr_list = ["object_mass"]
-          config.sim_params_size = 2
+          config.sim_params_size = 1
     elif config.dr_option == 'all_dr':
       real_dr_joint = {
         "table_friction": 2.,
@@ -440,8 +439,6 @@ def config_dr(config):
         config.real_dr_params.update(real_dr_joint)
         config.real_dr_list = list(config.real_dr_params.keys())
       config.sim_params_size = len(config.real_dr_list)
-      if not config.mean_only:
-        config.sim_params_size *= 2
       mean_scale = config.mean_scale
       range_scale = config.range_scale
       config.dr = {}  # (mean, range)
@@ -552,7 +549,7 @@ def config_dr(config):
       if real_val == 0:
         real_val = 5e-2
       config.dr[key] = (real_val * mean_scale, real_val * range_scale)
-    config.sim_params_size = 2 * len(config.real_dr_list)
+    config.sim_params_size = len(config.real_dr_list)
 
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
@@ -571,6 +568,7 @@ def config_dr(config):
   else:
     config.initial_dr_mean = np.array([config.dr[param][0] for param in config.real_dr_list])
     config.initial_dr_range = np.array([config.dr[param][1] for param in config.real_dr_list])
+
   return config
 
 
@@ -845,10 +843,7 @@ class Dreamer(tools.Module):
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
       dr_mean = tf.exp(self.learned_dr_mean)
-      if not self._c.mean_only:
-        dr_std = tf.exp(self.learned_dr_std)
-      else:
-        dr_std = tf.maximum(dr_mean * 0.1, 1e-3) #TODO : Change this if needed, corresponds to wrappers.py
+      dr_std = tf.maximum(dr_mean * 0.1, 1e-3) #TODO : Change this if needed, corresponds to wrappers.py
       random_num = tf.random.normal(dr_mean.shape, dtype=dr_mean.dtype)
       sampled_dr = random_num * dr_std + dr_mean
       desired_shape = (embed.shape[0], embed.shape[1], dr_mean.shape[0])
@@ -859,8 +854,6 @@ class Dreamer(tools.Module):
       image_pred = self._decode(feat)
       scale = tf.constant(self._c.sim_param_regularization)
       regularization = scale * tf.norm(dr_mean - config.initial_dr_mean)
-      if not self._c.mean_only:
-        regularization = regularization + tf.norm(dr_std - config.initial_dr_range)
       sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image'])) + regularization
     if update:
       sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)  # TODO: revert
@@ -869,8 +862,6 @@ class Dreamer(tools.Module):
       self._metrics['sim_param_loss_regularization'].update_state(regularization)
       for i, key in enumerate(self._c.real_dr_list):
         self._metrics['learned_mean' + key].update_state(dr_mean[i])
-        if not self._c.mean_only:
-          self._metrics['learned_std' + key].update_state(dr_std[i])
     return sim_param_loss
 
 
@@ -911,23 +902,14 @@ class Dreamer(tools.Module):
         tools.Adam, wd=self._c.weight_decay, clip=self._c.grad_clip,
         wdpattern=self._c.weight_decay_pattern)
     if self._c.outer_loop_version == 2:
-      if self._c.mean_only:
-        dr_mean = np.array([self._c.dr[k] for k in config.real_dr_list])
-      else:
-        dr_mean = np.array([self._c.dr[k][0] for k in config.real_dr_list])
-        dr_range = np.array([self._c.dr[k][1] for k in config.real_dr_list])
+      dr_mean = np.array([self._c.dr[k] for k in config.real_dr_list])
 
       self.learned_dr_mean = tf.Variable(np.log(dr_mean), trainable=True, dtype=tf.float32)
-      if not self._c.mean_only:
-        self.learned_dr_std = tf.Variable(np.log(dr_range), trainable=True, dtype=tf.float32)
     self._model_opt = Optimizer('model', model_modules, self._c.model_lr)
     self._value_opt = Optimizer('value', [self._value], self._c.value_lr)
     self._actor_opt = Optimizer('actor', [self._actor], self._c.actor_lr)
     if self._c.outer_loop_version == 2:
-      if self._c.mean_only:
-        self._dr_opt = Optimizer('dr', [self.learned_dr_mean], self._c.dr_lr)
-      else:
-        self._dr_opt = Optimizer('dr', [self.learned_dr_mean, self.learned_dr_std], self._c.dr_lr)
+      self._dr_opt = Optimizer('dr', [self.learned_dr_mean], self._c.dr_lr)
       # Do a train step to initialize all variables, including optimizer
       # statistics. Ideally, we would use batch size zero, but that doesn't work
       # in multi-GPU mode.
@@ -1146,8 +1128,10 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
-      env = wrappers.MetaWorld(task, use_state=config.use_state, early_termination=config.early_termination, real_world=real_world, dr_shape=config.sim_params_size, dr_list=[],
-                             simple_randomization=False, outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
+      env = wrappers.MetaWorld(task, use_state=config.use_state, early_termination=config.early_termination,
+                               real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+                               simple_randomization=False, outer_loop_version=config.outer_loop_version,
+                               use_depth=config.use_depth)
     else:
       env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
@@ -1245,7 +1229,11 @@ def generate_dataset(config, sim_envs, real_envs):
   with open(config.logdir / "dataset_config.pkl", "wb") as f:
     pkl.dump(config, f)
 
-  bot_agent = lambda o, d, da, s: ([np.array([0, 1, 0]) for _ in d], None)
+  action_length = len(sim_envs[0].action_space.sample())
+  if action_length == 4:  # Metaworld. probably useless
+    bot_agent = lambda o, d, da, s: ([np.array([1, 1, 1, 1]) for _ in d], None)
+  elif action_length == 3:  # Kitchen.  Likely only useful for kettle tasks
+    bot_agent = lambda o, d, da, s: ([np.array([0, 1, 0]) for _ in d], None)
   for i in range(num_dr_steps):
     dr = {}
     for param in real_dr_list:
@@ -1258,6 +1246,8 @@ def generate_dataset(config, sim_envs, real_envs):
           dr[param] = (1.15, 0.35)
         elif '_b' in param or '_r' in param or '_g' in param:
           dr[param] = (0.5, 0.17)
+        else:
+          raise NotImplementedError(f"Can't handle {param}")
       else:
         dr[param] = (val * curr_mean_scale, val * curr_range_scale)
     for env in sim_envs:
@@ -1322,7 +1312,7 @@ def generate_dataset(config, sim_envs, real_envs):
       env.reset()
       env.set_dr(dr)
       env.apply_dr()
-      env.set_dataset_step("test_all")
+      env.set_dataset_step("test_full")
       tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
 
   else:
@@ -1356,12 +1346,17 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
         load_dataset(dataset_datadir / "episodes" / "test_high", config)))
       test_full_dataset = iter(strategy.experimental_distribute_dataset(
         load_dataset(dataset_datadir / "episodes" / "test_full", config)))
-    except:
+      test_dataset = test_full_dataset
+    except Exception as e:
+      print("ISSUE LOADING DATASET", e)
       test_dataset = iter(strategy.experimental_distribute_dataset(
         load_dataset(dataset_datadir / "episodes" / "test", config)))
+      test_low_dataset = None
+      test_med_dataset = None
+      test_high_dataset = None
+      test_full_dataset = None
     num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
     print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
-
 
   agent = Dreamer(config, datadir, actspace, writer, dataset=test_dataset, strategy=strategy)
   if (config.logdir / 'variables.pkl').exists():
@@ -1505,17 +1500,9 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
 
   for i, param in enumerate(agent._c.real_dr_list):
     distribution_mean_i = distribution_mean[:, i]
-    if mean_only:
-      pred_mean = sim_param_pred[:, i]
-      real_mean = sim_param_real[:, i]
-      with writer.as_default():
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-        if not np.mean(real_mean) == 0:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                            step)
-    elif range_only:
-      pred_mean = tf.exp(sim_param_pred[:, i])
+    pred_mean = sim_param_pred[:, i]
+    real_mean = sim_param_real[:, i]
+    if range_only:
       if log_prefix == 'train':
         if 'kettle_mass' in param:
           real_mean = 1.15
@@ -1537,35 +1524,21 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
           real_mean = 1.85
         elif '_b' in param or '_r' in param or '_g' in param:
           real_mean = 0.83
-      elif log_prefix == 'test_all':
+      elif log_prefix == 'test_full':
         if 'kettle_mass' in param:
           real_mean = 1.05
         elif '_b' in param or '_r' in param or '_g' in param:
           real_mean = 0.5
+    with writer.as_default():
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+      if not np.mean(real_mean) == 0:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
+                          step)
 
-
-
-
-      with writer.as_default():
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-        if not np.mean(real_mean) == 0:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                            step)
-
-    else:
-      pred_mean = sim_param_pred[:, 2 * i]
-      pred_range = sim_param_pred[:, 2 * i + 1]
-      real_mean = sim_param_real[:, 2 * i]
-      real_range = sim_param_real[:, 2 * i + 1]
-      with writer.as_default():
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_range', np.mean(pred_range), step)
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_range', np.mean(real_range), step)
     if agent._c.binary_prediction:
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(pred_mean == real_mean), step)
-    elif not np.mean(distribution_mean) == 0:
+    elif not np.mean(distribution_mean_i) == 0:
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
                         np.mean((pred_mean - real_mean) / distribution_mean_i), step)
 
@@ -1606,21 +1579,14 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
   distribution_mean = np.array(envs[0].distribution_mean, np.float32)
 
   for i, param in enumerate(config.real_dr_list):
-    if not config.mean_only:
-      pred_mean = real_pred_sim_params[i * 2]
-      pred_range = real_pred_sim_params[i * 2 + 1]
-      print(f"Learned {param}", pred_mean, pred_range)
-    else:
-      try:
-        pred_mean = real_pred_sim_params[i]
-      except:
-        pred_mean = real_pred_sim_params
-      print(f"Learned {param}", pred_mean)
+    try:
+      pred_mean = real_pred_sim_params[i]
+    except:
+      pred_mean = real_pred_sim_params
+    print(f"Learned {param}", pred_mean)
 
     with writer.as_default():
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', pred_mean, step)
-      if not config.mean_only:
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_range', pred_range, step)
 
       real_dr_param = real_params[i]
 
@@ -1634,8 +1600,6 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
     writer.flush()
 
 def main(config):
-  if config.binary_prediction:
-    assert config.use_offline_dataset or config.mean_only, "Cannot predict range while using binary predictions"
   if config.gpu_growth:
     for gpu in tf.config.experimental.list_physical_devices('GPU'):
       tf.config.experimental.set_memory_growth(gpu, True)
@@ -1783,28 +1747,21 @@ def main(config):
         for i, param in enumerate(config.real_dr_list):
           if config.mean_only:
             prev_mean = env.dr[param]
-            pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
-            print(f"Learned {param}", pred_mean)
           else:
             prev_mean, prev_range = env.dr[param]
-            pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
-            pred_range = np.exp(agent.learned_dr_std.numpy())[i]
-            print(f"Learned {param}", pred_mean, pred_range)
+          pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
+          print(f"Learned {param}", pred_mean)
           alpha = config.alpha
 
           new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
           if config.mean_only:
             env.dr[param] = new_mean
           else:
-            new_range = prev_range * (1 - alpha) + alpha * pred_range
-            env.dr[param] = (new_mean, new_range)
+            env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
           # dr_list.append(new_mean)
           with writer.as_default():
             tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
             tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
-            if not config.mean_only:
-              tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
-              tf.summary.scalar(f'agent-sim_param/{param}/pred_range', pred_range, step)
 
             real_dr_param = config.real_dr_params[param]
             if not real_dr_param == 0:
@@ -1831,16 +1788,10 @@ def main(config):
               prev_mean = env.dr[param]
             else:
               prev_mean, prev_range = env.dr[param]
-
-            if not config.mean_only:
-              pred_mean = real_pred_sim_params[i * 2]
-              pred_range = real_pred_sim_params[i * 2 + 1]
-              print(f"Learned {param}", pred_mean, pred_range)
-            else:
-              try:
-                pred_mean = real_pred_sim_params[i]
-              except:
-                pred_mean = real_pred_sim_params
+            try:
+              pred_mean = real_pred_sim_params[i]
+            except:
+              pred_mean = real_pred_sim_params
               print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
@@ -1848,18 +1799,14 @@ def main(config):
               new_mean = prev_mean + alpha * np.mean(real_pred_sim_params)  # TODO: tune this
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
-            if not config.mean_only:
-              new_range = prev_range * (1 - alpha) + alpha * pred_range
-              env.dr[param] = (new_mean, new_range)
-            else:
+            if config.mean_only:
               env.dr[param] = new_mean
+            else:
+              env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
             with writer.as_default():
               print("NEW MEAN", param, new_mean, step, pred_mean, "!" * 30)
               tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
               tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
-              if not config.mean_only:
-                tf.summary.scalar(f'agent-sim_param/{param}/range', new_range, step)
-                tf.summary.scalar(f'agent-sim_param/{param}/pred_range', pred_range, step)
 
               real_dr_param = config.real_dr_params[param]
               if config.binary_prediction:
