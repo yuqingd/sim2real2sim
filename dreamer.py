@@ -1312,7 +1312,7 @@ def generate_dataset(config, sim_envs, real_envs):
       env.reset()
       env.set_dr(dr)
       env.apply_dr()
-      env.set_dataset_step("test_full")
+      env.set_dataset_step("test_all")
       tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
 
   else:
@@ -1354,7 +1354,7 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       test_low_dataset = None
       test_med_dataset = None
       test_high_dataset = None
-      test_full_dataset = None
+      test_all_dataset = None
     num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
     print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
 
@@ -1526,7 +1526,7 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
           real_mean = 1.85
         elif '_b' in param or '_r' in param or '_g' in param:
           real_mean = 0.83
-      elif log_prefix == 'test_full':
+      elif log_prefix == 'test_all':
         if 'kettle_mass' in param:
           real_mean = 1.05
         elif '_b' in param or '_r' in param or '_g' in param:
