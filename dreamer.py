@@ -170,6 +170,7 @@ def define_config():
   config.initial_randomization_steps = 3
   config.last_param_pred_only = False
   config.sim_params_loss_scale = 1e4
+  config.binary_prediction = False
 
   # Dataset Generation
   config.generate_dataset = False
@@ -589,9 +590,9 @@ def config_debug(config):
   config.num_sim_episodes = 6
   config.num_dr_steps = 3
   config.starting_mean_scale = 5
-  config.starting_range_scale = .5
+  config.starting_range_scale = 1
   config.ending_mean_scale = 1
-  config.ending_range_scale = .5
+  config.ending_range_scale = .1
   # config.minimal = True
 
   return config
@@ -763,11 +764,15 @@ class Dreamer(tools.Module):
 
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
-        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
+        if self._c.binary_prediction:
+          labels = tf.cast(data['sim_params'] > data['distribution_mean'], tf.int32)
+          predictions = sim_param_pred.mean()
+          sim_param_obj = -tf.keras.losses.binary_crossentropy(labels, predictions)
+        else:
+          sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
         if self._c.last_param_pred_only:
           sim_param_obj = sim_param_obj[:, -1]
-
         likes.sim_params = self._c.sim_params_loss_scale * tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
@@ -878,7 +883,10 @@ class Dreamer(tools.Module):
       self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
     if self._c.outer_loop_version == 1:
-      self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
+      if self._c.binary_prediction:
+        self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act, dist='binary')
+      else:
+        self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -1378,53 +1386,49 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
     embed = tf.concat([data['state'], embed], axis=-1)
   post, prior = agent._dynamics.observe(embed, data['action'])
   feat = agent._dynamics.get_feat(post)
-  sim_param_pred = tf.exp(agent._sim_params(feat).sample())
-  sim_param_real = data['sim_params']
+
+  if agent._c.binary_prediction:
+    sim_param_pred = tf.cast(tf.round(agent._sim_params(feat).mean()), dtype=tf.int32)
+    sim_param_real = tf.cast(data['sim_params'] > data['distribution_mean'], tf.int32)
+  else:
+    sim_param_pred = tf.exp(agent._sim_params(feat).mean())
+    sim_param_real = data['sim_params']
+
+  # TODO: keep in mind that if we are NOT domain randomizing the test environment, this will give all zeros and it will be WRONG.
+  distribution_mean = data['distribution_mean']
   assert np.array_equal(np.min(sim_param_real, axis=1), np.max(sim_param_real, axis=1))
   if last_only:
     sim_param_pred = sim_param_pred[:, -1]
+    distribution_mean = distribution_mean[:, -1]
+    sim_param_real = sim_param_real[:, -1]
   else:
     sim_param_pred = np.mean(sim_param_pred, axis=1)
-  if log_prefix == 'train':
-    if last_only:
-      sim_param_real = sim_param_real[:, -1]
-    else:
-      sim_param_real = np.mean(sim_param_real, axis=1)
-  elif log_prefix == 'test':
-    sim_param_real = agent._c.real_dr_params
-  else:
-    raise NotImplementedError(log_prefix)
+    distribution_mean = np.mean(distribution_mean, axis=1)
+    sim_param_real = np.mean(sim_param_real, axis=1)
 
   for i, param in enumerate(agent._c.real_dr_list):
+    distribution_mean_i = distribution_mean[:, i]
     if mean_only:
       pred_mean = sim_param_pred[:, i]
-      if log_prefix == 'train':
-        real_mean = sim_param_real[:, i]
-      elif log_prefix == 'test':
-        real_mean = np.zeros_like(pred_mean) + sim_param_real[param]
+      real_mean = sim_param_real[:, i]
       with writer.as_default():
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-        if not np.mean(real_mean) == 0:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                            step)
     else:
       pred_mean = sim_param_pred[:, 2 * i]
       pred_range = sim_param_pred[:, 2 * i + 1]
-      if log_prefix == 'train':
-        real_mean = sim_param_real[:, 2 * i]
-        real_range = sim_param_real[:, 2 * i + 1]
-      elif log_prefix == 'test':
-        real_mean = np.zeros_like(pred_mean) + sim_param_real[param]
-        real_range = np.zeros_like(pred_range)
+      real_mean = sim_param_real[:, 2 * i]
+      real_range = sim_param_real[:, 2 * i + 1]
       with writer.as_default():
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_range', np.mean(pred_range), step)
         tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_range', np.mean(real_range), step)
-        if not np.mean(real_mean) == 0:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                            step)
+    if agent._c.binary_prediction:
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(pred_mean == real_mean), step)
+    elif not np.mean(distribution_mean) == 0:
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                        np.mean((pred_mean - real_mean) / distribution_mean_i), step)
 
 def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
   predict_OL1(agent, eval_envs, writer, step, log_prefix="test", last_only=last_only)
@@ -1451,11 +1455,16 @@ def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
 
 
 def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
-  real_pred_sim_params = tf.exp(tools.simulate_real(
+  real_pred_sim_params = tools.simulate_real(
     functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1,
-    last_only=last_only))
+    last_only=last_only)
+  if agent._c.binary_prediction:
+    real_pred_sim_params = tf.round(real_pred_sim_params.mean())
+  else:
+    real_pred_sim_params = tf.exp(real_pred_sim_params)
 
   real_params = envs[0].get_dr()
+  distribution_mean = np.array(envs[0].distribution_mean, np.float32)
 
   for i, param in enumerate(config.real_dr_list):
     if not config.mean_only:
@@ -1477,8 +1486,12 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
       real_dr_param = real_params[i]
 
       if not real_dr_param == 0:
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
-                          (pred_mean - real_dr_param) / real_dr_param, step)
+        if agent._c.binary_prediction:
+          labels = real_dr_param > distribution_mean[i]
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
+        else:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
+                            (pred_mean - real_dr_param) / distribution_mean, step)
     writer.flush()
 
 def main(config):
@@ -1579,7 +1592,6 @@ def main(config):
     # Initially, don't use the real world samples to train the model since we don't know their sim params.
     # Once the sim params converge, we can change this to True
     dataset = agent._train_dataset_sim_only
-    dr_list = []
   else:
     dataset = None
 
@@ -1666,9 +1678,13 @@ def main(config):
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
         episodes=1, last_only=config.last_param_pred_only)
-      real_pred_sim_params = tf.exp(real_pred_sim_params)
+      if config.binary_prediction:
+        real_pred_sim_params = tf.round(real_pred_sim_params.mean())
+      else:
+        real_pred_sim_params = tf.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
+          distribution_mean = env.distribution_mean
           for i, param in enumerate(config.real_dr_list):
             if config.mean_only:
               prev_mean = env.dr[param]
@@ -1687,7 +1703,10 @@ def main(config):
               print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
-            new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
+            if config.binary_prediction:
+              new_mean = prev_mean + alpha * np.mean(real_pred_sim_params)  # TODO: tune this
+            else:
+              new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             if not config.mean_only:
               new_range = prev_range * (1 - alpha) + alpha * pred_range
               env.dr[param] = (new_mean, new_range)
@@ -1702,9 +1721,14 @@ def main(config):
                 tf.summary.scalar(f'agent-sim_param/{param}/pred_range', pred_range, step)
 
               real_dr_param = config.real_dr_params[param]
-              if not real_dr_param == 0:
-                tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (new_mean - real_dr_param) / real_dr_param,
-                                  step)
+              if config.binary_prediction:
+                label = real_dr_param > distribution_mean[i]
+                tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                                  np.mean(real_pred_sim_params == label), step)
+              else:
+                if not np.mean(distribution_mean) == 0:
+                  tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                                    (new_mean - real_dr_param) / distribution_mean, step)
               writer.flush()
 
           env.apply_dr()
