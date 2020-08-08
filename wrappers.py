@@ -502,10 +502,10 @@ class Kitchen:
 
       if self.predict_val:
         self.sim_params += [new_value]
-      elif self.mean_only:
-        self.sim_params += [mean]
       else:
-        self.sim_params += [mean, range]
+        self.sim_params += [mean]
+      self.distribution_mean += [mean]
+      self.distribution_range += [range]
 
   def set_workspace_bounds(self, bounds):
     if bounds == 'no_restrictions':
@@ -540,9 +540,13 @@ class Kitchen:
 
   def apply_dr(self):
     self.sim_params = []
+    self.distribution_mean = []
+    self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape, dtype=np.float32)
+        self.distribution_mean = self.get_dr()
+        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
@@ -980,6 +984,8 @@ class Kitchen:
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if done else 0.0
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
 
     if not self.early_termination:
       done = False
@@ -1028,6 +1034,8 @@ class Kitchen:
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
 
   def render(self, size=None, *args, **kwargs):
@@ -1102,16 +1110,19 @@ class MetaWorld:
         except:
           param[indices:indices+1] = new_value
 
-      if self.mean_only:
-        self.sim_params += [mean]
-      else:
-        self.sim_params += [mean, range]
+      self.sim_params += [mean]
+      self.distribution_mean += [mean]
+      self.distribution_range += [range]
 
   def apply_dr(self):
     self.sim_params = []
+    self.distribution_mean = []
+    self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
+        self.distribution_mean = self.get_dr()
+        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
 
     model = self._env.sim.model
@@ -1183,7 +1194,6 @@ class MetaWorld:
 
       for dr_param in self.dr_list:
         arr, indices = dr_update_dict[dr_param]
-        print(dr_param, arr, indices)
         self.update_dr_param(arr, dr_param, indices=indices)
 
     elif 'basketball' in self.name:
@@ -1254,9 +1264,13 @@ class MetaWorld:
     obs['image'] = self.render()
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if info['success'] else 0.0
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
 
     if not self.early_termination:
       done = False
@@ -1402,6 +1416,10 @@ class MetaWorld:
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
 
   def get_state(self, state_obs):
@@ -1491,18 +1509,21 @@ class DeepMindControl:
         except:
           param[indices:indices+1] = new_value
 
-      if self.mean_only:
-        self.sim_params += [mean]
-      else:
-        self.sim_params += [mean, range]
+      self.sim_params += [mean]
+      self.distribution_mean += [mean]
+      self.distribution_range += [range]
 
 
   def apply_dr(self):
     self.sim_params = []
+    self.distribution_mean = []
+    self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
         self.sim_params = np.zeros(self.dr_shape)
-      return  # TODO: start using XPOS_INDICES or equivalent for joints.
+        self.distribution_mean = self.get_dr()
+        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      return
 
     model = self._env.physics.model
     if 'cup_catch' in self.task:
@@ -1708,6 +1729,8 @@ class DeepMindControl:
         obs['dr_params'] = self.get_dr()
       if self.sparse_reward:
         obs['success'] = 1.0 if reward > 0 else 0.0
+      obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+      obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
       self.min_reward = min(self.min_reward, reward)
 
     except PhysicsError as e:
@@ -1744,6 +1767,8 @@ class DeepMindControl:
       obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 0.0
+      obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+      obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
 
   def render(self, *args, **kwargs):
