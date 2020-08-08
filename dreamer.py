@@ -1341,8 +1341,8 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
         load_dataset(dataset_datadir / "episodes" / "test_med", config)))
       test_high_dataset = iter(strategy.experimental_distribute_dataset(
         load_dataset(dataset_datadir / "episodes" / "test_high", config)))
-      test_full_dataset = iter(strategy.experimental_distribute_dataset(
-        load_dataset(dataset_datadir / "episodes" / "test_full", config)))
+      test_all_dataset = iter(strategy.experimental_distribute_dataset(
+        load_dataset(dataset_datadir / "episodes" / "test_all", config)))
     except:
       test_dataset = iter(strategy.experimental_distribute_dataset(
         load_dataset(dataset_datadir / "episodes" / "test", config)))
@@ -1405,7 +1405,7 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
       step = agent._step.numpy().item()
 
       if test_low_dataset is not None:
-        eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_full_dataset], writer, step, last_only=config.last_param_pred_only)
+        eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_all_dataset], writer, step, last_only=config.last_param_pred_only)
       else:
         eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
       writer.flush()
@@ -1450,7 +1450,7 @@ def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_onl
     predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step)
     predict_OL1_offline(agent, test_datasets[1], writer, last_only, "test_med", step)
     predict_OL1_offline(agent, test_datasets[2], writer, last_only, "test_high", step)
-    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_full", step)
+    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_all", step)
 
   else:
     predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step)
