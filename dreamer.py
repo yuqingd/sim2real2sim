@@ -1488,6 +1488,7 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
   else:
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
     sim_param_real = data['sim_params']
+    distribution_mean = np.zeros_like(sim_param_real)
 
   assert np.array_equal(np.min(sim_param_real, axis=1), np.max(sim_param_real, axis=1))
   if last_only:
@@ -1496,15 +1497,11 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
     sim_param_real = sim_param_real[:, -1]
   else:
     sim_param_pred = np.mean(sim_param_pred, axis=1)
-    if agent._c.binary_prediction:
-      distribution_mean = np.mean(distribution_mean, axis=1)
+    distribution_mean = np.mean(distribution_mean, axis=1)
     sim_param_real = np.mean(sim_param_real, axis=1)
 
   for i, param in enumerate(agent._c.real_dr_list):
-    if agent._c.binary_prediction:
-      distribution_mean_i = distribution_mean[:, i]
-    else:
-      distribution_mean_i = 0
+    distribution_mean_i = distribution_mean[:, i]
     pred_mean = sim_param_pred[:, i]
     real_mean = sim_param_real[:, i]
     if range_only:
