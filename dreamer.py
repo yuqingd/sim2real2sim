@@ -590,14 +590,14 @@ def config_debug(config):
   config.batch_length = 6
   config.update_target_every = 1
 
-  config.num_real_episodes = 2
-  config.num_sim_episodes = 6
-  config.num_dr_steps = 3
+  config.num_real_episodes = 3
+  config.num_sim_episodes = 3
+  config.num_dr_steps = 1 if config.range_only else 3
   config.starting_mean_scale = 5
   config.starting_range_scale = 1
   config.ending_mean_scale = 1
   config.ending_range_scale = .1
-  # config.minimal = True
+  config.minimal = True
 
   return config
 
@@ -1496,15 +1496,15 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
     distribution_mean = distribution_mean[:, -1]
     sim_param_real = sim_param_real[:, -1]
   else:
-    sim_param_pred = np.mean(sim_param_pred, axis=1)
-    distribution_mean = np.mean(distribution_mean, axis=1)
-    sim_param_real = np.mean(sim_param_real, axis=1)
+    sim_param_pred = np.round(np.mean(sim_param_pred, axis=1))
+    distribution_mean = np.round(np.mean(distribution_mean, axis=1))
+    sim_param_real = np.round(np.mean(sim_param_real, axis=1))
 
   for i, param in enumerate(agent._c.real_dr_list):
     distribution_mean_i = distribution_mean[:, i]
     pred_mean = sim_param_pred[:, i]
     real_mean = sim_param_real[:, i]
-    if range_only:
+    if range_only and not agent._c.binary_prediction:
       if log_prefix == 'train':
         if 'kettle_mass' in param:
           real_mean = 1.15
