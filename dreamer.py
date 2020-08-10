@@ -1482,7 +1482,16 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
 
   if agent._c.binary_prediction:
     sim_param_pred = tf.cast(tf.round(agent._sim_params(feat).mean()), dtype=tf.int32)
-    sim_param_real = tf.cast(data['sim_params'] > data['distribution_mean'], tf.int32)
+    if range_only:
+      # TODO: this is a hacky fix for the range test.  Remove this afterwards
+      param = agent._c.real_dr_list[0]
+      if 'kettle_mass' in param:
+        real_mean_value = 1.15
+      elif '_b' in param or '_r' in param or '_g' in param:
+        real_mean_value = 0.5
+    else:
+      real_mean_value = data['distribution_mean']
+    sim_param_real = tf.cast(data['sim_params'] > real_mean_value, tf.int32)
     distribution_mean = data['distribution_mean']
 
   else:
@@ -1534,15 +1543,11 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
     with writer.as_default():
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-      if not np.mean(real_mean) == 0:
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                          step)
-
-    if agent._c.binary_prediction:
-      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(pred_mean == real_mean), step)
-    elif not np.mean(distribution_mean_i) == 0:
-      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
-                        np.mean((pred_mean - real_mean) / distribution_mean_i), step)
+      if agent._c.binary_prediction:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(1 - (pred_mean == real_mean)), step)
+      elif not np.mean(distribution_mean_i) == 0:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                          np.mean((pred_mean - real_mean) / distribution_mean_i), step)
 
 def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
   predict_OL1(agent, eval_envs, writer, step, log_prefix="test", last_only=last_only)
