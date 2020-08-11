@@ -1551,7 +1551,7 @@ def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
       tf.summary.scalar(f'agent-sim_param/{param}/real_mean', real_mean, step)
 
 
-def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
+def predict_OL1(agent, envs, writer, step, log_prefix, last_only, distribution_mean):
   real_pred_sim_params = tools.simulate_real(
     functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1,
     last_only=last_only)
@@ -1561,7 +1561,6 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
     real_pred_sim_params = tf.exp(real_pred_sim_params)
 
   real_params = envs[0].get_dr()
-  distribution_mean = np.array(envs[0].distribution_mean, np.float32)
 
   for i, param in enumerate(config.real_dr_list):
     try:
@@ -1575,12 +1574,15 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
 
       real_dr_param = real_params[i]
 
-      if not real_dr_param == 0:
-        if agent._c.binary_prediction:
-          labels = real_dr_param > distribution_mean[i]
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
+      if agent._c.binary_prediction:
+        labels = real_dr_param > distribution_mean[i]
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
+      else:
+        if distribution_mean[i] == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                            (pred_mean - real_dr_param), step)
         else:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
                             (pred_mean - real_dr_param) / distribution_mean[i], step)
     writer.flush()
 
@@ -1757,7 +1759,11 @@ def main(config):
 
     #after train, update sim params
     elif config.outer_loop_version == 1:
-      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only)
+      distribution_mean = np.array(train_sim_envs[0].distribution_mean, np.float32)
+      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only,
+                  distribution_mean=distribution_mean)
+      predict_OL1(agent, test_envs, writer, step, "test", last_only=config.last_param_pred_only,
+                  distribution_mean=distribution_mean)
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
         episodes=1, last_only=config.last_param_pred_only)
@@ -1777,11 +1783,10 @@ def main(config):
               pred_mean = real_pred_sim_params[i]
             except:
               pred_mean = real_pred_sim_params
-              print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
             if config.binary_prediction:
-              new_mean = prev_mean + alpha * np.mean(real_pred_sim_params)  # TODO: tune this
+              new_mean = prev_mean + alpha * (np.mean(real_pred_sim_params) - 0.5)  # TODO: tune this
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             if config.mean_only:
@@ -1796,12 +1801,15 @@ def main(config):
               real_dr_param = config.real_dr_params[param]
               if config.binary_prediction:
                 label = real_dr_param > distribution_mean[i]
-                tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                tf.summary.scalar(f'agent-sim_param/{param}/_error',
                                   np.mean(real_pred_sim_params == label), step)
               else:
                 if not np.mean(distribution_mean) == 0:
-                  tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
                                     (new_mean - real_dr_param) / distribution_mean[i], step)
+                else:
+                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
+                                    (new_mean - real_dr_param), step)
               writer.flush()
 
           env.apply_dr()
