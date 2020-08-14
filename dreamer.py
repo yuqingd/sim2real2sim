@@ -325,6 +325,11 @@ def config_dr(config):
         }
         if dr_option == 'partial_dr':
           config.real_dr_list = ["cabinet_friction", "cabinet_mass", "kettle_friction", "kettle_mass", "stove_friction"]
+          config.real_dr_list = [
+            "cabinet_b", "cabinet_g", "cabinet_mass", "cabinet_r", "joint7_damping", "kettle_b",
+            "kettle_g", "kettle_mass", "kettle_r", "lighting", "microwave_b", "kettle_friction",
+            "microwave_g", "microwave_mass", "microwave_r", "robot_b", "robot_g", "robot_r", "stove_b", "stove_g", "stove_r",
+          ]
         elif dr_option == 'all_dr':
           config.real_dr_list = [
             "cabinet_b", "cabinet_friction", "cabinet_g", "cabinet_mass", "cabinet_r", "joint1_damping", "joint2_damping",
