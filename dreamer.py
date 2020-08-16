@@ -154,8 +154,8 @@ def define_config():
   # these values are for testing dmc_cup_catch
   config.mass_mean = 0.2
   config.mass_range = 0.01
-  config.mean_scale = 0.1
-  config.range_scale = 0.1
+  config.mean_scale = 0.67
+  config.range_scale = 0.33
   config.mean_only = False
   config.predict_val = True
   config.range_only = False
@@ -328,6 +328,11 @@ def config_dr(config):
         }
         if dr_option == 'partial_dr':
           config.real_dr_list = ["cabinet_friction", "cabinet_mass", "kettle_friction", "kettle_mass", "stove_friction"]
+          config.real_dr_list = [
+            "cabinet_b", "cabinet_g", "cabinet_mass", "cabinet_r", "joint7_damping", "kettle_b",
+            "kettle_g", "kettle_mass", "kettle_r", "lighting", "microwave_b", "kettle_friction",
+            "microwave_g", "microwave_mass", "microwave_r", "robot_b", "robot_g", "robot_r", "stove_b", "stove_g", "stove_r",
+          ]
         elif dr_option == 'all_dr':
           config.real_dr_list = [
             "cabinet_b", "cabinet_friction", "cabinet_g", "cabinet_mass", "cabinet_r", "joint1_damping", "joint2_damping",
@@ -593,14 +598,15 @@ def config_debug(config):
   config.batch_length = 6
   config.update_target_every = 1
 
-  config.num_real_episodes = 2
-  config.num_sim_episodes = 6
-  config.num_dr_steps = 3
+  config.num_real_episodes = 20
+  config.num_sim_episodes = 20
+  # config.range_only = True
+  config.num_dr_steps = 1 if config.range_only else 3
   config.starting_mean_scale = 5
   config.starting_range_scale = 1
   config.ending_mean_scale = 1
   config.ending_range_scale = .1
-  # config.minimal = True
+  config.minimal = False
 
   return config
 
@@ -1319,7 +1325,28 @@ def generate_dataset(config, sim_envs, real_envs):
       tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
 
   else:
-    real_envs[0].set_dataset_step("test")
+    # Dataset format is (name, mean_multiplier, range_multiplier)
+    datasets = [
+      ("test_med", 1, config.range_scale),
+      ("test_low", (1 - config.mean_scale), config.range_scale),
+      ("test_high", (1 + config.mean_scale), config.range_scale),
+      ("test_all", 1, 1),
+    ]
+    for name, mean_scale, range_scale in datasets:
+      dr = {}
+      for param in real_dr_list:
+        real_param = config.real_dr_params[param]
+        dr[param] = (real_param * mean_scale, real_param * range_scale)
+      for env in sim_envs:
+        env.reset()
+        env.set_dr(dr)
+        env.apply_dr()
+        env.set_dataset_step(name)
+        tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
+
+
+
+    real_envs[0].set_dataset_step("actual_test_set")
     tools.simulate(bot_agent, real_envs, dataset=None, episodes=num_real_episodes)
 
   # Collect validation dataset
@@ -1327,7 +1354,7 @@ def generate_dataset(config, sim_envs, real_envs):
   tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
 
 
-def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
+def train_with_offline_dataset(config, datadir, writer):
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
@@ -1370,42 +1397,8 @@ def train_with_offline_dataset(config, datadir, writer, train_envs, test_envs):
     print(config.logdir / 'variables.pkl')
     print((config.logdir / 'variables.pkl').exists())
 
-  real_dr_list = dataset_config.real_dr_list
-  real_dr = dataset_config.real_dr_params
-  num_dr_steps = dataset_config.num_dr_steps
-  starting_mean_scale = dataset_config.starting_mean_scale
-  starting_range_scale = dataset_config.starting_range_scale
-  ending_mean_scale = dataset_config.ending_mean_scale
-  ending_range_scale = dataset_config.ending_range_scale
-  if num_dr_steps > 1:
-    mean_step_size = (ending_mean_scale - starting_mean_scale) / (num_dr_steps - 1)
-    range_step_size = (ending_range_scale - starting_range_scale) / (num_dr_steps - 1)
-  else:
-    mean_step_size = range_step_size = 0
-  curr_mean_scale = float(starting_mean_scale)
-  curr_range_scale = float(starting_range_scale)
-
   # Loop
   for i in range(dataset_config.num_dr_steps):
-    dr = {}
-    for param in real_dr_list:
-      val = real_dr[param]
-      if dataset_config.mean_only:
-        dr[param] = val * curr_mean_scale
-      elif config.range_only:
-        if 'kettle_mass' in param:
-          dr[param] = (1.15, 0.35)
-        elif '_b' in param or '_r' in param or '_g' in param:
-          dr[param] = (0.5, 0.17)
-      else:
-        dr[param] = (val * curr_mean_scale, val * curr_range_scale)
-    print("DR", dr, dataset_config.mean_only, config.mean_only)
-    for env in train_envs:
-      env.set_dr(dr)
-      env.apply_dr()
-
-    curr_mean_scale += mean_step_size
-    curr_range_scale += range_step_size
 
     train_dataset = iter(strategy.experimental_distribute_dataset(
       load_dataset(dataset_datadir / "episodes" / str(i), config)))
@@ -1457,95 +1450,90 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
 
 
 def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):  # kangaroo
+  train_distribution = next(train_dataset)['distribution_mean']
   if isinstance(test_datasets, list):
-    predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step)
-    predict_OL1_offline(agent, test_datasets[1], writer, last_only, "test_med", step)
-    predict_OL1_offline(agent, test_datasets[2], writer, last_only, "test_high", step)
-    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_all", step)
+    predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step, train_distribution)
+    predict_OL1_offline(agent, test_datasets[1], writer, last_only, "test_med", step, train_distribution)
+    predict_OL1_offline(agent, test_datasets[2], writer, last_only, "test_high", step, train_distribution)
+    predict_OL1_offline(agent, test_datasets[3], writer, last_only, "test_all", step, train_distribution)
 
   else:
-    predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step)
+    predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step, train_distribution)
 
-  predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step)
+  predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step, train_distribution)
 
 
-def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step):
+def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, train_distribution_mean):
   data = next(dataset)
-  mean_only = agent._c.mean_only
-  range_only = agent._c.range_only
+  # range_only = agent._c.range_only
 
   if agent._c.random_crop:
     agent._random_crop(data)
 
   embed = agent._encode(data)
-  if 'state' in data:
+  if agent._c.use_state:
     embed = tf.concat([data['state'], embed], axis=-1)
   post, prior = agent._dynamics.observe(embed, data['action'])
   feat = agent._dynamics.get_feat(post)
 
   if agent._c.binary_prediction:
     sim_param_pred = tf.cast(tf.round(agent._sim_params(feat).mean()), dtype=tf.int32)
-    sim_param_real = tf.cast(data['sim_params'] > data['distribution_mean'], tf.int32)
-    distribution_mean = data['distribution_mean']
-
+    sim_param_real = tf.cast(data['sim_params'] > train_distribution_mean, tf.int32)
   else:
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
     sim_param_real = data['sim_params']
-    distribution_mean = np.zeros_like(sim_param_real)
 
   assert np.array_equal(np.min(sim_param_real, axis=1), np.max(sim_param_real, axis=1))
+  distribution_mean = train_distribution_mean[:, -1]
   if last_only:
     sim_param_pred = sim_param_pred[:, -1]
-    distribution_mean = distribution_mean[:, -1]
     sim_param_real = sim_param_real[:, -1]
   else:
     sim_param_pred = np.mean(sim_param_pred, axis=1)
-    distribution_mean = np.mean(distribution_mean, axis=1)
     sim_param_real = np.mean(sim_param_real, axis=1)
+    if agent._c.binary_prediction:
+      sim_param_pred = np.round(sim_param_pred)
+      sim_param_real = np.round(sim_param_real)
 
   for i, param in enumerate(agent._c.real_dr_list):
     distribution_mean_i = distribution_mean[:, i]
     pred_mean = sim_param_pred[:, i]
     real_mean = sim_param_real[:, i]
-    if range_only:
-      if log_prefix == 'train':
-        if 'kettle_mass' in param:
-          real_mean = 1.15
-        elif '_b' in param or '_r' in param or '_g' in param:
-          real_mean = 0.5
-
-      elif log_prefix == 'test_low':
-        if 'kettle_mass' in param:
-          real_mean = .45
-        elif '_b' in param or '_r' in param or '_g' in param:
-          real_mean = 0.17
-      elif log_prefix == 'test_med':
-        if 'kettle_mass' in param:
-          real_mean = 1.15
-        elif '_b' in param or '_r' in param or '_g' in param:
-          real_mean = 0.5
-      elif log_prefix == 'test_high':
-        if 'kettle_mass' in param:
-          real_mean = 1.85
-        elif '_b' in param or '_r' in param or '_g' in param:
-          real_mean = 0.83
-      elif log_prefix == 'test_all':
-        if 'kettle_mass' in param:
-          real_mean = 1.05
-        elif '_b' in param or '_r' in param or '_g' in param:
-          real_mean = 0.5
+    # if range_only and not agent._c.binary_prediction:
+    #   if log_prefix == 'train':
+    #     if 'kettle_mass' in param:
+    #       real_mean = 1.15
+    #     elif '_b' in param or '_r' in param or '_g' in param:
+    #       real_mean = 0.5
+    #
+    #   elif log_prefix == 'test_low':
+    #     if 'kettle_mass' in param:
+    #       real_mean = .45
+    #     elif '_b' in param or '_r' in param or '_g' in param:
+    #       real_mean = 0.17
+    #   elif log_prefix == 'test_med':
+    #     if 'kettle_mass' in param:
+    #       real_mean = 1.15
+    #     elif '_b' in param or '_r' in param or '_g' in param:
+    #       real_mean = 0.5
+    #   elif log_prefix == 'test_high':
+    #     if 'kettle_mass' in param:
+    #       real_mean = 1.85
+    #     elif '_b' in param or '_r' in param or '_g' in param:
+    #       real_mean = 0.83
+    #   elif log_prefix == 'test_all':
+    #     if 'kettle_mass' in param:
+    #       real_mean = 1.05
+    #     elif '_b' in param or '_r' in param or '_g' in param:
+    #       real_mean = 0.5
     with writer.as_default():
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
-      if not np.mean(real_mean) == 0:
-        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean((pred_mean - real_mean) / real_mean),
-                          step)
-
-    if agent._c.binary_prediction:
-      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(pred_mean == real_mean), step)
-    elif not np.mean(distribution_mean_i) == 0:
-      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
-                        np.mean((pred_mean - real_mean) / distribution_mean_i), step)
+      if agent._c.binary_prediction:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error', np.mean(1 - (pred_mean == real_mean)), step)
+      elif not np.mean(distribution_mean_i) == 0:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                          np.mean((pred_mean - real_mean) / distribution_mean_i), step)
 
 def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
   predict_OL1(agent, eval_envs, writer, step, log_prefix="test", last_only=last_only)
@@ -1571,7 +1559,7 @@ def eval_OL1(agent, eval_envs, train_envs, writer, step, last_only):
       tf.summary.scalar(f'agent-sim_param/{param}/real_mean', real_mean, step)
 
 
-def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
+def predict_OL1(agent, envs, writer, step, log_prefix, last_only, distribution_mean):
   real_pred_sim_params = tools.simulate_real(
     functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), envs, episodes=1,
     last_only=last_only)
@@ -1581,7 +1569,6 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
     real_pred_sim_params = tf.exp(real_pred_sim_params)
 
   real_params = envs[0].get_dr()
-  distribution_mean = np.array(envs[0].distribution_mean, np.float32)
 
   for i, param in enumerate(config.real_dr_list):
     try:
@@ -1595,12 +1582,15 @@ def predict_OL1(agent, envs, writer, step, log_prefix, last_only):
 
       real_dr_param = real_params[i]
 
-      if not real_dr_param == 0:
-        if agent._c.binary_prediction:
-          labels = real_dr_param > distribution_mean[i]
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
+      if agent._c.binary_prediction:
+        labels = real_dr_param > distribution_mean[i]
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error', np.mean(labels == pred_mean), step)
+      else:
+        if distribution_mean[i] == 0:
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                            (pred_mean - real_dr_param), step)
         else:
-          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_percent_error',
+          tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
                             (pred_mean - real_dr_param) / distribution_mean[i], step)
     writer.flush()
 
@@ -1636,7 +1626,7 @@ def main(config):
   actspace = train_sim_envs[0].action_space
 
   if config.use_offline_dataset:
-    train_with_offline_dataset(config, datadir, writer, train_sim_envs, test_envs)
+    train_with_offline_dataset(config, datadir, writer)
     print("Done with sim param learning!")
     return
 
@@ -1777,7 +1767,11 @@ def main(config):
 
     #after train, update sim params
     elif config.outer_loop_version == 1:
-      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only)
+      distribution_mean = np.array(train_sim_envs[0].distribution_mean, np.float32)
+      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only,
+                  distribution_mean=distribution_mean)
+      predict_OL1(agent, test_envs, writer, step, "test", last_only=config.last_param_pred_only,
+                  distribution_mean=distribution_mean)
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
         episodes=1, last_only=config.last_param_pred_only)
@@ -1797,11 +1791,10 @@ def main(config):
               pred_mean = real_pred_sim_params[i]
             except:
               pred_mean = real_pred_sim_params
-              print(f"Learned {param}", pred_mean)
             alpha = config.alpha
 
             if config.binary_prediction:
-              new_mean = prev_mean + alpha * np.mean(real_pred_sim_params)  # TODO: tune this
+              new_mean = prev_mean + alpha * (np.mean(real_pred_sim_params) - 0.5)  # TODO: tune this
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             if config.mean_only:
@@ -1816,12 +1809,15 @@ def main(config):
               real_dr_param = config.real_dr_params[param]
               if config.binary_prediction:
                 label = real_dr_param > distribution_mean[i]
-                tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                tf.summary.scalar(f'agent-sim_param/{param}/_error',
                                   np.mean(real_pred_sim_params == label), step)
               else:
                 if not np.mean(distribution_mean) == 0:
-                  tf.summary.scalar(f'agent-sim_param/{param}/percent_error',
+                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
                                     (new_mean - real_dr_param) / distribution_mean[i], step)
+                else:
+                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
+                                    (new_mean - real_dr_param), step)
               writer.flush()
 
           env.apply_dr()
