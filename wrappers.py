@@ -1414,7 +1414,6 @@ class MetaWorld:
 
   def reset(self):
     state_obs = self._env.reset()
-    import pdb; pdb.set_trace()
     self.apply_dr()
 
     obs = {}
