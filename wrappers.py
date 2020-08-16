@@ -1446,9 +1446,9 @@ class MetaWorld:
 
     if self.viewer is not None:
       self.viewer.update_sim(self._env.sim)
-      self.viewer.render(*self._size)
+      self.viewer.render(*size)
 
-      data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
+      data = self.viewer.read_pixels(*size, depth=self.use_depth)
       if self.use_depth:
         img, depth = data
         #img = img[::-1]
