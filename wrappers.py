@@ -1430,10 +1430,12 @@ class MetaWorld:
     else:
       raise NotImplementedError(self.use_state)
 
-  def render(self, *args, **kwargs):
+  def render(self, size=None, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    width, height = self._size
+    if size is None:
+      size = self._size
+    width, height = size
 
     if self.viewer is not None:
       self.viewer.update_sim(self._env.sim)
