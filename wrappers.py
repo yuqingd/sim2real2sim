@@ -1265,7 +1265,7 @@ class MetaWorld:
     if self.use_img:
       obs['image'] = self.render()
     else:
-      obs['image'] = np.zeros_like((self._size, 3))
+      obs['image'] = np.zeros_like((self._size + (3,)))
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 1:
@@ -1409,6 +1409,7 @@ class MetaWorld:
 
   def reset(self):
     state_obs = self._env.reset()
+    import pdb; pdb.set_trace()
     self.apply_dr()
 
     obs = {}
@@ -1418,7 +1419,7 @@ class MetaWorld:
     if self.use_img:
       obs['image'] = self.render()
     else:
-      obs['image'] = np.zeros_like((self._size, 3))
+      obs['image'] = np.zeros_like((self._size + (3,)))
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
