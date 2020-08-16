@@ -189,6 +189,7 @@ def define_config():
   # Using offline dataset
   config.use_offline_dataset = False
   config.datadir = "temp"
+  config.grayscale = True
 
 
 
@@ -327,7 +328,6 @@ def config_dr(config):
           "stove_r": 0.5,
         }
         if dr_option == 'partial_dr':
-          config.real_dr_list = ["cabinet_friction", "cabinet_mass", "kettle_friction", "kettle_mass", "stove_friction"]
           config.real_dr_list = [
             "cabinet_b", "cabinet_g", "cabinet_mass", "cabinet_r", "joint7_damping", "kettle_b",
             "kettle_g", "kettle_mass", "kettle_r", "lighting", "microwave_b", "kettle_friction",
@@ -341,6 +341,10 @@ def config_dr(config):
             "microwave_g",  "microwave_mass", "microwave_r", "robot_b", "robot_g",  "robot_r", "stove_b",
             "stove_friction",  "stove_g", "stove_r",
           ]
+        elif dr_option == 'dynamics_dr':
+          config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass", "kettle_friction"]
+        elif dr_option == 'dynamics_nonconflicting_dr':
+          config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass"]
         elif dr_option == 'visual':
           config.real_dr_list = ["stove_r"]
         elif dr_option == 'mass':
@@ -361,16 +365,13 @@ def config_dr(config):
 
 
       config.sim_params_size = len(config.real_dr_list)
-      if dr_option in ['all_dr', 'partial_dr', 'mass', 'visual', 'friction']:
-        mean_scale = config.mean_scale
-        range_scale = config.range_scale
-        config.dr = {}  # (mean, range)
-        for key, real_val in config.real_dr_params.items():
-          if real_val == 0:
-            real_val = 5e-2
-          config.dr[key] = (real_val * mean_scale, real_val * range_scale)
-      else:
-        raise NotImplementedError(dr_option)
+      mean_scale = config.mean_scale
+      range_scale = config.range_scale
+      config.dr = {}  # (mean, range)
+      for key, real_val in config.real_dr_params.items():
+        if real_val == 0:
+          real_val = 5e-2
+        config.dr[key] = (real_val * mean_scale, real_val * range_scale)
 
         #Keep mean only
     if config.mean_only and config.dr is not None:
@@ -886,7 +887,8 @@ class Dreamer(tools.Module):
     if self._c.use_depth:
       self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act, shape=(64,64,4))
     else:
-      self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act)
+      channels = 1 if self._c.grayscale else 3
+      self._decode = models.ConvDecoder(self._c.cnn_depth, cnn_act, shape=(64, 64, channels))
     self._reward = models.DenseDecoder((), 2, self._c.num_units, act=act)
     if self._c.outer_loop_version == 1:
       if self._c.binary_prediction:
@@ -1124,7 +1126,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              task=task, simple_randomization=False, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
-                             minimal=config.minimal)
+                             minimal=config.minimal, grayscale=config.grayscale)
     else:
       env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, predict_val=config.predict_val, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
@@ -1132,7 +1134,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
                              outer_loop_version=config.outer_loop_version, control_version=config.control_version,
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
-                             minimal=config.minimal)
+                             minimal=config.minimal, grayscale=config.grayscale)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
@@ -1140,13 +1142,13 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
       env = wrappers.MetaWorld(task, use_state=config.use_state, use_img=config.use_img, early_termination=config.early_termination,
                                real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                simple_randomization=False, outer_loop_version=config.outer_loop_version,
-                               use_depth=config.use_depth)
+                               use_depth=config.use_depth, grayscale=config.grayscale)
     else:
       env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state,  use_img=config.use_img, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, simple_randomization=config.simple_randomization,
                              outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
-      env = wrappers.ActionRepeat(env, config.action_repeat)
+      env = wrappers.ActionRepeat(env, config.action_repeat, grayscale=config.grayscale)
       env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':
     if config.dr is None or real_world:

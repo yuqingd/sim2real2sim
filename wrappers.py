@@ -157,7 +157,7 @@ class Kitchen:
                early_termination=False, use_state="None", step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
-               initial_randomization_steps=3, minimal=False, dataset_step=None):
+               initial_randomization_steps=3, minimal=False, dataset_step=None, grayscale=False):
     if 'rope' in task:
       distance = 1.5
       azimuth = 20
@@ -217,6 +217,7 @@ class Kitchen:
     self.has_microwave = False if minimal else True
     self.has_cabinet = False if minimal else True
     self.dataset_step = dataset_step
+    self.grayscale = grayscale
 
     self.apply_dr()
 
@@ -1045,12 +1046,15 @@ class Kitchen:
         size = self._size
     h, w = size
     img = self._env.render(width=w, height=h, mode='rgb_array')
+    if self.grayscale:
+      img = img[:, :, 0] * 0.2989 + img[:, :, 1] * 0.5870 * img[:, :, 2] + 0.1140
+      img = np.expand_dims(img, 2)
     return img
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
                real_world=False, dr=None, use_state="None", use_img=True, azimuth=160, distance=1.75, elevation=-20, use_depth=False,
-               dataset_step=None):
+               dataset_step=None, grayscale=False):
     from environments.metaworld.metaworld import ML1
     import random
     self._ml1 = ML1(name + "-v1")
@@ -1073,6 +1077,7 @@ class MetaWorld:
     self.dr = dr
     self.use_depth = use_depth
     self.dataset_step = dataset_step
+    self.grayscale = grayscale
 
     if self._env.viewer is None:
       from mujoco_py import MjRenderContextOffscreen
@@ -1438,16 +1443,21 @@ class MetaWorld:
     else:
       raise NotImplementedError(self.use_state)
 
-  def render(self, *args, **kwargs):
+  def render(self, size=None, *args, **kwargs):
     if kwargs.get('mode', 'rgb_array') != 'rgb_array':
       raise ValueError("Only render mode 'rgb_array' is supported.")
-    width, height = self._size
+    if size is None:
+      size = self._size
+    width, height = size
 
     if self.viewer is not None:
       self.viewer.update_sim(self._env.sim)
-      self.viewer.render(*self._size)
+      self.viewer.render(*size)
 
-      data = self.viewer.read_pixels(*self._size, depth=self.use_depth)
+      data = self.viewer.read_pixels(*size, depth=self.use_depth)
+      if self.grayscale:
+        data = data[:, :, 0] * 0.2989 + data[:, :, 1] * 0.5870 * data[:, :, 2] + 0.1140
+        data = np.expand_dims(data, 2)
       if self.use_depth:
         img, depth = data
         #img = img[::-1]
