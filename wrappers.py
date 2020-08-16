@@ -1049,7 +1049,7 @@ class Kitchen:
 
 class MetaWorld:
   def __init__(self, name, size=(64, 64), mean_only=False, early_termination=False, dr_list=[], simple_randomization=False, dr_shape=None, outer_loop_version=0,
-               real_world=False, dr=None, use_state="None", azimuth=160, distance=1.75, elevation=-20, use_depth=False,
+               real_world=False, dr=None, use_state="None", use_img=True, azimuth=160, distance=1.75, elevation=-20, use_depth=False,
                dataset_step=None):
     from environments.metaworld.metaworld import ML1
     import random
@@ -1069,6 +1069,7 @@ class MetaWorld:
     self.outer_loop_version = outer_loop_version
     self.real_world = real_world
     self.use_state = use_state
+    self.use_img = use_img
     self.dr = dr
     self.use_depth = use_depth
     self.dataset_step = dataset_step
@@ -1261,7 +1262,10 @@ class MetaWorld:
     obs['state'] = self._env._get_pos_goal()
     if self.use_state is not "None":
       obs['state'] = np.concatenate([obs['state'], self.get_state(state_obs)])
-    obs['image'] = self.render()
+    if self.use_img:
+      obs['image'] = self.render()
+    else:
+      obs['image'] = np.zeros_like((self._size, 3))
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 1:
@@ -1411,7 +1415,10 @@ class MetaWorld:
     obs['state'] = self._env._get_pos_goal()
     if self.use_state is not "None":
       obs['state'] = np.concatenate([obs['state'], self.get_state(state_obs)])
-    obs['image'] = self.render()
+    if self.use_img:
+      obs['image'] = self.render()
+    else:
+      obs['image'] = np.zeros_like((self._size, 3))
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()

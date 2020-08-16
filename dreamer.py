@@ -137,6 +137,7 @@ def define_config():
   config.expl_min = 0.0
   config.id = 'debug'
   config.use_state = 'None'  # Options are 'None', 'robot', or 'all'
+  config.use_img = True #no image only added for metaworld
   config.num_dr_grad_steps = 100
   config.control_version = 'mocap_ik'
   config.generate_videos = False  # If true, it doesn't train; just generates videos
@@ -167,6 +168,7 @@ def define_config():
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
+
   config.random_crop = False
   config.initial_randomization_steps = 3
   config.last_param_pred_only = False
@@ -187,6 +189,7 @@ def define_config():
   # Using offline dataset
   config.use_offline_dataset = False
   config.datadir = "temp"
+
 
 
   return config
@@ -1134,13 +1137,13 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.NormalizeActions(env)
   elif suite == 'metaworld':
     if config.dr is None or real_world:
-      env = wrappers.MetaWorld(task, use_state=config.use_state, early_termination=config.early_termination,
+      env = wrappers.MetaWorld(task, use_state=config.use_state, use_img=config.use_img, early_termination=config.early_termination,
                                real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                simple_randomization=False, outer_loop_version=config.outer_loop_version,
                                use_depth=config.use_depth)
     else:
       env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
-                             use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
+                             use_state=config.use_state,  use_img=config.use_img, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, simple_randomization=config.simple_randomization,
                              outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
       env = wrappers.ActionRepeat(env, config.action_repeat)
