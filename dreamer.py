@@ -926,11 +926,6 @@ class Dreamer(tools.Module):
       # in multi-GPU mode.
     if dataset is not None:
       self.train(next(dataset))
-    elif self._c.outer_loop_version in [0, 1]:
-      self.train(next(self._dataset))
-    else:
-      self.train(next(self._train_dataset_sim_only))
-      # self.train(next(self._train_dataset_combined))
       self.update_sim_params(next(self._real_world_dataset))
     if not self._c.use_offline_dataset:
       self.update_target(self._value, self._target_value)
@@ -1465,8 +1460,9 @@ def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_onl
   predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step, train_distribution)
 
 
-def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, train_distribution_mean):
-  data = next(dataset)
+def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, train_distribution_mean, data=None):
+  if data is None:
+    data = next(dataset)
   # range_only = agent._c.range_only
 
   if agent._c.random_crop:
@@ -1501,33 +1497,6 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, tra
     distribution_mean_i = distribution_mean[:, i]
     pred_mean = sim_param_pred[:, i]
     real_mean = sim_param_real[:, i]
-    # if range_only and not agent._c.binary_prediction:
-    #   if log_prefix == 'train':
-    #     if 'kettle_mass' in param:
-    #       real_mean = 1.15
-    #     elif '_b' in param or '_r' in param or '_g' in param:
-    #       real_mean = 0.5
-    #
-    #   elif log_prefix == 'test_low':
-    #     if 'kettle_mass' in param:
-    #       real_mean = .45
-    #     elif '_b' in param or '_r' in param or '_g' in param:
-    #       real_mean = 0.17
-    #   elif log_prefix == 'test_med':
-    #     if 'kettle_mass' in param:
-    #       real_mean = 1.15
-    #     elif '_b' in param or '_r' in param or '_g' in param:
-    #       real_mean = 0.5
-    #   elif log_prefix == 'test_high':
-    #     if 'kettle_mass' in param:
-    #       real_mean = 1.85
-    #     elif '_b' in param or '_r' in param or '_g' in param:
-    #       real_mean = 0.83
-    #   elif log_prefix == 'test_all':
-    #     if 'kettle_mass' in param:
-    #       real_mean = 1.05
-    #     elif '_b' in param or '_r' in param or '_g' in param:
-    #       real_mean = 0.5
     with writer.as_default():
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
@@ -1768,12 +1737,13 @@ def main(config):
         env.apply_dr()
 
     #after train, update sim params
-    elif config.outer_loop_version == 1:
-      distribution_mean = np.array(train_sim_envs[0].distribution_mean, np.float32)
-      predict_OL1(agent, train_sim_envs, writer, step, "train", last_only=config.last_param_pred_only,
-                  distribution_mean=distribution_mean)
-      predict_OL1(agent, test_envs, writer, step, "test", last_only=config.last_param_pred_only,
-                  distribution_mean=distribution_mean)
+    elif config.outer_loop_version == 1:  # Kangaroo
+      train_batch = next(agent._dataset)
+      test_batch = next(agent._real_world_dataset)
+      last_only = config.last_param_pred_only
+      train_distribution = train_batch['distribution_mean']
+      predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
+      predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
         episodes=1, last_only=config.last_param_pred_only)
@@ -1783,7 +1753,6 @@ def main(config):
         real_pred_sim_params = tf.exp(real_pred_sim_params)
       for env in train_sim_envs:
         if env.dr is not None:
-          distribution_mean = env.distribution_mean
           for i, param in enumerate(config.real_dr_list):
             if config.mean_only:
               prev_mean = env.dr[param]
@@ -1809,17 +1778,12 @@ def main(config):
               tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
 
               real_dr_param = config.real_dr_params[param]
-              if config.binary_prediction:
-                label = real_dr_param > distribution_mean[i]
-                tf.summary.scalar(f'agent-sim_param/{param}/_error',
-                                  np.mean(real_pred_sim_params == label), step)
+              if not np.mean(real_dr_param) == 0:
+                tf.summary.scalar(f'agent-sim_param/{param}/sim_param_error',
+                                  (new_mean - real_dr_param) /real_dr_param, step)
               else:
-                if not np.mean(distribution_mean) == 0:
-                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
-                                    (new_mean - real_dr_param) / distribution_mean[i], step)
-                else:
-                  tf.summary.scalar(f'agent-sim_param/{param}/_error',
-                                    (new_mean - real_dr_param), step)
+                tf.summary.scalar(f'agent-sim_param/{param}/sim_param_error',
+                                  (new_mean - real_dr_param), step)
               writer.flush()
 
           env.apply_dr()
