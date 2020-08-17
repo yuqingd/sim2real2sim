@@ -644,8 +644,8 @@ class Dreamer(tools.Module):
         else:
           self._dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c)))
-      self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-        load_dataset(datadir, self._c, use_sim=False, use_real=True)))
+        self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model(dataset)
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
