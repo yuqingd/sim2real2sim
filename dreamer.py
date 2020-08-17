@@ -343,6 +343,8 @@ def config_dr(config):
           ]
         elif dr_option == 'dynamics_dr':
           config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass", "kettle_friction"]
+        elif dr_option == 'friction_dr':
+          config.real_dr_list = ["kettle_friction", "cabinet_friction"],
         elif dr_option == 'dynamics_nonconflicting_dr':
           config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass"]
         elif dr_option == 'visual':
