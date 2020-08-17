@@ -156,7 +156,7 @@ def define_config():
   config.mass_range = 0.01
   config.mean_scale = 0.67
   config.range_scale = 0.33
-  config.mean_only = False
+  config.mean_only = True
   config.predict_val = True
   config.range_only = False
 
@@ -641,11 +641,11 @@ class Dreamer(tools.Module):
               load_dataset(datadir, self._c, use_sim=True, use_real=False)))
           # self._train_dataset_combined = iter(self._strategy.experimental_distribute_dataset(
           #   load_dataset(datadir, self._c, use_sim=True, use_real=True)))
-          self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
-              load_dataset(datadir, self._c, use_sim=False, use_real=True)))
         else:
           self._dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c)))
+      self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
+        load_dataset(datadir, self._c, use_sim=False, use_real=True)))
       self._build_model(dataset)
 
   def __call__(self, obs, reset, dataset=None, state=None, training=True):
@@ -926,6 +926,10 @@ class Dreamer(tools.Module):
       # in multi-GPU mode.
     if dataset is not None:
       self.train(next(dataset))
+    elif self._c.outer_loop_version in [0, 1]:
+      self.train(next(self._dataset))
+    else:
+      self.train(next(self._train_dataset_sim_only))
       self.update_sim_params(next(self._real_world_dataset))
     if not self._c.use_offline_dataset:
       self.update_target(self._value, self._target_value)
