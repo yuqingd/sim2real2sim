@@ -173,6 +173,7 @@ def define_config():
   config.random_crop = False
   config.initial_randomization_steps = 3
   config.last_param_pred_only = False
+  config.individual_loss_scale = True #True for scaling sim_param loss only, False for scaling sim_param and image+reward loss
   config.sim_params_loss_scale = 1e4
   config.binary_prediction = False
 
@@ -792,7 +793,7 @@ class Dreamer(tools.Module):
         sim_param_obj = sim_param_obj * (1 - data['real_world'])
         if self._c.last_param_pred_only:
           sim_param_obj = sim_param_obj[:, -1]
-        likes.sim_params = self._c.sim_params_loss_scale * tf.reduce_mean(sim_param_obj)
+        likes.sim_params = tf.reduce_mean(sim_param_obj)
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
@@ -802,6 +803,16 @@ class Dreamer(tools.Module):
       post_dist = self._dynamics.get_dist(post)
       div = tf.reduce_mean(tfd.kl_divergence(post_dist, prior_dist))
       div = tf.maximum(div, self._c.free_nats)
+
+      #weigh losses
+      if not self._c.individual_loss_scale:
+        assert self._c.sim_params_loss_scale <= 1
+        likes.sim_params *= self._c.sim_params_loss_scale
+      else:
+        likes.sim_params *= 1-self._c.sim_params_loss_scale
+        likes.reward *= self._c.sim_params_loss_scale
+        likes.image *= self._c.sim_params_loss_scale
+
       model_loss = self._c.kl_scale * div - sum(likes.values())
       model_loss /= float(self._strategy.num_replicas_in_sync)
 
