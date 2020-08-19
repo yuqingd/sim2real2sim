@@ -168,6 +168,7 @@ def define_config():
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
+  config.ol1_episodes = 1
 
   config.random_crop = False
   config.initial_randomization_steps = 3
@@ -761,6 +762,7 @@ class Dreamer(tools.Module):
       else:
         success_rate = tf.convert_to_tensor(-1)
       embed = self._encode(data)
+      img_embed = tf.identity(embed)
       if 'state' in data:
         embed = tf.concat([data['state'], embed], axis=-1)
       if 'dr_params' in data and self._c.outer_loop_version == 2:
@@ -1752,7 +1754,7 @@ def main(config):
       predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
-        episodes=1, last_only=config.last_param_pred_only)
+        episodes=config.ol1_episodes, last_only=config.last_param_pred_only)
       if config.binary_prediction:
         real_pred_sim_params = tf.round(real_pred_sim_params.mean())
       else:
