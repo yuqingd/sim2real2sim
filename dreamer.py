@@ -594,7 +594,7 @@ def config_debug(config):
   config.stoch_size = 3
   config.num_units = 4
   config.cnn_depth = 2
-  config.eval_every = 2
+  config.eval_every = 1
   config.log_every = 1
   config.train_every = 3
   config.pretrain = 3
