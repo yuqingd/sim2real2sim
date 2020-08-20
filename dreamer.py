@@ -805,10 +805,11 @@ class Dreamer(tools.Module):
       div = tf.maximum(div, self._c.free_nats)
 
       #weigh losses
-      if not self._c.individual_loss_scale:
-        assert self._c.sim_params_loss_scale <= 1
+      if self._c.individual_loss_scale:
         likes.sim_params *= self._c.sim_params_loss_scale
       else:
+        assert self._c.sim_params_loss_scale <= 1
+
         likes.sim_params *= 1-self._c.sim_params_loss_scale
         likes.reward *= self._c.sim_params_loss_scale
         likes.image *= self._c.sim_params_loss_scale
