@@ -191,7 +191,7 @@ def define_config():
   # Using offline dataset
   config.use_offline_dataset = False
   config.datadir = "temp"
-  config.grayscale = True
+  config.grayscale = False
 
 
 
@@ -592,7 +592,10 @@ def config_dr(config):
     for key, real_val in config.real_dr_params.items():
       if real_val == 0:
         real_val = 5e-2
-      config.dr[key] = (real_val * mean_scale, real_val * range_scale)
+      if config.mean_only:
+        config.dr[key] = real_val * mean_scale
+      else:
+        config.dr[key] = (real_val * mean_scale, real_val * range_scale)
     config.sim_params_size = len(config.real_dr_list)
 
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
@@ -625,7 +628,7 @@ def config_debug(config):
   config.stoch_size = 3
   config.num_units = 4
   config.cnn_depth = 2
-  config.eval_every = 1
+  config.eval_every = 2
   config.log_every = 1
   config.train_every = 3
   config.pretrain = 3
@@ -1192,11 +1195,11 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
   elif suite == 'dmc':
     if config.dr is None or real_world:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
-                                     simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version, mean_only=False)
+                                     simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version, mean_only=config.mean_only)
     else:
       env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      real_world=real_world, simple_randomization=config.simple_randomization,
-                                     outer_loop_type=config.outer_loop_version, mean_only=False)
+                                     outer_loop_type=config.outer_loop_version, mean_only=config.mean_only)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'atari':
@@ -1513,7 +1516,7 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, tra
     agent._random_crop(data)
 
   embed = agent._encode(data)
-  if agent._c.use_state:
+  if 'state' in data:
     embed = tf.concat([data['state'], embed], axis=-1)
   post, prior = agent._dynamics.observe(embed, data['action'])
   feat = agent._dynamics.get_feat(post)

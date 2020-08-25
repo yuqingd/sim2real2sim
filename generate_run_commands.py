@@ -58,6 +58,7 @@ sweep_params_1 = [
     [{"outer_loop_version": [1]}],
     [{"binary_prediction": [True]}],
     [{"alpha": [.05]}],
+    [{"grayscale": [False]}],
     [{"ol1_episodes": [10]}],
     [{"individual_loss_scale": [False]}],
     [{"sim_params_loss_scale": [.001]}],
