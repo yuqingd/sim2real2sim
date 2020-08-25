@@ -545,7 +545,7 @@ class Kitchen:
     self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.ones(self.dr_shape, dtype=np.float32)
+        self.sim_params = self.get_dr()
         self.distribution_mean = self.get_dr()
         self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
@@ -1126,7 +1126,7 @@ class MetaWorld:
     self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.ones(self.dr_shape)
+        self.sim_params = self.get_dr()
         self.distribution_mean = self.get_dr()
         self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
@@ -1537,7 +1537,7 @@ class DeepMindControl:
     self.distribution_range = []
     if self.dr is None or self.real_world:
       if self.outer_loop_version == 1:
-        self.sim_params = np.ones(self.dr_shape)
+        self.sim_params = self.get_dr()
         self.distribution_mean = self.get_dr()
         self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
