@@ -7,33 +7,26 @@ PRESENT = 'present'
 ABSENT = 'absent'
 
 # This is to grid search. If you don't want to grid search, manually write in the param_args list.
-starting_id = 2292
+starting_id = 2452
 
 sweep_params_1 = [
-   [{"task": ["kitchen_open_cabinet",
-              "kitchen_push_kettle_burner",
-              "kitchen_rope",
-              ],
-     "horizon": [8, 25],
-     "time_limit": [250, 500],
-     },
-
-    {"task": ["metaworld_faucet-open",
-              "metaworld_stick-push",
-              "metaworld_stick-pull",
-              "metaworld_hammer",
-              "metaworld_plate-slide-back",
-              "metaworld_drawer-open",
-              "metaworld_box-close",
-
-              ]}
-
+    [{"task": ["kitchen_push_kettle_burner"]}],
+    [{"time_limit": [250]}],
+    [{"outer_loop_version": [1]}],
+    [{"binary_prediction": [True], "alpha": [.01, .05, .1]},
+     {"binary_prediction": [False], "alpha": [.01, .1, .5]},
     ],
-    [{"seed": [0, 1, 2]}],
-    [{"real_world_prob": [0]}],
-    [{"sample_real_every": [3e6]}],
+    [{"ol1_episodes": [1, 20]}],
+    [{"individual_loss_scale": [False], "sim_params_loss_scale": [0.001, 0.01, 0.1, 0.5, 0.9]},
+     {"individual_loss_scale": [True], "sim_params_loss_scale": [0.1, 1, 10, 100]}],
+
+    [{"task": ["kitchen_push_kettle_burner"]}],
+    [{"seed": [0, 1]}],
     [{"log_images": [False]}],
     [{"early_termination": [False]}],
+    [{"eval_every": [1e3, 1e2]}],
+    [{"dr": [PRESENT]}],
+    [{"dr_option": ["dynamics_nonconflicting_dr"]}],
 ]
 
 sweep_params_list = [
