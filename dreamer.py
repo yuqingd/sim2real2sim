@@ -294,6 +294,13 @@ def config_dr(config):
             "box6_b", "box7_r",  "box7_g", "box7_b", "box8_r", "box8_g", "box8_b", "rope_damping", "rope_friction",
             "rope_stiffness", "lighting",
           ]
+        elif dr_option == 'nonconflicting_dr':
+          config.real_dr_list = [
+            "joint7_damping",  "robot_b",  "robot_g", "robot_r", "cylinder_b", "cylinder_g",
+            "cylinder_r", "cylinder_mass", "box1_r", "box1_g", "box1_b", "box2_r", "box2_g", "box2_b", "box3_r",
+            "box3_g", "box3_b", "box4_r",  "box4_g",  "box4_b", "box5_r", "box5_g", "box5_b", "box6_r", "box6_g",
+            "box6_b", "box7_r",  "box7_g", "box7_b", "box8_r", "box8_g", "box8_b", "rope_damping", "lighting",
+          ]
 
       else:
         config.real_dr_params = {
@@ -349,6 +356,10 @@ def config_dr(config):
           config.real_dr_list = ["kettle_friction", "cabinet_friction"]
         elif dr_option == 'dynamics_nonconflicting_dr':
           config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass"]
+        elif dr_option == 'nonconflicting_dr':
+          config.real_dr_list = ["cabinet_mass", "joint7_damping", "kettle_mass", "cabinet_b", "cabinet_g", "cabinet_r",
+                                 "kettle_b", "kettle_g", "kettle_r", "lighting", "microwave_b", "microwave_g",
+                                 "microwave_r", "robot_b", "robot_g",  "robot_r", "stove_b",  "stove_g", "stove_r"]
         elif dr_option == 'visual':
           config.real_dr_list = ["stove_r"]
         elif dr_option == 'mass':
@@ -481,6 +492,12 @@ def config_dr(config):
         "ball_g": .5,
         "ball_b": .5,
       }
+      if dr_option == 'all_dr':
+        config.real_dr_list = list(real_dr_values.keys())
+      elif dr_option == 'nonconflicting_dr':
+        config.real_dr_list = [
+          "cup_mass", "ball_mass", "cup_r", "cup_g", "cup_b", "ball_r", "ball_g", "ball_b",
+        ]
     elif "walker" in config.task:
       real_dr_values = {
         "torso_mass": 10.3,
@@ -503,6 +520,13 @@ def config_dr(config):
         "body_g": .5,
         "body_b": .5,
       }
+      if dr_option == 'all_dr':
+        config.real_dr_list = list(real_dr_values.keys())
+      elif dr_option == 'nonconflicting_dr':
+        config.real_dr_list = [
+          "right_hip", "right_knee", "right_ankle", "left_hip", "left_knee", "left_ankle", "ground_r", "ground_g",
+          "ground_b", "body_r", "body_g", "body_b"
+        ]
     elif "finger" in config.task:
       real_dr_values = {
         "proximal_mass": .805,
@@ -521,6 +545,13 @@ def config_dr(config):
         "hotdog_g": .5,
         "hotdog_b": .5,
       }
+      if dr_option == 'all_dr':
+        config.real_dr_list = list(real_dr_values.keys())
+      elif dr_option == 'nonconflicting_dr':
+        config.real_dr_list = [
+          "proximal_mass", "distal_mass", "spinner_mass", "ground_r", "ground_g", "ground_b", "finger_r", "finger_g",
+          "finger_b", "hotdog_r", "hotdog_g", "hotdog_b",
+        ]
     elif "cheetah" in config.task:
       real_dr_values = {
         "torso_mass": 6.36,
