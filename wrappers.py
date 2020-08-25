@@ -75,7 +75,7 @@ class RealWorldRL:
         except:
           param[indices:indices+1] = new_value
 
-      self.sim_params += [mean]
+      self.sim_params += [new_value]
       self.distribution_mean += [mean]
       self.distribution_range += [range]
 
