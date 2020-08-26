@@ -157,7 +157,7 @@ def define_config():
   config.mean_scale = 0.67
   config.range_scale = 0.33
   config.mean_only = True
-  config.anneal_range_scale = 10 #if > 0, start at anneal_range_scale*mean and anneal to 0.1*mean over total_steps
+  config.anneal_range_scale = 1 #if > 0, start at anneal_range_scale*mean and anneal to 0.1*mean over total_steps
   config.predict_val = True
   config.range_only = False
 
