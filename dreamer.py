@@ -1741,7 +1741,10 @@ def main(config):
     tools.simulate(
         functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
+    train_batch = next(agent._sim_dataset)
+    test_batch = next(agent._real_world_dataset)
     last_only = config.last_param_pred_only
+    train_distribution = train_batch['distribution_mean']
     predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
     predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
 
