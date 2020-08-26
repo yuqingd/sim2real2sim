@@ -860,11 +860,12 @@ class Dreamer(tools.Module):
       div = tf.reduce_mean(tfd.kl_divergence(post_dist, prior_dist))
       div = tf.maximum(div, self._c.free_nats)
 
-      #weigh losses
-      if self._c.individual_loss_scale:
-        likes.sim_params *= self._c.sim_params_loss_scale
-      else:
-        assert self._c.sim_params_loss_scale <= 1
+      # weigh losses
+      if self._c.outer_loop_version == 1:
+        if self._c.individual_loss_scale:
+          likes.sim_params *= self._c.sim_params_loss_scale
+        else:
+          assert self._c.sim_params_loss_scale <= 1
 
         likes.sim_params *= 1-self._c.sim_params_loss_scale
         likes.reward *= self._c.sim_params_loss_scale
@@ -1658,12 +1659,9 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0 or config.outer_loop_version in [1, 2] or config.generate_dataset:
-    train_real_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
-                  for _ in range(config.envs)]
-  else:
-    train_real_envs = None
+  train_real_envs = [wrappers.Async(lambda: make_env(
+    config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
+                for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
@@ -1712,11 +1710,7 @@ def main(config):
   if num_real_prefill == 0:
     num_real_prefill += 1
   print(f'Prefill dataset with {num_real_prefill} real world steps.')
-  if train_real_envs is None:
-    envs = test_envs
-  else:
-    envs = train_real_envs
-  tools.simulate(random_agent, envs, dataset, episodes=10)#, steps=num_real_prefill)
+  tools.simulate(random_agent, train_real_envs, dataset, episodes=1, steps=num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
   #update_target_step_target = config.update_target_every * config.time_limit
