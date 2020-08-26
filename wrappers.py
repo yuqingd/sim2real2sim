@@ -2125,17 +2125,28 @@ class DeepMindControl:
 
 
 class Dummy:
-
-  def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False):
-    self.mass = 3.0
-    self._size = size
+  def __init__(self, real_world=False, dr=None, dr_shape=None, outer_loop_version=0, dr_list=[], mean_only=False, dataset_step=None):
+    self.square_size = 4
+    self.speed_multiplier = 10
+    self.square_r = 0.5
+    self.square_g = 0.5
+    self.square_b = 0.0
     self.real_world = real_world
-    self.left_half = np.random.uniform(low=-3., high=0.)
-    self.right_half = np.random.uniform(low=-3., high=0.)
     self.dr = dr
+    self.outer_loop_version = outer_loop_version
+    self.dr_list = dr_list
+    self.dr_shape = dr_shape
+    self.mean_only = mean_only
+    self.dataset_step = dataset_step
     self.apply_dr()
 
-  def apply_dr(self):
+  def set_dataset_step(self, step):
+    self.dataset_step = step
+
+  def get_dr(self):
+    return np.array([self.square_size, self.speed_multiplier, self.square_r, self.square_g, self.square_b])
+
+  def apply_dr(self):  # TODO: copy this!
     if self.dr is None or self.real_world:
       return
     if "body_mass" in self.dr:
@@ -2144,51 +2155,93 @@ class Dummy:
       self.mass = max(np.random.uniform(low=mean-range, high=mean+range), eps)
 
 
+  def update_dr_param(self, param_name, eps=1e-3):
+    if self.mean_only:
+      mean = self.dr[param_name]
+      range = max(0.3 * mean, eps) #TODO: Note that this is 2x the default.  It's higher b/c I want ranges to include at least a couple different square sizes
+    else:
+      mean, range = self.dr[param_name]
+      range = max(range, eps)
+    new_value = np.random.uniform(low=max(mean - range, eps), high=max(mean + range, 2 * eps))
+    self.sim_params += [new_value]
+    self.distribution_mean += [mean]
+    self.distribution_range += [range]
+    return new_value
+
+
+  def apply_dr(self):
+    self.sim_params = []
+    self.distribution_mean = []
+    self.distribution_range = []
+    if self.dr is None or self.real_world:
+      if self.outer_loop_version == 1:
+        self.sim_params = np.zeros(self.dr_shape)
+        self.distribution_mean = self.get_dr()
+        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      return
+    self.square_size = self.update_dr_param('square_size')
+    self.speed_multiplier = self.update_dr_param('speed_multiplier')
+    self.square_r = self.update_dr_param('square_r')
+    self.square_g = self.update_dr_param('square_g')
+    self.square_b = self.update_dr_param('square_b')
+
+
   @property
   def observation_space(self):
     spaces = {}
-    # for key, value in self._env.observation_spec().items():
-    #   spaces[key] = gym.spaces.Box(
-    #       -np.inf, np.inf, value.shape, dtype=np.float32)
     spaces['image'] = gym.spaces.Box(
         0, 255, self._size + (3,), dtype=np.uint8)
     return gym.spaces.Dict(spaces)
 
   @property
   def action_space(self):
-    return gym.spaces.Box(np.array([-5, -5]), np.array([5, 5]), dtype=np.float32)
+    return gym.spaces.Box(np.array([-1, -1]), np.array([1, 1]), dtype=np.float32)
 
   def step(self, action):
-    self.left_half += action[0] * .05
-    self.right_half += self.mass * .01
+    x_update = action[0] * self.speed_multiplier
+    y_update = action[0] * self.speed_multiplier
+    self.square_x += x_update
+    self.square_y += y_update
     obs = {}
     obs['image'] = self.render()
-    if np.abs(self.left_half - self.right_half) < .05:
-      reward = 1.0
-    else:
-      reward = 0.0
+    reward = - (np.abs(self.square_x) + np.abs(self.square_y))
     done = False
     info = {}
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['mass'] = self.mass
-    obs['success'] = 1.0 if reward > 0 else 0.0
+    obs['success'] = 1.0 if reward > -4 else 0.0
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    if self.outer_loop_version == 2:
+      obs['dr_params'] = self.get_dr()
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs, reward, done, info
 
   def reset(self):
     self.apply_dr()
-    self.left_half = np.random.uniform(low=-3., high=0.)
-    self.right_half = np.random.uniform(low=-3., high=0.)
+    self.square_x = np.random.uniform(low=10., high=50.)
+    self.square_y = np.random.uniform(low=10., high=50.)
     obs = {}
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    obs['mass'] = self.mass
+    if self.outer_loop_version == 1:
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    if self.outer_loop_version == 2:
+      obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
 
-  def render(self, *args, **kwargs):
+  def render(self, size=None, *args, **kwargs):
     rgb_array = np.zeros((64, 64, 3))
-    rgb_array[:32] = self.left_half
-    rgb_array[32:] = self.right_half
+    x_start = max(0, int(np.round(self.square_x - self.square_size)))
+    y_start = max(0, int(np.round(self.square_y - self.square_size)))
+    x_end = min(63, int(np.round(self.square_x + self.square_size)))
+    y_end = min(63, int(np.round(self.square_y + self.square_size)))
+    rgb_array[y_start:y_end, x_start:x_end] = np.clip(np.array([self.square_r, self.square_g, self.square_b]), 0, 1)
+    if size is not None:
+      rgb_array = cv2.resize(rgb_array, size)
     return rgb_array
 
 

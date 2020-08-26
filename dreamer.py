@@ -598,6 +598,28 @@ def config_dr(config):
         config.dr[key] = (real_val * mean_scale, real_val * range_scale)
     config.sim_params_size = len(config.real_dr_list)
 
+  elif "dummy" in config.task:
+    real_dr_values = {
+      "square_size": 4,
+      "speed_multiplier": 10,
+      "square_r": .5,
+      "square_g": .5,
+      "square_b": 0.0,
+    }
+    config.real_dr_params = real_dr_values
+    config.real_dr_list = list(config.real_dr_params.keys())
+    mean_scale = config.mean_scale
+    range_scale = config.range_scale
+    config.dr = {}  # (mean, range)
+    for key, real_val in config.real_dr_params.items():
+      if real_val == 0:
+        real_val = 5e-2
+      if config.mean_only:
+        config.dr[key] = real_val * mean_scale
+      else:
+        config.dr[key] = (real_val * mean_scale, real_val * range_scale)
+    config.sim_params_size = len(config.real_dr_list)
+
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
       "body_mass": (1.0, 1.0) # Real parameter is 2.0
@@ -838,11 +860,12 @@ class Dreamer(tools.Module):
       div = tf.reduce_mean(tfd.kl_divergence(post_dist, prior_dist))
       div = tf.maximum(div, self._c.free_nats)
 
-      #weigh losses
-      if self._c.individual_loss_scale:
-        likes.sim_params *= self._c.sim_params_loss_scale
-      else:
-        assert self._c.sim_params_loss_scale <= 1
+      # weigh losses
+      if self._c.outer_loop_version == 1:
+        if self._c.individual_loss_scale:
+          likes.sim_params *= self._c.sim_params_loss_scale
+        else:
+          assert self._c.sim_params_loss_scale <= 1
 
         likes.sim_params *= 1-self._c.sim_params_loss_scale
         likes.reward *= self._c.sim_params_loss_scale
@@ -1215,11 +1238,15 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'dummy':
-    if config.dr is None or real_world: #first index is always real world
-      env = wrappers.Dummy(task, use_state=config.use_state, real_world=real_world)
+    if config.dr is None or real_world:
+      env = wrappers.Dummy(dr=config.dr, real_world=real_world,
+                                     dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+                                     outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
     else:
-      env = wrappers.Dummy(task, dr=config.dr, use_state=config.use_state,
-                                     real_world=real_world)
+      env = wrappers.Dummy(dr=config.dr, dr_shape=config.sim_params_size,
+                                     dr_list=config.real_dr_list,
+                                     real_world=real_world,
+                                     outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
     env = wrappers.ActionRepeat(env, config.action_repeat)
   else:
     raise NotImplementedError(suite)
@@ -1632,12 +1659,9 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
-  if config.real_world_prob > 0 or config.outer_loop_version in [1, 2] or config.generate_dataset:
-    train_real_envs = [wrappers.Async(lambda: make_env(
-      config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
-                  for _ in range(config.envs)]
-  else:
-    train_real_envs = None
+  train_real_envs = [wrappers.Async(lambda: make_env(
+    config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
+                for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
@@ -1682,12 +1706,11 @@ def main(config):
   dataset = None
   print(f'Prefill dataset with {prefill} simulated steps.')
   tools.simulate(random_agent, train_sim_envs, dataset, prefill / config.action_repeat)
-  if train_real_envs is not None:
-    num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
-    if num_real_prefill == 0:
-      num_real_prefill += 1
-    print(f'Prefill dataset with {num_real_prefill} real world steps.')
-    tools.simulate(random_agent, train_real_envs, dataset, num_real_prefill)
+  num_real_prefill = int(prefill / config.action_repeat / config.sample_real_every)
+  if num_real_prefill == 0:
+    num_real_prefill += 1
+  print(f'Prefill dataset with {num_real_prefill} real world steps.')
+  tools.simulate(random_agent, train_real_envs, dataset, episodes=1, steps=num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
   #update_target_step_target = config.update_target_every * config.time_limit
@@ -1785,7 +1808,7 @@ def main(config):
             writer.flush()
         env.apply_dr()
 
-    #after train, update sim params
+    #after train, update sim param
     elif config.outer_loop_version == 1:  # Kangaroo
       train_batch = next(agent._sim_dataset)
       test_batch = next(agent._real_world_dataset)
