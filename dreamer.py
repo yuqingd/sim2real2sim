@@ -1717,6 +1717,9 @@ def main(config):
     tools.simulate(
         functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
+    predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
+    predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
+
     steps = config.eval_every // config.action_repeat
     episodes = int(steps / config.time_limit)
     if episodes == 0:
