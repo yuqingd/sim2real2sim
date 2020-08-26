@@ -598,6 +598,28 @@ def config_dr(config):
         config.dr[key] = (real_val * mean_scale, real_val * range_scale)
     config.sim_params_size = len(config.real_dr_list)
 
+  elif "dummy" in config.task:
+    real_dr_values = {
+      "square_size": 4,
+      "speed_multiplier": 10,
+      "square_r": .5,
+      "square_g": .5,
+      "square_b": 0.0,
+    }
+    config.real_dr_params = real_dr_values
+    config.real_dr_list = list(config.real_dr_params.keys())
+    mean_scale = config.mean_scale
+    range_scale = config.range_scale
+    config.dr = {}  # (mean, range)
+    for key, real_val in config.real_dr_params.items():
+      if real_val == 0:
+        real_val = 5e-2
+      if config.mean_only:
+        config.dr[key] = real_val * mean_scale
+      else:
+        config.dr[key] = (real_val * mean_scale, real_val * range_scale)
+    config.sim_params_size = len(config.real_dr_list)
+
   elif config.task in ["gym_FetchPush", "gym_FetchSlide"]:
     config.dr = {
       "body_mass": (1.0, 1.0) # Real parameter is 2.0
@@ -1215,11 +1237,15 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'dummy':
-    if config.dr is None or real_world: #first index is always real world
-      env = wrappers.Dummy(task, use_state=config.use_state, real_world=real_world)
+    if config.dr is None or real_world:
+      env = wrappers.Dummy(dr=config.dr, real_world=real_world,
+                                     dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+                                     outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
     else:
-      env = wrappers.Dummy(task, dr=config.dr, use_state=config.use_state,
-                                     real_world=real_world)
+      env = wrappers.Dummy(dr=config.dr, dr_shape=config.sim_params_size,
+                                     dr_list=config.real_dr_list,
+                                     real_world=real_world,
+                                     outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
     env = wrappers.ActionRepeat(env, config.action_repeat)
   else:
     raise NotImplementedError(suite)
@@ -1782,7 +1808,7 @@ def main(config):
             writer.flush()
         env.apply_dr()
 
-    #after train, update sim params
+    #after train, update sim param
     elif config.outer_loop_version == 1:  # Kangaroo
       train_batch = next(agent._sim_dataset)
       test_batch = next(agent._real_world_dataset)
