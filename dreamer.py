@@ -680,11 +680,12 @@ def config_debug(config):
 
 class Dreamer(tools.Module):
 
-  def __init__(self, config, datadir, actspace, writer, dataset=None, strategy=None):
+  def __init__(self, config, datadir, actspace, writer, env, dataset=None, strategy=None):
     self._c = config
     self._actspace = actspace
     self._actdim = actspace.n if hasattr(actspace, 'n') else actspace.shape[0]
     self._writer = writer
+    self.env = env
     self._random = np.random.RandomState(config.seed)
     with tf.device('cpu:0'):
       self._step = tf.Variable(count_steps(datadir / 'train', config), dtype=tf.int64)
@@ -848,7 +849,8 @@ class Dreamer(tools.Module):
       likes.reward = tf.reduce_mean(reward_obj)
       if self._c.outer_loop_version == 1:
         if self._c.binary_prediction:
-          labels = tf.cast(data['sim_params'] > data['distribution_mean'], tf.int32)
+          dist_mean = tf.constant(np.expand_dims(np.expand_dims(self.env.distribution_mean, 0), 1), dtype=tf.float32)
+          labels = tf.cast(data['sim_params'] > dist_mean, tf.int32)
           predictions = sim_param_pred.mean()
           sim_param_obj = -tf.keras.losses.binary_crossentropy(labels, predictions)
         else:
@@ -1433,6 +1435,7 @@ def generate_dataset(config, sim_envs, real_envs):
 
 
 def train_with_offline_dataset(config, datadir, writer):
+  raise ValueError("NOT CURRENTLY WORKING; FIX ISSUE WITH 'CURRENT' DISTRIBUTION AND PASS AN ENV INTO DREAMER")
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
@@ -1705,7 +1708,7 @@ def main(config):
     random_agent = lambda o, d, da, s: ([actspace.sample() for _ in d], None)
     tools.simulate(random_agent, train_sim_envs, None, episodes=1)
     print("Loading past run")
-    agent = Dreamer(config, datadir, actspace, writer)
+    agent = Dreamer(config, datadir, actspace, writer, train_sim_envs[0])
     agent.load(config.logdir / 'variables.pkl')
     print("Generating videos")
     generate_videos(train_sim_envs, test_envs, agent, config.logdir)
@@ -1737,7 +1740,7 @@ def main(config):
 
   # Train and regularly evaluate the agent.
   step = count_steps(train_datadir, config)
-  agent = Dreamer(config, datadir, actspace, writer)
+  agent = Dreamer(config, datadir, actspace, writer, train_sim_envs[0])
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
     agent.load(config.logdir / 'variables.pkl')
@@ -1763,7 +1766,8 @@ def main(config):
     train_batch = next(agent._sim_dataset)
     test_batch = next(agent._real_world_dataset)
     last_only = config.last_param_pred_only
-    train_distribution = train_batch['distribution_mean']
+    dist_mean = train_sim_envs[0].distribution_mean
+    train_distribution = tf.constant(np.expand_dims(np.expand_dims(dist_mean, 0), 1), dtype=tf.float32)
     predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
     predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
 
@@ -1845,7 +1849,8 @@ def main(config):
       val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
       last_only = config.last_param_pred_only
-      train_distribution = train_batch['distribution_mean']
+      dist_mean = train_sim_envs[0].distribution_mean
+      train_distribution = tf.constant(np.expand_dims(np.expand_dims(dist_mean, 0), 1), dtype=tf.float32)
       predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
       predict_OL1_offline(agent, None, writer, last_only, "val", step, train_distribution, data=val_batch)
       predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
@@ -1871,7 +1876,7 @@ def main(config):
 
             if config.binary_prediction:
               new_mean = prev_mean + alpha * (np.mean(pred_mean) - 0.5) # TODO: tune this
-              new_mean = max(new_mean, 1e-3)  #prevent negative means
+              new_mean = max(new_mean, 1e-3)  # prevent negative means
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             if config.mean_only:
