@@ -158,6 +158,7 @@ def define_config():
   config.mean_scale = 0.67
   config.range_scale = 0.33
   config.mean_only = True
+  config.anneal_range_scale = 1 #if > 0, start at anneal_range_scale*mean and anneal to 0.1*mean over total_steps
   config.predict_val = True
   config.range_only = False
 
@@ -1199,7 +1200,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
                              minimal=config.minimal, grayscale=config.grayscale)
     else:
-      env = wrappers.Kitchen(dr=copy.deepcopy(config.dr), mean_only=config.mean_only, predict_val=config.predict_val, early_termination=config.early_termination,
+      env = wrappers.Kitchen(dr=copy.deepcopy(config.dr), mean_only=config.mean_only, anneal_range_scale=config.anneal_range_scale, predict_val=config.predict_val, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
@@ -1759,6 +1760,13 @@ def main(config):
     tools.simulate(
         functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
+    train_batch = next(agent._sim_dataset)
+    test_batch = next(agent._real_world_dataset)
+    last_only = config.last_param_pred_only
+    train_distribution = train_batch['distribution_mean']
+    predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
+    predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
+
     steps = config.eval_every // config.action_repeat
     episodes = int(steps / config.time_limit)
     if episodes == 0:
@@ -1876,6 +1884,8 @@ def main(config):
               print("NEW MEAN", param, new_mean, step, pred_mean, "!" * 30)
               tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
               tf.summary.scalar(f'agent-sim_param/{param}/pred_mean', pred_mean, step)
+              if config.anneal_range_scale > 0:
+                tf.summary.scalar(f'agent-sim_param/{param}/range', config.anneal_range_scale*(1-float(step/config.steps)), step)
 
               real_dr_param = config.real_dr_params[param]
               if not np.mean(real_dr_param) == 0:
@@ -1884,8 +1894,10 @@ def main(config):
               else:
                 tf.summary.scalar(f'agent-sim_param/{param}/sim_param_error',
                                   (new_mean - real_dr_param), step)
+
               writer.flush()
 
+          env.cur_step_fraction = float(step/config.steps)
           train_env.apply_dr()
           val_env.apply_dr()
 

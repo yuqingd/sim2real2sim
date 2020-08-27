@@ -481,7 +481,7 @@ BONUS_THRESH_HL = 0.3
 # 48          kettleroot [-0.269     0.35      1.63    ]
 
 class Kitchen:
-  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, predict_val=False,
+  def __init__(self, task='reach_kettle', size=(64, 64), real_world=False, dr=None, mean_only=False, anneal_range_scale=0, predict_val=False,
                early_termination=False, use_state="None", step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
@@ -516,6 +516,8 @@ class Kitchen:
     self._size = size
     self.early_termination = early_termination
     self.mean_only = mean_only
+    self.anneal_range_scale = anneal_range_scale
+    self.cur_step_fraction = 0
     self.predict_val = predict_val
     self.real_world = real_world
     self.use_state = use_state
@@ -814,7 +816,11 @@ class Kitchen:
     if param_name in self.dr:
       if self.mean_only:
         mean = self.dr[param_name]
-        range = max(0.1 * mean, eps) #TODO: tune this?
+        range_scale = 0.1
+        if self.anneal_range_scale > 0:
+          range_scale = self.anneal_range_scale * (1-self.cur_step_fraction)
+          range_scale = max(range_scale, 0.1)
+        range = max(range_scale * mean, eps) #TODO: tune this?
       else:
         mean, range = self.dr[param_name]
         range = max(range, eps)
