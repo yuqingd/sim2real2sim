@@ -85,10 +85,9 @@ class RealWorldRL:
     self.distribution_mean = []
     self.distribution_range = []
     if self.dr is None or self.real_world:
-      if self.outer_loop_version == 1:
-        self.sim_params = np.zeros(self.dr_shape)
-        self.distribution_mean = self.get_dr()
-        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      self.sim_params = np.zeros(self.dr_shape)
+      self.distribution_mean = self.get_dr()
+      self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
 
     model = self._env.physics.model
@@ -287,8 +286,7 @@ class RealWorldRL:
       obs['image'] = self.render()
       reward = time_step.reward or 0
       done = time_step.last()
-      if self.outer_loop_version == 1:
-        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       info = {'discount': np.array(time_step.discount, np.float32)}
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
@@ -304,8 +302,7 @@ class RealWorldRL:
       # if self.use_state:
       #   obs['state'] = np.concatenate([obs['position'], obs['velocity']])
       obs['image'] = self.render()
-      if self.outer_loop_version == 1:
-        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
         obs['dr_params'] = self.get_dr()
@@ -326,8 +323,7 @@ class RealWorldRL:
     if self.use_state is not "None":
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
@@ -880,10 +876,9 @@ class Kitchen:
     self.distribution_mean = []
     self.distribution_range = []
     if self.dr is None or self.real_world:
-      if self.outer_loop_version == 1:
-        self.sim_params = self.get_dr()
-        self.distribution_mean = self.get_dr()
-        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      self.sim_params = self.get_dr()
+      self.distribution_mean = self.get_dr()
+      self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return  # TODO: start using XPOS_INDICES or equivalent for joints.
 
     if 'rope' in self.task:
@@ -1310,8 +1305,7 @@ class Kitchen:
     #done = np.abs(reward) < 0.25   # TODO: tune threshold
     info = {}
     obs = {}
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['state'] = self.goal
     if self.use_state is not "None":
       state = self.get_state()
@@ -1362,8 +1356,7 @@ class Kitchen:
 
     obs = {}
     obs['state'] = self.goal
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if self.use_state is not "None":
       state = self.get_state()
       obs['state'] = np.concatenate([obs['state'], state])
@@ -1461,10 +1454,9 @@ class MetaWorld:
     self.distribution_mean = []
     self.distribution_range = []
     if self.dr is None or self.real_world:
-      if self.outer_loop_version == 1:
-        self.sim_params = self.get_dr()
-        self.distribution_mean = self.get_dr()
-        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      self.sim_params = self.get_dr()
+      self.distribution_mean = self.get_dr()
+      self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
 
     model = self._env.sim.model
@@ -1609,8 +1601,7 @@ class MetaWorld:
       obs['image'] = np.zeros(self._size + (3,))
     info['discount'] = 1.0
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 1.0 if info['success'] else 0.0
@@ -1764,8 +1755,7 @@ class MetaWorld:
     if not (self.dr is None) and not self.real_world:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
     obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
@@ -1872,10 +1862,9 @@ class DeepMindControl:
     self.distribution_mean = []
     self.distribution_range = []
     if self.dr is None or self.real_world:
-      if self.outer_loop_version == 1:
-        self.sim_params = self.get_dr()
-        self.distribution_mean = self.get_dr()
-        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      self.sim_params = self.get_dr()
+      self.distribution_mean = self.get_dr()
+      self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
 
     model = self._env.physics.model
@@ -2074,8 +2063,7 @@ class DeepMindControl:
       obs['image'] = self.render()
       reward = time_step.reward or 0
       done = time_step.last()
-      if self.outer_loop_version == 1:
-        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       info = {'discount': np.array(time_step.discount, np.float32)}
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
@@ -2091,8 +2079,7 @@ class DeepMindControl:
       # if self.use_state:
       #   obs['state'] = np.concatenate([obs['position'], obs['velocity']])
       obs['image'] = self.render()
-      if self.outer_loop_version == 1:
-        obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
       obs['real_world'] = 1.0 if self.real_world else 0.0
       if self.outer_loop_version == 2:
         obs['dr_params'] = self.get_dr()
@@ -2113,15 +2100,14 @@ class DeepMindControl:
     if self.use_state is not "None":
       obs['state'] = np.concatenate([obs['position'], obs['velocity']])
     obs['image'] = self.render()
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     obs['real_world'] = 1.0 if self.real_world else 0.0
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
     if self.sparse_reward:
       obs['success'] = 0.0
-      obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
-      obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
+    obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
+    obs['distribution_range'] = np.array(self.distribution_range, dtype=np.float32)
     return obs
 
   def render(self, *args, **kwargs):
@@ -2182,10 +2168,9 @@ class Dummy:
     self.distribution_mean = []
     self.distribution_range = []
     if self.dr is None or self.real_world:
-      if self.outer_loop_version == 1:
-        self.sim_params = np.zeros(self.dr_shape)
-        self.distribution_mean = self.get_dr()
-        self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
+      self.sim_params = np.zeros(self.dr_shape)
+      self.distribution_mean = self.get_dr()
+      self.distribution_range = np.zeros(self.dr_shape, dtype=np.float32)
       return
     self.square_size = self.update_dr_param('square_size')
     self.speed_multiplier = self.update_dr_param('speed_multiplier')
@@ -2217,8 +2202,7 @@ class Dummy:
     info = {}
     obs['real_world'] = 1.0 if self.real_world else 0.0
     obs['success'] = 1.0 if reward > -4 else 0.0
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
     obs['distribution_mean'] = np.array(self.distribution_mean, dtype=np.float32)
@@ -2232,8 +2216,7 @@ class Dummy:
     obs = {}
     obs['image'] = self.render()
     obs['real_world'] = 1.0 if self.real_world else 0.0
-    if self.outer_loop_version == 1:
-      obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
+    obs['sim_params'] = np.array(self.sim_params, dtype=np.float32)
     if self.outer_loop_version == 2:
       obs['dr_params'] = self.get_dr()
     obs['success'] = 0.0
