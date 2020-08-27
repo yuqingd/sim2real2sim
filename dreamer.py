@@ -84,8 +84,8 @@ def define_config():
   # General.
   config.logdir = pathlib.Path('.')
   config.seed = 0
-  config.steps = 2e6
-  config.eval_every = 1e4
+  config.steps = 1e6
+  config.eval_every = 1e3
   config.log_every = 1e3
   config.log_scalars = True
   config.log_images = True
@@ -144,6 +144,7 @@ def define_config():
   config.step_repeat = 50
   config.bounds = 'stove_area'
   config.step_size = 0.01
+  config.sample_val_every = 10
 
   # Sim2real transfer
   config.real_world_prob = -1   # fraction of samples trained on which are from the real world (probably involves oversampling real-world samples)
@@ -168,13 +169,13 @@ def define_config():
   config.early_termination = False
   config.sim_param_regularization = .0001
   config.use_depth = False
-  config.ol1_episodes = 1
+  config.ol1_episodes = 10
 
   config.random_crop = False
   config.initial_randomization_steps = 3
   config.last_param_pred_only = False
-  config.individual_loss_scale = True #True for scaling sim_param loss only, False for scaling sim_param and image+reward loss
-  config.sim_params_loss_scale = 1e4
+  config.individual_loss_scale = False #True for scaling sim_param loss only, False for scaling sim_param and image+reward loss
+  config.sim_params_loss_scale = .001
   config.binary_prediction = False
 
   # Dataset Generation
@@ -645,7 +646,7 @@ def config_dr(config):
 def config_debug(config):
   # DEBUG
   config.prefill = 1
-  config.steps = 40
+  config.steps = 100
   config.deter_size = 2
   config.stoch_size = 3
   config.num_units = 4
@@ -659,6 +660,9 @@ def config_debug(config):
   config.batch_size = 50
   config.batch_length = 6
   config.update_target_every = 1
+  config.sample_val_every = 10
+  # config.sample_real_every = 10
+  config.ol1_episodes = 1
 
   config.num_real_episodes = 20
   config.num_sim_episodes = 20
@@ -682,7 +686,7 @@ class Dreamer(tools.Module):
     self._writer = writer
     self._random = np.random.RandomState(config.seed)
     with tf.device('cpu:0'):
-      self._step = tf.Variable(count_steps(datadir, config), dtype=tf.int64)
+      self._step = tf.Variable(count_steps(datadir / 'train', config), dtype=tf.int64)
     self._should_pretrain = tools.Once()
     self._should_train = tools.Every(config.train_every)
     self._should_log = tools.Every(config.log_every)
@@ -703,6 +707,8 @@ class Dreamer(tools.Module):
         else:
           self._dataset = iter(self._strategy.experimental_distribute_dataset(
             load_dataset(datadir, self._c)))
+        self._val_dataset = iter(self._strategy.experimental_distribute_dataset(
+          load_dataset(datadir / 'val', self._c, use_sim=True, use_real=False)))
         self._real_world_dataset = iter(self._strategy.experimental_distribute_dataset(
           load_dataset(datadir, self._c, use_sim=False, use_real=True)))
         self._sim_dataset = iter(self._strategy.experimental_distribute_dataset(
@@ -1181,7 +1187,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     if config.dr is None or real_world:
       env = wrappers.PegTask(use_state=config.use_state, real_world=real_world)
     else:
-      env = wrappers.PegTask(dr=config.dr, use_state=config.use_state, real_world=real_world)
+      env = wrappers.PegTask(dr=copy.deepcopy(config.dr), use_state=config.use_state, real_world=real_world)
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'kitchen':
@@ -1193,7 +1199,7 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                              step_size=config.step_size, initial_randomization_steps=config.initial_randomization_steps,
                              minimal=config.minimal, grayscale=config.grayscale)
     else:
-      env = wrappers.Kitchen(dr=config.dr, mean_only=config.mean_only, predict_val=config.predict_val, early_termination=config.early_termination,
+      env = wrappers.Kitchen(dr=copy.deepcopy(config.dr), mean_only=config.mean_only, predict_val=config.predict_val, early_termination=config.early_termination,
                              use_state=config.use_state, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, task=task,
                              simple_randomization=config.simple_randomization, step_repeat=config.step_repeat,
@@ -1209,18 +1215,18 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
                                simple_randomization=False, outer_loop_version=config.outer_loop_version,
                                use_depth=config.use_depth, grayscale=config.grayscale)
     else:
-      env = wrappers.MetaWorld(task, dr=config.dr, mean_only=config.mean_only, early_termination=config.early_termination,
+      env = wrappers.MetaWorld(task, dr=copy.deepcopy(config.dr), mean_only=config.mean_only, early_termination=config.early_termination,
                              use_state=config.use_state,  use_img=config.use_img, real_world=real_world, dr_list=config.real_dr_list,
                              dr_shape=config.sim_params_size, simple_randomization=config.simple_randomization,
-                             outer_loop_version=config.outer_loop_version, use_depth=config.use_depth)
-      env = wrappers.ActionRepeat(env, config.action_repeat, grayscale=config.grayscale)
+                             outer_loop_version=config.outer_loop_version, use_depth=config.use_depth, grayscale=config.grayscale)
+      env = wrappers.ActionRepeat(env, config.action_repeat)
       env = wrappers.NormalizeActions(env)
   elif suite == 'dmc':
     if config.dr is None or real_world:
-      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+      env = wrappers.DeepMindControl(task, dr=copy.deepcopy(config.dr), use_state=config.use_state, real_world=real_world, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      simple_randomization=config.simple_randomization, outer_loop_type=config.outer_loop_version, mean_only=config.mean_only)
     else:
-      env = wrappers.DeepMindControl(task, dr=config.dr, use_state=config.use_state, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
+      env = wrappers.DeepMindControl(task, dr=copy.deepcopy(config.dr), use_state=config.use_state, dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      real_world=real_world, simple_randomization=config.simple_randomization,
                                      outer_loop_type=config.outer_loop_version, mean_only=config.mean_only)
     env = wrappers.ActionRepeat(env, config.action_repeat)
@@ -1234,16 +1240,16 @@ def make_env(config, writer, prefix, datadir, store, index=None, real_world=Fals
     if index == 0 or index is None: #first index is always real world
       env = wrappers.GymControl(task)
     else:
-      env = wrappers.GymControl(task, dr=config.dr)
+      env = wrappers.GymControl(task, dr=copy.deepcopy(config.dr))
     env = wrappers.ActionRepeat(env, config.action_repeat)
     env = wrappers.NormalizeActions(env)
   elif suite == 'dummy':
     if config.dr is None or real_world:
-      env = wrappers.Dummy(dr=config.dr, real_world=real_world,
+      env = wrappers.Dummy(dr=copy.deepcopy(config.dr), real_world=real_world,
                                      dr_shape=config.sim_params_size, dr_list=config.real_dr_list,
                                      outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
     else:
-      env = wrappers.Dummy(dr=config.dr, dr_shape=config.sim_params_size,
+      env = wrappers.Dummy(dr=copy.deepcopy(config.dr), dr_shape=config.sim_params_size,
                                      dr_list=config.real_dr_list,
                                      real_world=real_world,
                                      outer_loop_version=config.outer_loop_version, mean_only=config.mean_only)
@@ -1652,6 +1658,7 @@ def main(config):
 
   # Create environments.
   datadir = config.logdir / 'episodes'
+  train_datadir = datadir
   writer = tf.summary.create_file_writer(
       str(config.logdir), max_queue=1000, flush_millis=20000)
   writer.set_as_default()
@@ -1659,12 +1666,22 @@ def main(config):
   train_sim_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
       for i in range(config.envs)]
+  val_sim_envs = [wrappers.Async(lambda: make_env(
+    config, writer, 'sim_train', datadir, store=True, real_world=False), config.parallel)
+                    for i in range(config.envs)]
   train_real_envs = [wrappers.Async(lambda: make_env(
     config, writer, 'real_train', datadir, store=True, real_world=True), config.parallel)
                 for _ in range(config.envs)]
   test_envs = [wrappers.Async(lambda: make_env(
       config, writer, 'test', datadir, store=False, real_world=True), config.parallel)
       for _ in range(config.envs)]
+
+  # Set 'dataset_step' parameter so they'll get logged to different folders
+  for env in val_sim_envs:
+    env.set_dataset_step('val')
+  for env in test_envs:
+    env.set_dataset_step('test')
+
   actspace = train_sim_envs[0].action_space
 
   if config.use_offline_dataset:
@@ -1700,7 +1717,7 @@ def main(config):
     return
 
   # Prefill dataset with random episodes.
-  step = count_steps(datadir, config)
+  step = count_steps(train_datadir, config)
   prefill = max(0, config.prefill - step)
   random_agent = lambda o, d, da, s: ([actspace.sample() for _ in d], None)
   dataset = None
@@ -1711,12 +1728,14 @@ def main(config):
     num_real_prefill += 1
   print(f'Prefill dataset with {num_real_prefill} real world steps.')
   tools.simulate(random_agent, train_real_envs, dataset, episodes=1, steps=num_real_prefill)
+  tools.simulate(random_agent, val_sim_envs, dataset, episodes=1, steps=num_real_prefill)
   writer.flush()
   train_real_step_target = config.sample_real_every * config.time_limit
+  val_step_target = config.sample_val_every * config.time_limit
   #update_target_step_target = config.update_target_every * config.time_limit
 
   # Train and regularly evaluate the agent.
-  step = count_steps(datadir, config)
+  step = count_steps(train_datadir, config)
   agent = Dreamer(config, datadir, actspace, writer)
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
@@ -1754,7 +1773,11 @@ def main(config):
       print("Start collection from the real world")
       tools.simulate(agent, train_real_envs, dataset, episodes=config.num_real_world, state=None)
       train_real_step_target += config.sample_real_every * config.time_limit
-    step = count_steps(datadir, config)
+    if step >= val_step_target:
+      print("Start collection for the val set")
+      tools.simulate(agent, val_sim_envs, dataset, episodes=1, state=None)
+      val_step_target += config.sample_val_every * config.time_limit
+    step = count_steps(train_datadir, config)
     agent.save(config.logdir / 'variables.pkl')
     with open(config.logdir / 'dr_dict.pkl', 'wb') as f:
       pkl.dump(config.dr, f)
@@ -1778,21 +1801,23 @@ def main(config):
       for i in range(config.num_dr_grad_steps):
         agent.update_sim_params(next(agent._real_world_dataset))
 
-      for env in train_sim_envs:
+      for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
         for i, param in enumerate(config.real_dr_list):
           if config.mean_only:
-            prev_mean = env.dr[param]
+            prev_mean = train_env.dr[param]
           else:
-            prev_mean, prev_range = env.dr[param]
+            prev_mean, prev_range = train_env.dr[param]
           pred_mean = np.exp(agent.learned_dr_mean.numpy())[i]
           print(f"Learned {param}", pred_mean)
           alpha = config.alpha
 
           new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
           if config.mean_only:
-            env.dr[param] = new_mean
+            train_env.dr[param] = new_mean
+            val_env.dr[param] = new_mean
           else:
-            env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
+            train_env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
+            val_env.dr[param] = (new_mean, prev_range)
           # dr_list.append(new_mean)
           with writer.as_default():
             tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
@@ -1803,15 +1828,18 @@ def main(config):
               tf.summary.scalar(f'agent-sim_param/{param}/percent_error', (new_mean - real_dr_param)/ real_dr_param, step)
 
             writer.flush()
-        env.apply_dr()
+        train_env.apply_dr()
+        val_env.apply_dr()
 
     #after train, update sim param
     elif config.outer_loop_version == 1:  # Kangaroo
       train_batch = next(agent._sim_dataset)
+      val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
       last_only = config.last_param_pred_only
       train_distribution = train_batch['distribution_mean']
       predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
+      predict_OL1_offline(agent, None, writer, last_only, "val", step, train_distribution, data=val_batch)
       predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
       real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
@@ -1820,13 +1848,13 @@ def main(config):
         real_pred_sim_params = tf.round(real_pred_sim_params.mean())
       else:
         real_pred_sim_params = tf.exp(real_pred_sim_params)
-      for env in train_sim_envs:
-        if env.dr is not None:
+      for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
+        if train_env.dr is not None:
           for i, param in enumerate(config.real_dr_list):
             if config.mean_only:
-              prev_mean = env.dr[param]
+              prev_mean = train_env.dr[param]
             else:
-              prev_mean, prev_range = env.dr[param]
+              prev_mean, prev_range = train_env.dr[param]
             try:
               pred_mean = real_pred_sim_params[i]
             except:
@@ -1839,9 +1867,11 @@ def main(config):
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
             if config.mean_only:
-              env.dr[param] = new_mean
+              train_env.dr[param] = new_mean
+              val_env.dr[param] = new_mean
             else:
-              env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
+              train_env.dr[param] = (new_mean, prev_range)  # TODO: find a better way to handle the case where we only predict mean but we have a range
+              val_env.dr[param] = (new_mean, prev_range)
             with writer.as_default():
               print("NEW MEAN", param, new_mean, step, pred_mean, "!" * 30)
               tf.summary.scalar(f'agent-sim_param/{param}/mean', new_mean, step)
@@ -1856,7 +1886,8 @@ def main(config):
                                   (new_mean - real_dr_param), step)
               writer.flush()
 
-          env.apply_dr()
+          train_env.apply_dr()
+          val_env.apply_dr()
 
   for env in train_sim_envs + test_envs:
     env.close()
