@@ -485,7 +485,7 @@ class Kitchen:
                early_termination=False, use_state="None", step_repeat=200, dr_list=[],
                step_size=0.05, simple_randomization=False, dr_shape=None, outer_loop_version=0,
                control_version='mocap_ik', distance=2., azimuth=50, elevation=-40,
-               initial_randomization_steps=3, minimal=False, dataset_step=None, grayscale=False):
+               initial_randomization_steps=1, minimal=False, dataset_step=None, grayscale=False):
     if 'rope' in task:
       distance = 1.5
       azimuth = 20
@@ -542,6 +542,8 @@ class Kitchen:
     self.outer_loop_version = outer_loop_version
     self.control_version = control_version
     self.initial_randomization_steps = initial_randomization_steps
+    if 'push_kettle' in task:
+      self.initial_randomization_steps += 3
 
     self.has_kettle = False if 'open_microwave' in task else True
     self.has_microwave = False if minimal else True
@@ -570,7 +572,7 @@ class Kitchen:
     elif 'rope' in self.task:
       body_id = self._env.sim.model.body_name2id('boxes_with_hole')
       box_loc = self._env.sim.model.body_pos[body_id]
-      box_loc += np.random.normal(0, .01, (3,))
+      box_loc += np.random.normal(0, .075, (3,))
       self._env.sim.model.body_pos[body_id] = box_loc
       self._env.sim.forward()
 
