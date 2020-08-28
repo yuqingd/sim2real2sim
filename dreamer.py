@@ -926,11 +926,13 @@ class Dreamer(tools.Module):
       if tf.equal(log_images, True):
         self._image_summaries(data, embed, image_pred)
 
-  @tf.function()
-  def update_sim_params(self, data, update=True):
-    return self._strategy.experimental_run_v2(self._update_sim_params, args=(data, update))
+  # @tf.function()
+  def update_sim_params(self, data, update=True, tag=""):
+    return self._strategy.experimental_run_v2(self._update_sim_params, args=(data, update, tag))
 
-  def _update_sim_params(self, data, update):
+  def _update_sim_params(self, data, update, tag):
+    if not tag == "":
+      tag = tag + "/"
     with tf.GradientTape() as sim_param_tape:
       embed = self._encode(data)
       if 'state' in data:
@@ -950,9 +952,9 @@ class Dreamer(tools.Module):
       sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image'])) + regularization
     if update:
       sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)  # TODO: revert
-      self._metrics['sim_param_loss'].update_state(sim_param_loss)
-      self._metrics['sim_param_norm'].update_state(sim_param_norm)
-      self._metrics['sim_param_loss_regularization'].update_state(regularization)
+      self._metrics[f'{tag}sim_param_loss'].update_state(sim_param_loss)
+      self._metrics[f'{tag}sim_param_norm'].update_state(sim_param_norm)
+      self._metrics[f'{tag}sim_param_loss_regularization'].update_state(regularization)
       for i, key in enumerate(self._c.real_dr_list):
         self._metrics['learned_mean' + key].update_state(dr_mean[i])
     return sim_param_loss
@@ -1434,8 +1436,7 @@ def generate_dataset(config, sim_envs, real_envs):
   tools.simulate(bot_agent, sim_envs, dataset=None, episodes=num_real_episodes)
 
 
-def train_with_offline_dataset(config, datadir, writer):
-  raise ValueError("NOT CURRENTLY WORKING; FIX ISSUE WITH 'CURRENT' DISTRIBUTION AND PASS AN ENV INTO DREAMER")
+def train_with_offline_dataset(config, datadir, writer, envs):
 
   # Check dataset exists
   dataset_datadir = pathlib.Path('.').joinpath('logdir', config.datadir)
@@ -1469,7 +1470,7 @@ def train_with_offline_dataset(config, datadir, writer):
     num_train_steps_per_level = int(config.steps / config.train_every / dataset_config.num_dr_steps)
     print("NUM TRAIN STEPS PER LEVEL", num_train_steps_per_level)
 
-  agent = Dreamer(config, datadir, actspace, writer, dataset=test_dataset, strategy=strategy)
+  agent = Dreamer(config, datadir, actspace, writer, envs[0], dataset=test_dataset, strategy=strategy)
   if (config.logdir / 'variables.pkl').exists():
     print('Load checkpoint.')
     agent.load(config.logdir / 'variables.pkl')
@@ -1486,13 +1487,24 @@ def train_with_offline_dataset(config, datadir, writer):
     print("Training with dataset", i)
     for _ in range(num_train_steps_per_level):
       # Train
+      example_batch = next(train_dataset)
+      # Patch the current distribution mean into the env which got passed into dreamer
+      # since dreamer uses the current env's mean in binary prediction
+      distribution_mean = example_batch['distribution_mean'][0, 0].numpy()
+      envs[0].distribution_mean = distribution_mean
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
 
-      if test_low_dataset is not None:
-        eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_all_dataset], writer, step, last_only=config.last_param_pred_only)
-      else:
-        eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
+      if config.outer_loop_version == 1:
+        if test_low_dataset is not None:
+          eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_all_dataset], writer, step, last_only=config.last_param_pred_only)
+        else:
+          eval_OL1_offline(agent, train_dataset, test_dataset, writer, step, last_only=config.last_param_pred_only)
+      elif config.outer_loop_version == 2:
+        if test_low_dataset is not None:
+          eval_OL2_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_all_dataset], writer, step)
+        else:
+          eval_OL2_offline(agent, train_dataset, test_dataset, writer, step)
       writer.flush()
 
 def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_rollouts=3):
@@ -1530,6 +1542,21 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
     writer.release()
 
 
+def eval_OL2_offline(agent, train_dataset, test_datasets, writer, step):  # kangaroo
+  num_steps = 100
+  train_distribution = next(train_dataset)['distribution_mean']
+  if isinstance(test_datasets, list):
+    predict_OL2_offline(agent, test_datasets[0], writer, "test_low", num_steps, step, train_distribution)
+    predict_OL2_offline(agent, test_datasets[1], writer, "test_med", num_steps, step, train_distribution)
+    predict_OL2_offline(agent, test_datasets[2], writer, "test_high", num_steps, step, train_distribution)
+    predict_OL2_offline(agent, test_datasets[3], writer, "test_all", num_steps, step, train_distribution)
+
+  else:
+    predict_OL2_offline(agent, test_datasets, writer, "test", num_steps, step, train_distribution)
+
+  predict_OL2_offline(agent, train_dataset, writer, "train", num_steps, step, train_distribution)
+
+
 def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):  # kangaroo
   train_distribution = next(train_dataset)['distribution_mean']
   if isinstance(test_datasets, list):
@@ -1542,6 +1569,29 @@ def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_onl
     predict_OL1_offline(agent, test_datasets, writer, last_only, "test", step, train_distribution)
 
   predict_OL1_offline(agent, train_dataset, writer, last_only, "train", step, train_distribution)
+
+
+def predict_OL2_offline(agent, dataset, writer, log_prefix, num_dr_grad_steps, step, train_distribution):
+  for _ in range(num_dr_grad_steps):
+    agent.update_sim_params(next(dataset), update=True, tag=log_prefix)
+  for i, param in enumerate(agent._c.real_dr_list):
+    distribution_mean_i = train_distribution[:, 0, i]
+    pred_mean = tf.exp(agent.learned_dr_mean).numpy()
+    t1 = next(dataset)
+    t2 = t1['sim_params']
+    t3 = t2[:, :, i]
+    t4 = t3.numpy()
+    real_mean = np.mean(next(dataset)['sim_params'][:, :, i].numpy())
+    with writer.as_default():
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
+      tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_real_mean', np.mean(real_mean), step)
+      if not np.mean(distribution_mean_i) == 0:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                          np.mean((pred_mean - real_mean) / distribution_mean_i), step)
+      else:
+        tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_error',
+                          np.mean(pred_mean - real_mean), step)
+
 
 
 def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, train_distribution_mean, data=None):
@@ -1689,7 +1739,7 @@ def main(config):
   actspace = train_sim_envs[0].action_space
 
   if config.use_offline_dataset:
-    train_with_offline_dataset(config, datadir, writer)
+    train_with_offline_dataset(config, datadir, writer, train_sim_envs)
     print("Done with sim param learning!")
     return
 
