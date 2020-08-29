@@ -952,9 +952,9 @@ class Dreamer(tools.Module):
       sim_param_loss = -tf.reduce_mean(image_pred.log_prob(data['image'])) + regularization
     if update:
       sim_param_norm = self._dr_opt(sim_param_tape, sim_param_loss, module=False)  # TODO: revert
-      self._metrics[f'{tag}sim_param_loss'].update_state(sim_param_loss)
-      self._metrics[f'{tag}sim_param_norm'].update_state(sim_param_norm)
-      self._metrics[f'{tag}sim_param_loss_regularization'].update_state(regularization)
+      self._metrics[f'sim_param_loss'].update_state(sim_param_loss)
+      self._metrics[f'sim_param_norm'].update_state(sim_param_norm)
+      self._metrics[f'sim_param_loss_regularization'].update_state(regularization)
       for i, key in enumerate(self._c.real_dr_list):
         self._metrics['learned_mean' + key].update_state(dr_mean[i])
     return sim_param_loss
@@ -1542,22 +1542,27 @@ def generate_videos(train_envs, test_envs, agent, logdir, size=(512, 512), num_r
     writer.release()
 
 
-def eval_OL2_offline(agent, train_dataset, test_datasets, writer, step):  # kangaroo
-  num_steps = 100
+def eval_OL2_offline(agent, train_dataset, test_datasets, writer, step):
+  num_steps = 300
   train_distribution = next(train_dataset)['distribution_mean']
   if isinstance(test_datasets, list):
+    print("TEST LOW")
     predict_OL2_offline(agent, test_datasets[0], writer, "test_low", num_steps, step, train_distribution)
+    print("TEST MED")
     predict_OL2_offline(agent, test_datasets[1], writer, "test_med", num_steps, step, train_distribution)
+    print("TEST HIGH")
     predict_OL2_offline(agent, test_datasets[2], writer, "test_high", num_steps, step, train_distribution)
+    print("TEST ALL")
     predict_OL2_offline(agent, test_datasets[3], writer, "test_all", num_steps, step, train_distribution)
 
   else:
     predict_OL2_offline(agent, test_datasets, writer, "test", num_steps, step, train_distribution)
 
+  print("TRAIN")
   predict_OL2_offline(agent, train_dataset, writer, "train", num_steps, step, train_distribution)
 
 
-def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):  # kangaroo
+def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_only):
   train_distribution = next(train_dataset)['distribution_mean']
   if isinstance(test_datasets, list):
     predict_OL1_offline(agent, test_datasets[0], writer, last_only, "test_low", step, train_distribution)
@@ -1572,15 +1577,11 @@ def eval_OL1_offline(agent, train_dataset, test_datasets, writer, step, last_onl
 
 
 def predict_OL2_offline(agent, dataset, writer, log_prefix, num_dr_grad_steps, step, train_distribution):
-  for _ in range(num_dr_grad_steps):
+  for i in range(num_dr_grad_steps):
     agent.update_sim_params(next(dataset), update=True, tag=log_prefix)
   for i, param in enumerate(agent._c.real_dr_list):
     distribution_mean_i = train_distribution[:, 0, i]
     pred_mean = tf.exp(agent.learned_dr_mean).numpy()
-    t1 = next(dataset)
-    t2 = t1['sim_params']
-    t3 = t2[:, :, i]
-    t4 = t3.numpy()
     real_mean = np.mean(next(dataset)['sim_params'][:, :, i].numpy())
     with writer.as_default():
       tf.summary.scalar(f'agent-sim_param/{param}/{log_prefix}_pred_mean', np.mean(pred_mean), step)
@@ -1895,7 +1896,7 @@ def main(config):
         val_env.apply_dr()
 
     #after train, update sim param
-    elif config.outer_loop_version == 1:  # Kangaroo
+    elif config.outer_loop_version == 1:
       train_batch = next(agent._sim_dataset)
       val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
