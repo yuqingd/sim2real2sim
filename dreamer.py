@@ -171,6 +171,7 @@ def define_config():
   config.sim_param_regularization = .0001
   config.use_depth = False
   config.ol1_episodes = 10
+  config.start_outer_loop = 0
 
   config.random_crop = False
   config.initial_randomization_steps = 3
@@ -1858,7 +1859,7 @@ def main(config):
     log_memory(step)
 
     # after train, update sim params
-    if config.outer_loop_version == 2:
+    if config.outer_loop_version == 2 and step >= config.start_outer_loop:
       print("UPDATING!")
 
       for i in range(config.num_dr_grad_steps):
@@ -1895,7 +1896,7 @@ def main(config):
         val_env.apply_dr()
 
     #after train, update sim param
-    elif config.outer_loop_version == 1:  # Kangaroo
+    elif config.outer_loop_version == 1 and step >= config.start_outer_loop:
       train_batch = next(agent._sim_dataset)
       val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
