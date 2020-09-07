@@ -194,6 +194,7 @@ def define_config():
   config.use_offline_dataset = False
   config.datadir = "temp"
   config.grayscale = False
+  config.start_outer_loop = 0
 
 
 
@@ -1851,7 +1852,7 @@ def main(config):
     #   agent.update_target(agent._value, agent._target_value)
     #   update_target_step_target += config.update_target_every * config.time_limit
 
-    if config.outer_loop_version == 2:
+    if config.outer_loop_version == 2 and step >= config.start_outer_loop:
       dataset = agent._train_dataset_sim_only
       tf.summary.scalar('sim/train_with_real', 0, step)
 
@@ -1896,7 +1897,7 @@ def main(config):
         val_env.apply_dr()
 
     #after train, update sim param
-    elif config.outer_loop_version == 1:
+    elif config.outer_loop_version == 1 and step >= config.start_outer_loop:
       train_batch = next(agent._sim_dataset)
       val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
