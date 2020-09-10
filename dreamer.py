@@ -863,8 +863,7 @@ class Dreamer(tools.Module):
       elif self._c.outer_loop_version == 3:
         dist_range = self.env.distribution_range
         num_params = len(data['sim_params'])
-        sim_params = tf.constant(data['sim_params'])
-        tiled_sim_params = tf.tile(sim_params, tf.constant([9,1])) #3 below, 3 above, 3 around eps; can tune later if necessary
+        sim_params = tf.constant(tf.convert_to_tensor(data['sim_params']))
         eps = 1e-3
         mid_eps = 1e-2
 
