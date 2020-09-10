@@ -863,21 +863,22 @@ class Dreamer(tools.Module):
       elif self._c.outer_loop_version == 3:
         dist_range = self.env.distribution_range
         num_params = len(data['sim_params'])
-        sim_params = np.tile(data['sim_params'], (9,1)) #3 below, 3 above, 3 around eps; can tune later if necessary
-        fake_pred = sim_params.copy()
+        sim_params = tf.constant(data['sim_params'])
+        tiled_sim_params = tf.tile(sim_params, tf.constant([9,1])) #3 below, 3 above, 3 around eps; can tune later if necessary
         eps = 1e-3
         mid_eps = 1e-2
 
-        fake_pred[:3, :] = np.random.uniform(low=fake_pred[:3,:] + mid_eps, high=fake_pred[:3,:] + dist_range)
-        fake_pred[3:6, :] = np.random.uniform(low=max(fake_pred[3:6,:] - dist_range. eps), high=max(fake_pred[3:6,:] - mid_eps, eps))
-        fake_pred[7:, :] = np.random.uniform(low=max(fake_pred[6:,:] - mid_eps, eps), high=fake_pred[6:,:] + mid_eps)
-        labels = np.array([1, 1, 1, -1, -1, -1, 0, 0, 0]) #1 for higher, -1 for lower, 0 for mid
+        high = tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range)
+        low = tf.random.uniform([3], minval=max(sim_params - dist_range. eps), maxval=max(sim_params - mid_eps, eps))
+        mid = tf.random.uniform([3], minval=max(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        fake_pred = tf.concat([high, low, mid], 0)
+        labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0]) #1 for higher, -1 for lower, 0 for mid
 
-        c = np.c_[fake_pred.reshape(len(fake_pred), -1), labels.reshape(len(labels), -1)]
-        c = np.random.shuffle(c) #permute high/low/mid fake data
+        c = tf.concat([fake_pred, labels], -1)
+        c = tf.random.shuffle(c) #permute high/low/mid fake data
 
-        fake_pred = c[:,:num_params]
-        labels = c[:,num_params:]
+        fake_pred = c[:, :num_params]
+        labels = c[:, -1:]
 
         pred_class = self._classifier(fake_pred)
 
