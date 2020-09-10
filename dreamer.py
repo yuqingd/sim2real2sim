@@ -877,7 +877,7 @@ class Dreamer(tools.Module):
         indices = tf.range(start=0, limit=9, dtype=tf.int32)
         shuffled_indices = tf.random.shuffle(indices)
 
-        fake_pred = tf.gather(fake_pred, shuffled_indices)
+        fake_pred = tf.gather(fake_pred, shuffled_indices, axis=-1)
         print(fake_pred.shape, "fake_pred post-shuffle shape")
 
         labels = tf.gather(labels, shuffled_indices, axis=-1)
