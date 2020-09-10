@@ -891,8 +891,7 @@ class Dreamer(tools.Module):
           sim_param_obj = sim_param_obj[:, -1]
         likes.sim_params = tf.reduce_mean(sim_param_obj)
 
-
-    if self._c.pcont:
+      if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
         likes.pcont = tf.reduce_mean(pcont_pred.log_prob(pcont_target))
