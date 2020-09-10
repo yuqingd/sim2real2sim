@@ -838,7 +838,7 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
-      if self._c.outer_loop_version in [1,3]:
+      if self._c.outer_loop_version == 1:
         sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
@@ -862,35 +862,55 @@ class Dreamer(tools.Module):
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
         #dist_range = self.env.distribution_range
-        dist_range = 10 * self.env.distribution_mean #TODO: change range scaling
+        dist_range =  10 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
+        print(dist_range, "Dist range")
         sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
+        B, L, num_params  = sim_params.shape
+
+        print(sim_params.shape, "Sim params shae")
+
         eps = 1e-3
         mid_eps = 1e-2
+
         print(sim_params.shape, "Sim params shape")
-        high = tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range)
-        low = tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
-        mid = tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
+        high_labels = tf.ones_like(high)
+        low = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
+        low_labels = tf.ones_like(low)
+        mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        mid_labels = tf.ones_like(mid)
         print(high.shape, "high shape")
-        fake_pred = tf.concat([high, low, mid], -1)
+        fake_pred = tf.concat([high, low, mid], 0)
+        labels = tf.concat([high_labels, low_labels, mid_labels], 0)
+        print(labels.shape, "labels shape")
         print(fake_pred.shape, "fake_pred shape")
 
-        fake_pred = tf.concat([fake_pred, feat], axis= -1)
+        #fake_pred = tf.reshape(fake_pred, [B, L, -1])
+        print(feat.shape, "feat shape")
+        feat_tiled =  tf.identity(feat)
+        feat_shape = np.ones(len(feat_tiled.shape))
+        feat_shape[0] = 3
+        feat_tiled = tf.tile(feat_tiled, feat_shape)
+        fake_pred = tf.concat([fake_pred, feat_tiled], axis= -1)
         print(fake_pred.shape, "fake_pred shape with features")
-        labels = tf.expand_dims(tf.expand_dims(tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32), 0), 0) #1 for higher, -1 for lower, 0 for mid
 
-        indices = tf.range(start=0, limit=9, dtype=tf.int32)
+
+        indices = tf.range(start=0, limit=B * 3, dtype=tf.int32)
         shuffled_indices = tf.random.shuffle(indices)
 
-        fake_pred = tf.gather(fake_pred, shuffled_indices, axis=-1)
+        fake_pred = tf.gather(fake_pred, shuffled_indices, axis=0)
         print(fake_pred.shape, "fake_pred post-shuffle shape")
 
-        labels = tf.gather(labels, shuffled_indices, axis=-1)
+        labels = tf.gather(labels, shuffled_indices, axis=0)
         print(labels.shape, "labels shape")
 
         pred_class = self._sim_params_classifier(fake_pred).mean()
         print(pred_class.shape, "pred_class shape")
         classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
-        classifier_obj = classifier_obj * (1 - data['real_world'])
+        mask_shape = np.ones(len( data['real_world'].shape))
+        mask_shape[0] = 3
+        mask = tf.tile(data['real_world'], mask_shape)
+        classifier_obj = classifier_obj * mask
         if self._c.last_param_pred_only:
           classifier_obj = classifier_obj[:, -1]
         likes.classfier = tf.reduce_mean(classifier_obj)
@@ -2083,11 +2103,13 @@ if __name__ == '__main__':
   else:
     config.dr = None
     config.real_dr_list = []
-
   try:
     print("GPUS found", tf.config.list_physical_devices(device_type="GPU"))
+    if len(tf.config.list_physical_devices(device_type="GPU")) == 0:
+      os.environ['MUJOCO_GL'] = 'glfw'
   except:
     print("GPUS found", tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None))
+    os.environ['MUJOCO_GL'] = None
 
   if config.gpudevice is not None:
     print('Setting gpudevice to:', config.gpudevice)
