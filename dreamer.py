@@ -871,7 +871,7 @@ class Dreamer(tools.Module):
         low = tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
         mid = tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
         fake_pred = tf.concat([high, low, mid], 0)
-        labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0]) #1 for higher, -1 for lower, 0 for mid
+        labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32) #1 for higher, -1 for lower, 0 for mid
 
         c = tf.concat([fake_pred, labels], -1)
         c = tf.random.shuffle(c) #permute high/low/mid fake data
