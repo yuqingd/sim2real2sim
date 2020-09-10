@@ -867,17 +867,18 @@ class Dreamer(tools.Module):
         eps = 1e-3
         mid_eps = 1e-2
 
-        high = tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range)
-        low = tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
-        mid = tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
-        fake_pred = tf.concat([high, low, mid], 0)
+        high = tf.expand_dims(tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range), 0)
+        low = tf.expand_dims(tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps)), 0)
+        mid = tf.expand_dims(tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps), 0)
+        fake_pred = tf.expand_dims(tf.concat([high, low, mid], 0),0)
+
         labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32) #1 for higher, -1 for lower, 0 for mid
 
-        c = tf.concat([fake_pred, labels], -1)
+        c = tf.concat([fake_pred, labels], 0)
         c = tf.random.shuffle(c) #permute high/low/mid fake data
 
-        fake_pred = c[:, :num_params]
-        labels = c[:, -1:]
+        fake_pred = c[:num_params, ...]
+        labels = c[-1, ...]
 
         pred_class = self._classifier(fake_pred)
 
