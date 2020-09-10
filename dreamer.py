@@ -884,9 +884,10 @@ class Dreamer(tools.Module):
         print(labels.shape, "labels shape")
 
 
-        pred_class = self._classifier(fake_pred).mean()
+        pred_class = self._classifier(fake_pred)
         print(pred_class.shape, "pred_class shape")
-
+        pred_class = pred_class.mean()
+        print(pred_class.shape, "mean pred_class shape")
         classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
         classifier_obj = classifier_obj * (1 - data['real_world'])
         likes.classfier = tf.reduce_mean(classifier_obj) #TODO: tune loss scaling
@@ -1022,7 +1023,7 @@ class Dreamer(tools.Module):
         self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     elif self._c.outer_loop_version == 3:
       self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
-      self._classifier = models.DenseDecoder((3,), 2, self._c.num_units, act=act)
+      self._classifier = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
