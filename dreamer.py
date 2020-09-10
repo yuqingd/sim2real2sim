@@ -1534,7 +1534,7 @@ def train_with_offline_dataset(config, datadir, writer, envs):
       agent.train_only(train_dataset)
       step = agent._step.numpy().item()
 
-      if config.outer_loop_version == 1:
+      if config.outer_loop_version in [1,3]:
         if test_low_dataset is not None:
           eval_OL1_offline(agent, train_dataset, [test_low_dataset, test_med_dataset, test_high_dataset, test_all_dataset], writer, step, last_only=config.last_param_pred_only)
         else:
@@ -1855,7 +1855,7 @@ def main(config):
     tools.simulate(
         functools.partial(agent, training=False), test_envs, dataset, episodes=1)
     writer.flush()
-    if config.outer_loop_version == 1:
+    if config.outer_loop_version in [1,3]:
       train_batch = next(agent._sim_dataset)
       test_batch = next(agent._real_world_dataset)
       last_only = config.last_param_pred_only
