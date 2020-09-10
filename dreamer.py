@@ -862,8 +862,7 @@ class Dreamer(tools.Module):
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
         dist_range = self.env.distribution_range
-        num_params = len(data['sim_params'])
-        sim_params = tf.convert_to_tensor(data['sim_params'])
+        sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
         eps = 1e-3
         mid_eps = 1e-2
         print(sim_params.shape, "Sim params shape")
@@ -879,10 +878,14 @@ class Dreamer(tools.Module):
         shuffled_indices = tf.random.shuffle(indices)
 
         fake_pred = tf.gather(fake_pred, shuffled_indices)
+        print(fake_pred.shape, "fake_pred post-shuffle shape")
+
         labels = tf.gather(labels, shuffled_indices)
+        print(labels.shape, "labels shape")
 
 
-        pred_class = self._classifier(fake_pred)
+        pred_class = self._classifier(fake_pred).mean()
+        print(pred_class.shape, "pred_class shape")
 
         classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
         classifier_obj = classifier_obj * (1 - data['real_world'])
