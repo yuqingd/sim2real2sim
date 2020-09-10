@@ -861,7 +861,8 @@ class Dreamer(tools.Module):
           sim_param_obj = sim_param_obj[:, -1]
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
-        dist_range = self.env.distribution_range
+        #dist_range = self.env.distribution_range
+        dist_range = 10 * self.env.distribution_mean #TODO: change range scaling
         sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
         eps = 1e-3
         mid_eps = 1e-2
@@ -872,6 +873,9 @@ class Dreamer(tools.Module):
         print(high.shape, "high shape")
         fake_pred = tf.concat([high, low, mid], -1)
         print(fake_pred.shape, "fake_pred shape")
+
+        fake_pred = tf.concat([fake_pred, feat], axis= -1)
+        print(fake_pred.shape, "fake_pred shape with features")
         labels = tf.expand_dims(tf.expand_dims(tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32), 0), 0) #1 for higher, -1 for lower, 0 for mid
 
         indices = tf.range(start=0, limit=9, dtype=tf.int32)
@@ -883,20 +887,19 @@ class Dreamer(tools.Module):
         labels = tf.gather(labels, shuffled_indices, axis=-1)
         print(labels.shape, "labels shape")
 
-
-        pred_class = self._classifier(fake_pred)
+        pred_class = self._sim_params_classifier(fake_pred).mean()
         print(pred_class.shape, "pred_class shape")
-        pred_class = pred_class.mean()
-        print(pred_class.shape, "mean pred_class shape")
         classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
         classifier_obj = classifier_obj * (1 - data['real_world'])
-        likes.classfier = tf.reduce_mean(classifier_obj) #TODO: tune loss scaling
-
-        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
-        sim_param_obj = sim_param_obj * (1 - data['real_world'])
         if self._c.last_param_pred_only:
-          sim_param_obj = sim_param_obj[:, -1]
-        likes.sim_params = tf.reduce_mean(sim_param_obj)
+          classifier_obj = classifier_obj[:, -1]
+        likes.classfier = tf.reduce_mean(classifier_obj)
+
+        # sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
+        # sim_param_obj = sim_param_obj * (1 - data['real_world'])
+        # if self._c.last_param_pred_only:
+        #   sim_param_obj = sim_param_obj[:, -1]
+        # likes.sim_params = tf.reduce_mean(sim_param_obj)
 
       if self._c.pcont:
         pcont_pred = self._pcont(feat)
@@ -911,13 +914,16 @@ class Dreamer(tools.Module):
       # weigh losses
       if self._c.outer_loop_version in [1,3]:
         if self._c.individual_loss_scale:
-          likes.sim_params *= self._c.sim_params_loss_scale
+          if self._c.outer_loop_version == 3:
+            likes.classfier *= self._c.sim_params_loss_scale
+          else:
+            likes.sim_params *= self._c.sim_params_loss_scale
         else:
           assert self._c.sim_params_loss_scale <= 1
           if self._c.outer_loop_version == 3:
-            likes.classfier *= 1 - self._c.sim_params_loss_scale
 
-          likes.sim_params *= 1-self._c.sim_params_loss_scale
+          else:
+            likes.sim_params *= 1-self._c.sim_params_loss_scale
           likes.reward *= self._c.sim_params_loss_scale
           likes.image *= self._c.sim_params_loss_scale
 
@@ -1022,8 +1028,7 @@ class Dreamer(tools.Module):
       else:
         self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     elif self._c.outer_loop_version == 3:
-      self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
-      self._classifier = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
+      self._sim_params_classifier = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -1037,7 +1042,7 @@ class Dreamer(tools.Module):
     elif self._c.outer_loop_version in [0, 2]:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward]
     else:
-      model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params, self._classifier]
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params_classifier]
     if self._c.pcont:
       model_modules.append(self._pcont)
     Optimizer = functools.partial(
@@ -1177,6 +1182,32 @@ class Dreamer(tools.Module):
     sim_param_pred = self._sim_params(feat)
     return  action, state, sim_param_pred
 
+  def predict_sim_params_classification(self, obs, reset, state=None):
+    step = self._step.numpy().item()
+    tf.summary.experimental.set_step(step)
+    if state is not None and reset.any():
+      mask = tf.cast(1 - reset, self._float)[:, None]
+      state = tf.nest.map_structure(lambda x: x * mask, state)
+
+    if state is None:
+      latent = self._dynamics.initial(len(obs['image']))
+      action = tf.zeros((len(obs['image']), self._actdim), self._float)
+    else:
+      latent, action = state
+    embed = self._encode(preprocess(obs, self._c))
+    if 'state' in obs:
+      state = tf.dtypes.cast(obs['state'], embed.dtype)
+      embed = tf.concat([state, embed], axis=-1)
+    latent, _ = self._dynamics.obs_step(latent, action, embed)
+    feat = self._dynamics.get_feat(latent)
+
+    action = self._actor(feat).mode()
+    action = self._exploration(action, False)
+    state = (latent, action)
+
+    feat = tf.concat([obs['sim_params'], feat])
+    sim_param_pred = self._sim_params_classifier(feat)
+    return  action, state, sim_param_pred
 
 def preprocess(obs, config):
   dtype = prec.global_policy().compute_dtype
@@ -1658,8 +1689,10 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, tra
     sim_param_pred = tf.cast(tf.round(agent._sim_params(feat).mean()), dtype=tf.int32)
     sim_param_real = tf.cast(data['sim_params'] > train_distribution_mean, tf.int32)
   elif agent._c.outer_loop_version == 3:
-    sim_param_pred = agent._classifier(tf.exp(agent._sim_params(feat).mean()))
-    sim_param_real = data['sim_params']
+    feat = tf.concat([data['sim_params'], feat], axis=-1)
+    dist_eps = 1e-2
+    sim_param_pred = agent._sim_params_classifier(feat).mean()
+    sim_param_real = tf.cast(data['sim_params'] > (train_distribution_mean + dist_eps), tf.int32) - tf.cast(data['sim_params'] < tf.math.maximum(train_distribution_mean - dist_eps, 0), tf.int32)
   else:
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
     sim_param_real = data['sim_params']
@@ -1954,15 +1987,21 @@ def main(config):
       predict_OL1_offline(agent, None, writer, last_only, "train", step, train_distribution, data=train_batch)
       predict_OL1_offline(agent, None, writer, last_only, "val", step, train_distribution, data=val_batch)
       predict_OL1_offline(agent, None, writer, last_only, "test", step, train_distribution, data=test_batch)
-      real_pred_sim_params = tools.simulate_real(
+      if config.outer_loop_version == 1:
+        real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params), test_envs,
         episodes=config.ol1_episodes, last_only=config.last_param_pred_only)
-      if config.binary_prediction:
-        real_pred_sim_params = tf.round(real_pred_sim_params.mean())
-      elif config.outer_loop_version ==3:
-        real_pred_sim_params = agent._classifier(tf.exp(real_pred_sim_params)).mean()
-      else:
-        real_pred_sim_params = tf.exp(real_pred_sim_params)
+
+        if config.binary_prediction:
+          real_pred_sim_params = tf.round(real_pred_sim_params.mean())
+        else:
+          real_pred_sim_params = tf.exp(real_pred_sim_params)
+      elif config.outer_loop_version == 3:
+        real_pred_sim_params = tools.simulate_real(
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params_classification()), test_envs,
+        episodes=config.ol1_episodes, last_only=config.last_param_pred_only)
+        real_pred_sim_params = real_pred_sim_params.mean()
+
       for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
         if train_env.dr is not None:
           for i, param in enumerate(config.real_dr_list):
