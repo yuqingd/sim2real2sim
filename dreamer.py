@@ -731,7 +731,7 @@ class Dreamer(tools.Module):
       with self._strategy.scope():
         for train_step in range(n):
           log_images = self._c.log_images and log and train_step == 0
-          if self._c.outer_loop_version in [0, 1]:
+          if self._c.outer_loop_version in [0, 1, 3]:
             self.train(next(self._dataset), log_images)
           else:
             self.train(next(dataset), log_images)
@@ -1050,7 +1050,7 @@ class Dreamer(tools.Module):
       # in multi-GPU mode.
     if dataset is not None:
       self.train(next(dataset))
-    elif self._c.outer_loop_version in [0, 1]:
+    elif self._c.outer_loop_version in [0, 1, 3]:
       self.train(next(self._dataset))
     else:
       self.train(next(self._train_dataset_sim_only))
