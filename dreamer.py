@@ -162,7 +162,7 @@ def define_config():
   config.predict_val = True
   config.range_only = False
 
-  config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning
+  config.outer_loop_version = 0  # 0= no outer loop, 1 = regression,f 2 = conditioning, 3 = regression w/ classification
   config.alpha = 0.3
   config.sim_params_size = 0
   config.buffer_size = 0
@@ -838,7 +838,7 @@ class Dreamer(tools.Module):
       feat = self._dynamics.get_feat(post)
       image_pred = self._decode(feat)
       reward_pred = self._reward(feat)
-      if self._c.outer_loop_version == 1:
+      if self._c.outer_loop_version in [1,3]:
         sim_param_pred = self._sim_params(feat)
       likes = tools.AttrDict()
       likes.image = tf.reduce_mean(image_pred.log_prob(data['image']))
@@ -860,7 +860,39 @@ class Dreamer(tools.Module):
         if self._c.last_param_pred_only:
           sim_param_obj = sim_param_obj[:, -1]
         likes.sim_params = tf.reduce_mean(sim_param_obj)
-      if self._c.pcont:
+      elif self._c.outer_loop_version == 3:
+        dist_range = self.env.distribution_range
+        num_params = len(data['sim_params'])
+        sim_params = np.tile(data['sim_params'], (9,1)) #3 below, 3 above, 3 around eps; can tune later if necessary
+        fake_pred = sim_params.copy()
+        eps = 1e-3
+        mid_eps = 1e-2
+
+        fake_pred[:3, :] = np.random.uniform(low=fake_pred[:3,:] + mid_eps, high=fake_pred[:3,:] + dist_range)
+        fake_pred[3:6, :] = np.random.uniform(low=max(fake_pred[3:6,:] - dist_range. eps), high=max(fake_pred[3:6,:] - mid_eps, eps))
+        fake_pred[7:, :] = np.random.uniform(low=max(fake_pred[6:,:] - mid_eps, eps), high=fake_pred[6:,:] + mid_eps)
+        labels = np.array([1, 1, 1, -1, -1, -1, 0, 0, 0]) #1 for higher, -1 for lower, 0 for mid
+
+        c = np.c_[fake_pred.reshape(len(fake_pred), -1), labels.reshape(len(labels), -1)]
+        c = np.random.shuffle(c) #permute high/low/mid fake data
+
+        fake_pred = c[:,:num_params]
+        labels = c[:,num_params:]
+
+        pred_class = self._classifier(fake_pred)
+
+        classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
+        classifier_obj = classifier_obj * (1 - data['real_world'])
+        likes.classfier = tf.reduce_mean(classifier_obj) #TODO: tune loss scaling
+
+        sim_param_obj = sim_param_pred.log_prob(tf.math.log(data['sim_params']))
+        sim_param_obj = sim_param_obj * (1 - data['real_world'])
+        if self._c.last_param_pred_only:
+          sim_param_obj = sim_param_obj[:, -1]
+        likes.sim_params = tf.reduce_mean(sim_param_obj)
+
+
+    if self._c.pcont:
         pcont_pred = self._pcont(feat)
         pcont_target = self._c.discount * data['discount']
         likes.pcont = tf.reduce_mean(pcont_pred.log_prob(pcont_target))
@@ -871,15 +903,17 @@ class Dreamer(tools.Module):
       div = tf.maximum(div, self._c.free_nats)
 
       # weigh losses
-      if self._c.outer_loop_version == 1:
+      if self._c.outer_loop_version in [1,3]:
         if self._c.individual_loss_scale:
           likes.sim_params *= self._c.sim_params_loss_scale
         else:
           assert self._c.sim_params_loss_scale <= 1
+          if self._c.outer_loop_version == 3:
+            likes.classfier *= 1 - self._c.sim_params_loss_scale
 
-        likes.sim_params *= 1-self._c.sim_params_loss_scale
-        likes.reward *= self._c.sim_params_loss_scale
-        likes.image *= self._c.sim_params_loss_scale
+          likes.sim_params *= 1-self._c.sim_params_loss_scale
+          likes.reward *= self._c.sim_params_loss_scale
+          likes.image *= self._c.sim_params_loss_scale
 
       model_loss = self._c.kl_scale * div - sum(likes.values())
       model_loss /= float(self._strategy.num_replicas_in_sync)
@@ -981,6 +1015,9 @@ class Dreamer(tools.Module):
         self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act, dist='binary')
       else:
         self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
+    elif self._c.outer_loop_version == 3:
+      self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
+      self._classifier = models.DenseDecoder((3,), 2, self._c.num_units, act=act)
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -993,6 +1030,8 @@ class Dreamer(tools.Module):
       model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params]
     elif self._c.outer_loop_version in [0, 2]:
       model_modules = [self._encode, self._dynamics, self._decode, self._reward]
+    else:
+      model_modules = [self._encode, self._dynamics, self._decode, self._reward, self._sim_params, self._classifier]
     if self._c.pcont:
       model_modules.append(self._pcont)
     Optimizer = functools.partial(
@@ -1612,6 +1651,9 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, tra
   if agent._c.binary_prediction:
     sim_param_pred = tf.cast(tf.round(agent._sim_params(feat).mean()), dtype=tf.int32)
     sim_param_real = tf.cast(data['sim_params'] > train_distribution_mean, tf.int32)
+  elif agent._c.outer_loop_version == 3:
+    sim_param_pred = agent._classifier(tf.exp(agent._sim_params(feat).mean()))
+    sim_param_real = data['sim_params']
   else:
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
     sim_param_real = data['sim_params']
@@ -1896,7 +1938,7 @@ def main(config):
         val_env.apply_dr()
 
     #after train, update sim param
-    elif config.outer_loop_version == 1 and step >= config.start_outer_loop:
+    elif config.outer_loop_version in [1,3] and step >= config.start_outer_loop:
       train_batch = next(agent._sim_dataset)
       val_batch = next(agent._val_dataset)
       test_batch = next(agent._real_world_dataset)
@@ -1911,6 +1953,8 @@ def main(config):
         episodes=config.ol1_episodes, last_only=config.last_param_pred_only)
       if config.binary_prediction:
         real_pred_sim_params = tf.round(real_pred_sim_params.mean())
+      elif config.outer_loop_version ==3:
+        real_pred_sim_params = agent._classifier(tf.exp(real_pred_sim_params)).mean()
       else:
         real_pred_sim_params = tf.exp(real_pred_sim_params)
       for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
@@ -1928,6 +1972,9 @@ def main(config):
 
             if config.binary_prediction:
               new_mean = prev_mean + alpha * (np.mean(pred_mean) - 0.5) # TODO: tune this
+              new_mean = max(new_mean, 1e-3)  # prevent negative means
+            elif config.outer_loop_version == 3:
+              new_mean = prev_mean - alpha * np.mean(pred_mean)  # TODO: tune this
               new_mean = max(new_mean, 1e-3)  # prevent negative means
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean

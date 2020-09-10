@@ -138,6 +138,8 @@ class DenseDecoder(tools.Module):
       return tfd.Independent(tfd.Bernoulli(x), len(self._shape))
     raise NotImplementedError(self._dist)
 
+
+
 class SimParamDecoder(tools.Module):
 
   def __init__(self, shape, units, dist='normal', act=tf.nn.elu):
