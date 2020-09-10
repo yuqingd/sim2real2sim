@@ -866,15 +866,17 @@ class Dreamer(tools.Module):
         sim_params = tf.convert_to_tensor(data['sim_params'])
         eps = 1e-3
         mid_eps = 1e-2
+        print(sim_params.shape, "Sim params shape")
+        high = tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range)
+        low = tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
+        mid = tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        print(high.shape, "high shape")
+        fake_pred = tf.concat([high, low, mid], -1)
+        print(fake_pred.shape, "fake_pred shape")
+        labels = tf.expand_dims(tf.expand_dims(tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32), 0), 0) #1 for higher, -1 for lower, 0 for mid
 
-        high = tf.expand_dims(tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range), 0)
-        low = tf.expand_dims(tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps)), 0)
-        mid = tf.expand_dims(tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps), 0)
-        fake_pred = tf.expand_dims(tf.concat([high, low, mid], 0),0)
-
-        labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32) #1 for higher, -1 for lower, 0 for mid
-
-        c = tf.concat([fake_pred, labels], 0)
+        c = tf.concat([fake_pred, labels], -1)
+        print(c.shape, "c shape")
         c = tf.random.shuffle(c) #permute high/low/mid fake data
 
         fake_pred = c[:num_params, ...]
