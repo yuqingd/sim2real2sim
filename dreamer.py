@@ -863,13 +863,13 @@ class Dreamer(tools.Module):
       elif self._c.outer_loop_version == 3:
         dist_range = self.env.distribution_range
         num_params = len(data['sim_params'])
-        sim_params = tf.constant(tf.convert_to_tensor(data['sim_params']))
+        sim_params = tf.convert_to_tensor(data['sim_params'])
         eps = 1e-3
         mid_eps = 1e-2
 
         high = tf.random.uniform([3], minval=sim_params + mid_eps, maxval=sim_params + dist_range)
-        low = tf.random.uniform([3], minval=max(sim_params - dist_range. eps), maxval=max(sim_params - mid_eps, eps))
-        mid = tf.random.uniform([3], minval=max(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        low = tf.random.uniform([3], minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
+        mid = tf.random.uniform([3], minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
         fake_pred = tf.concat([high, low, mid], 0)
         labels = tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0]) #1 for higher, -1 for lower, 0 for mid
 
