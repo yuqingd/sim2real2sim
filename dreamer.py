@@ -875,12 +875,12 @@ class Dreamer(tools.Module):
         print(fake_pred.shape, "fake_pred shape")
         labels = tf.expand_dims(tf.expand_dims(tf.convert_to_tensor([1, 1, 1, -1, -1, -1, 0, 0, 0], dtype=tf.float32), 0), 0) #1 for higher, -1 for lower, 0 for mid
 
-        c = tf.concat([fake_pred, labels], -1)
-        print(c.shape, "c shape")
-        c = tf.random.shuffle(c) #permute high/low/mid fake data
+        indices = tf.range(start=0, limit=9, dtype=tf.int32)
+        shuffled_indices = tf.random.shuffle(indices)
 
-        fake_pred = c[:num_params, ...]
-        labels = c[-1, ...]
+        fake_pred = tf.gather(fake_pred, shuffled_indices)
+        labels = tf.gather(labels, shuffled_indices)
+
 
         pred_class = self._classifier(fake_pred)
 
