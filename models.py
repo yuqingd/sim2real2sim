@@ -136,6 +136,7 @@ class DenseDecoder(tools.Module):
       return tfd.Independent(tfd.Normal(x, 1), len(self._shape))
     if self._dist == 'binary':
       return tfd.Independent(tfd.Bernoulli(x), len(self._shape))
+
     raise NotImplementedError(self._dist)
 
 

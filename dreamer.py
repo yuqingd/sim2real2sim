@@ -862,17 +862,17 @@ class Dreamer(tools.Module):
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
         #dist_range = self.env.distribution_range
-        dist_range =  10 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
-        print(dist_range, "Dist range")
+        dist_range =  100 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
+        #print(dist_range, "Dist range")
         sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
         B, L, num_params  = sim_params.shape
 
-        print(sim_params.shape, "Sim params shae")
+        #print(sim_params.shape, "Sim params shae")
 
         eps = 1e-3
-        mid_eps = 1e-2
+        mid_eps = eps
 
-        print(sim_params.shape, "Sim params shape")
+        #print(sim_params.shape, "Sim params shape")
         high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
         high_labels = 2 * tf.ones_like(high, dtype=tf.int32)
         low = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
@@ -883,7 +883,7 @@ class Dreamer(tools.Module):
         fake_pred = tf.concat([high, low, mid], 0)
         labels = tf.concat([high_labels, low_labels, mid_labels], 0)
         labels = tf.one_hot(labels, 3)
-        print(labels.shape, "labels shape")
+        #print(labels.shape, "labels shape")
         #print(fake_pred.shape, "fake_pred shape")
 
         #fake_pred = tf.reshape(fake_pred, [B, L, -1])
@@ -900,21 +900,21 @@ class Dreamer(tools.Module):
         shuffled_indices = tf.random.shuffle(indices)
 
         fake_pred = tf.gather(fake_pred, shuffled_indices, axis=0)
-        print(fake_pred.shape, "fake_pred post-shuffle shape")
+        #print(fake_pred.shape, "fake_pred post-shuffle shape")
 
         labels = tf.gather(labels, shuffled_indices, axis=0)
-        print(labels.shape, "labels shape")
+        #print(labels.shape, "labels shape")
 
         pred_class = self._sim_params_classifier( fake_pred).mean()
-        print(pred_class.shape, "pred_class shape")
+        #print(pred_class.shape, "pred_class shape")
         classifier_obj = -tf.nn.softmax_cross_entropy_with_logits(labels, pred_class)
-        print(classifier_obj, "classifier_obj shape")
+        #print(classifier_obj, "classifier_obj shape")
 
         mask_shape = np.ones(len( data['real_world'].shape) + 1)
         mask_shape[0] = 3
         mask_shape[-1] = num_params
-        print(tf.expand_dims(data['real_world'], -1), "real world data")
-        print(mask_shape, "mask shape")
+        #print(tf.expand_dims(data['real_world'], -1), "real world data")
+        #print(mask_shape, "mask shape")
         mask = tf.tile(tf.expand_dims(data['real_world'], -1), mask_shape)
         classifier_obj = classifier_obj * mask
         if self._c.last_param_pred_only:
