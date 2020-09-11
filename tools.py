@@ -144,7 +144,7 @@ def simulate(agent, envs, dataset=None, steps=0, episodes=0, state=None):
     return (step - steps, episode - episodes, done, length, obs, agent_state)
 
 
-def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None, last_only=False):
+def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=None, last_only=False, train_env=None):
   # Initialize or unpack simulation state.
   if state is None:
     step, episode = 0, 0
@@ -168,7 +168,7 @@ def simulate_real(agent, predict_sim_params, envs, steps=0, episodes=0, state=No
     obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
 
     #predict sim params
-    action, agent_state, pred_sim_params = predict_sim_params(obs, done, agent_state)
+    action, agent_state, pred_sim_params = predict_sim_params(obs, done, train_env=train_env, state=agent_state)
     pred_sim_params_list.append(pred_sim_params.sample())
     action = np.array(action)
 
