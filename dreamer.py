@@ -874,15 +874,16 @@ class Dreamer(tools.Module):
 
         print(sim_params.shape, "Sim params shape")
         high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
-        high_labels = tf.ones_like(high)
+        high_labels = 2 * tf.ones_like(high, dtype=tf.int32)
         low = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
-        low_labels = tf.ones_like(low)
+        low_labels = tf.zeros_like(low, dtype=tf.int32)
         mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
-        mid_labels = tf.ones_like(mid)
+        mid_labels = tf.ones_like(mid, dtype=tf.int32)
         #print(high.shape, "high shape")
         fake_pred = tf.concat([high, low, mid], 0)
         labels = tf.concat([high_labels, low_labels, mid_labels], 0)
-        #print(labels.shape, "labels shape")
+        labels = tf.one_hot(labels, 3)
+        print(labels.shape, "labels shape")
         #print(fake_pred.shape, "fake_pred shape")
 
         #fake_pred = tf.reshape(fake_pred, [B, L, -1])
@@ -899,17 +900,22 @@ class Dreamer(tools.Module):
         shuffled_indices = tf.random.shuffle(indices)
 
         fake_pred = tf.gather(fake_pred, shuffled_indices, axis=0)
-        #print(fake_pred.shape, "fake_pred post-shuffle shape")
+        print(fake_pred.shape, "fake_pred post-shuffle shape")
 
         labels = tf.gather(labels, shuffled_indices, axis=0)
-        #print(labels.shape, "labels shape")
+        print(labels.shape, "labels shape")
 
-        pred_class = self._sim_params_classifier(fake_pred).mean()
-        #print(pred_class.shape, "pred_class shape")
-        classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
-        mask_shape = np.ones(len( data['real_world'].shape))
+        pred_class = self._sim_params_classifier( fake_pred).mean()
+        print(pred_class.shape, "pred_class shape")
+        classifier_obj = -tf.nn.softmax_cross_entropy_with_logits(labels, pred_class)
+        print(classifier_obj, "classifier_obj shape")
+
+        mask_shape = np.ones(len( data['real_world'].shape) + 1)
         mask_shape[0] = 3
-        mask = tf.tile(data['real_world'], mask_shape)
+        mask_shape[-1] = num_params
+        print(tf.expand_dims(data['real_world'], -1), "real world data")
+        print(mask_shape, "mask shape")
+        mask = tf.tile(tf.expand_dims(data['real_world'], -1), mask_shape)
         classifier_obj = classifier_obj * mask
         if self._c.last_param_pred_only:
           classifier_obj = classifier_obj[:, -1]
@@ -1048,7 +1054,7 @@ class Dreamer(tools.Module):
       else:
         self._sim_params = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
     elif self._c.outer_loop_version == 3:
-      self._sim_params_classifier = models.DenseDecoder((self._c.sim_params_size,), 2, self._c.num_units, act=act)
+      self._sim_params_classifier = models.DenseDecoder((self._c.sim_params_size, 3), 2, self._c.num_units, act=act, dist='binary')
     if self._c.pcont:
       self._pcont = models.DenseDecoder(
           (), 3, self._c.num_units, 'binary', act=act)
@@ -1712,7 +1718,7 @@ def predict_OL1_offline(agent, dataset, writer, last_only, log_prefix, step, tra
   elif agent._c.outer_loop_version == 3:
     feat = tf.concat([data['sim_params'], feat], axis=-1)
     dist_eps = 1e-2
-    sim_param_pred = agent._sim_params_classifier(feat).mean()
+    sim_param_pred = tf.argmax(agent._sim_params_classifier(feat).mean(), -1) - 1
     sim_param_real = tf.cast(data['sim_params'] > (train_distribution_mean + dist_eps), tf.int32) - tf.cast(data['sim_params'] < tf.math.maximum(train_distribution_mean - dist_eps, 0), tf.int32)
   else:
     sim_param_pred = tf.exp(agent._sim_params(feat).mean())
@@ -2021,6 +2027,8 @@ def main(config):
         real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params_classification), test_envs,
         episodes=config.ol1_episodes, last_only=config.last_param_pred_only, train_env=train_sim_envs[0])
+        real_pred_sim_params = tf.argmax(real_pred_sim_params, -1)
+        real_pred_sim_params -= 1
         print(real_pred_sim_params)
         print(real_pred_sim_params.shape, "Real pred sim params shape")
 
