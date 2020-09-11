@@ -870,21 +870,19 @@ class Dreamer(tools.Module):
         #print(sim_params.shape, "Sim params shae")
 
         eps = 1e-3
-        mid_eps = eps
+        mid_eps = 1e-1
 
         #print(sim_params.shape, "Sim params shape")
         high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
         high_labels = 2 * tf.ones_like(high, dtype=tf.int32)
         low = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
         low_labels = tf.zeros_like(low, dtype=tf.int32)
-        # mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
-        # mid_labels = tf.ones_like(mid, dtype=tf.int32)
+        mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        mid_labels = tf.ones_like(mid, dtype=tf.int32)
         #print(high.shape, "high shape")
-        fake_pred = tf.concat([high, low, mid], 0)
-        labels = tf.concat([high_labels, low_labels], 0)
-        labels = tf.one_hot(labels, 2)
-        #labels = tf.concat([high_labels, low_labels, mid_labels], 0)
-        #labels = tf.one_hot(labels, 3)
+        fake_pred = tf.concat([high, mid, low], 0)
+        labels = tf.concat([high_labels, mid_labels, low_labels,], 0)
+        labels = tf.one_hot(labels, 3)
         #print(labels.shape, "labels shape")
         #print(fake_pred.shape, "fake_pred shape")
 
@@ -892,13 +890,13 @@ class Dreamer(tools.Module):
         #print(feat.shape, "feat shape")
         feat_tiled =  tf.identity(feat)
         feat_shape = np.ones(len(feat_tiled.shape))
-        feat_shape[0] = 2#3
+        feat_shape[0] = 3
         feat_tiled = tf.tile(feat_tiled, feat_shape)
         fake_pred = tf.concat([fake_pred, feat_tiled], axis= -1)
         #print(fake_pred.shape, "fake_pred shape with features")
 
-        indices = tf.range(start=0, limit=B * 2, dtype=tf.int32)
-#        indices = tf.range(start=0, limit=B * 3, dtype=tf.int32)
+
+        indices = tf.range(start=0, limit=B * 3, dtype=tf.int32)
         shuffled_indices = tf.random.shuffle(indices)
 
         fake_pred = tf.gather(fake_pred, shuffled_indices, axis=0)
@@ -913,7 +911,7 @@ class Dreamer(tools.Module):
         #print(classifier_obj, "classifier_obj shape")
 
         mask_shape = np.ones(len( data['real_world'].shape) + 1)
-        mask_shape[0] = 2#3
+        mask_shape[0] = 3
         mask_shape[-1] = num_params
         #print(tf.expand_dims(data['real_world'], -1), "real world data")
         #print(mask_shape, "mask shape")
@@ -2051,7 +2049,7 @@ def main(config):
               new_mean = prev_mean + alpha * (np.mean(pred_mean) - 0.5) # TODO: tune this
               new_mean = max(new_mean, 1e-3)  # prevent negative means
             elif config.outer_loop_version == 3:
-              new_mean = prev_mean - alpha * np.mean(pred_mean)  # TODO: tune this
+              new_mean = prev_mean + alpha * np.mean(pred_mean)  # TODO: tune this
               new_mean = max(new_mean, 1e-3)  # prevent negative means
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
