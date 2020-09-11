@@ -1225,8 +1225,10 @@ class Dreamer(tools.Module):
     action = self._exploration(action, False)
     state = (latent, action)
 
-    feat = tf.concat([obs['sim_params'], feat])
+    feat = tf.concat([obs['sim_params'], feat], -1)
+    print(feat.shape, "class feat shape")
     sim_param_pred = self._sim_params_classifier(feat)
+    print(sim_param_pred.mean().shape, "sim param pred shape")
     return  action, state, sim_param_pred
 
 def preprocess(obs, config):
@@ -2018,9 +2020,10 @@ def main(config):
           real_pred_sim_params = tf.exp(real_pred_sim_params)
       elif config.outer_loop_version == 3:
         real_pred_sim_params = tools.simulate_real(
-          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params_classification()), test_envs,
+          functools.partial(agent, training=False), functools.partial(agent.predict_sim_params_classification), test_envs,
         episodes=config.ol1_episodes, last_only=config.last_param_pred_only)
-        real_pred_sim_params = real_pred_sim_params.mean()
+        print(real_pred_sim_params)
+        print(real_pred_sim_params.shape, "Real pred sim params shape")
 
       for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
         if train_env.dr is not None:
