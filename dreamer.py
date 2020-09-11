@@ -947,7 +947,7 @@ class Dreamer(tools.Module):
         else:
           assert self._c.sim_params_loss_scale <= 1
           if self._c.outer_loop_version == 3:
-            likes.classfier *= self._c.sim_params_loss_scale
+            likes.classfier *= 1-self._c.sim_params_loss_scale
           else:
             likes.sim_params *= 1-self._c.sim_params_loss_scale
           likes.reward *= self._c.sim_params_loss_scale
