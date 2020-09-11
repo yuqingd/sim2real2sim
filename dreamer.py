@@ -879,33 +879,33 @@ class Dreamer(tools.Module):
         low_labels = tf.ones_like(low)
         mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
         mid_labels = tf.ones_like(mid)
-        print(high.shape, "high shape")
+        #print(high.shape, "high shape")
         fake_pred = tf.concat([high, low, mid], 0)
         labels = tf.concat([high_labels, low_labels, mid_labels], 0)
-        print(labels.shape, "labels shape")
-        print(fake_pred.shape, "fake_pred shape")
+        #print(labels.shape, "labels shape")
+        #print(fake_pred.shape, "fake_pred shape")
 
         #fake_pred = tf.reshape(fake_pred, [B, L, -1])
-        print(feat.shape, "feat shape")
+        #print(feat.shape, "feat shape")
         feat_tiled =  tf.identity(feat)
         feat_shape = np.ones(len(feat_tiled.shape))
         feat_shape[0] = 3
         feat_tiled = tf.tile(feat_tiled, feat_shape)
         fake_pred = tf.concat([fake_pred, feat_tiled], axis= -1)
-        print(fake_pred.shape, "fake_pred shape with features")
+        #print(fake_pred.shape, "fake_pred shape with features")
 
 
         indices = tf.range(start=0, limit=B * 3, dtype=tf.int32)
         shuffled_indices = tf.random.shuffle(indices)
 
         fake_pred = tf.gather(fake_pred, shuffled_indices, axis=0)
-        print(fake_pred.shape, "fake_pred post-shuffle shape")
+        #print(fake_pred.shape, "fake_pred post-shuffle shape")
 
         labels = tf.gather(labels, shuffled_indices, axis=0)
-        print(labels.shape, "labels shape")
+        #print(labels.shape, "labels shape")
 
         pred_class = self._sim_params_classifier(fake_pred).mean()
-        print(pred_class.shape, "pred_class shape")
+        #print(pred_class.shape, "pred_class shape")
         classifier_obj = -tf.keras.losses.categorical_crossentropy(labels, pred_class)
         mask_shape = np.ones(len( data['real_world'].shape))
         mask_shape[0] = 3
@@ -1226,12 +1226,8 @@ class Dreamer(tools.Module):
     state = (latent, action)
 
     current_sim_dr_means = tf.expand_dims(tf.convert_to_tensor(list(train_env.dr.values()), dtype=tf.float32), 0)
-    print(current_sim_dr_means.shape, "curr dr feat shape")
-
     feat = tf.concat([current_sim_dr_means, feat], -1)
-    print(feat.shape, "class feat shape")
     sim_param_pred = self._sim_params_classifier(feat)
-    print(sim_param_pred.mean().shape, "sim param pred shape")
     return  action, state, sim_param_pred
 
 def preprocess(obs, config):
