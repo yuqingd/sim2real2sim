@@ -2056,7 +2056,7 @@ def main(config):
               new_mean = prev_mean + alpha * (np.mean(pred_mean) - 0.5) # TODO: tune this
               new_mean = max(new_mean, 1e-3)  # prevent negative means
             elif config.outer_loop_version == 3:
-              new_mean = prev_mean - alpha * (np.mean(pred_mean) - 0.5)  # TODO: tune this
+              new_mean = prev_mean - alpha * (np.mean(pred_mean) - 0.5) * prev_mean  # TODO: tune this
               new_mean = max(new_mean, 1e-3)  # prevent negative means
             else:
               new_mean = prev_mean * (1 - alpha) + alpha * pred_mean
