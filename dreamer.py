@@ -862,7 +862,7 @@ class Dreamer(tools.Module):
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
         #dist_range = self.env.distribution_range
-        dist_range =  100 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
+        dist_range =   .3 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
         #print(dist_range, "Dist range")
         sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
         B, L, num_params  = sim_params.shape
@@ -873,16 +873,19 @@ class Dreamer(tools.Module):
         mid_eps = 1e-3
 
         #print(sim_params.shape, "Sim params shape")
+        tf.print(sim_params, "params")
         high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
+        tf.print(high, "high")
         high_labels = 2 * tf.ones_like(high, dtype=tf.int32)
         low = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - dist_range, eps), maxval=tf.math.maximum(sim_params - mid_eps, eps))
+        tf.print(low, "low")
         low_labels = tf.zeros_like(low, dtype=tf.int32)
         mid = tf.random.uniform(sim_params.shape, minval=tf.math.maximum(sim_params - mid_eps, eps), maxval=sim_params + mid_eps)
+        tf.print(mid, "mid")
         mid_labels = tf.ones_like(mid, dtype=tf.int32)
         #print(high.shape, "high shape")
         fake_pred = tf.concat([high, mid, low], 0)
         labels = tf.concat([high_labels, mid_labels, low_labels], 0)
-        tf.print(labels)
         #print("Labels")
         #labels = tf.one_hot(labels, 3, axis=-1)
         #tf.print(labels)
