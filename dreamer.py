@@ -870,7 +870,7 @@ class Dreamer(tools.Module):
         #print(sim_params.shape, "Sim params shae")
 
         eps = 1e-3
-        mid_eps = 1e-1
+        mid_eps = 1e-3
 
         #print(sim_params.shape, "Sim params shape")
         high = tf.random.uniform(sim_params.shape, minval=sim_params + mid_eps, maxval=sim_params + dist_range)
@@ -881,8 +881,10 @@ class Dreamer(tools.Module):
         mid_labels = tf.ones_like(mid, dtype=tf.int32)
         #print(high.shape, "high shape")
         fake_pred = tf.concat([high, mid, low], 0)
-        labels = tf.concat([high_labels, mid_labels, low_labels,], 0)
+        labels = tf.concat([high_labels, mid_labels, low_labels], 0)
+        print(labels)
         labels = tf.one_hot(labels, 3)
+        print(labels)
         #print(labels.shape, "labels shape")
         #print(fake_pred.shape, "fake_pred shape")
 
@@ -2027,9 +2029,10 @@ def main(config):
         real_pred_sim_params = tools.simulate_real(
           functools.partial(agent, training=False), functools.partial(agent.predict_sim_params_classification), test_envs,
         episodes=config.ol1_episodes, last_only=config.last_param_pred_only, train_env=train_sim_envs[0])
+        print(real_pred_sim_params)
         real_pred_sim_params = tf.argmax(real_pred_sim_params, -1)
         real_pred_sim_params -= 1
-        print(real_pred_sim_params)
+        print(real_pred_sim_params, "Argmax")
         print(real_pred_sim_params.shape, "Real pred sim params shape")
 
       for (train_env, val_env) in zip(train_sim_envs, val_sim_envs):
