@@ -659,7 +659,7 @@ def config_debug(config):
   config.pretrain = 3
   config.train_steps = 7
   config.time_limit = 15
-  config.batch_size = 50
+  config.batch_size = 5
   config.batch_length = 6
   config.update_target_every = 1
   config.sample_val_every = 10
@@ -882,9 +882,10 @@ class Dreamer(tools.Module):
         #print(high.shape, "high shape")
         fake_pred = tf.concat([high, mid, low], 0)
         labels = tf.concat([high_labels, mid_labels, low_labels], 0)
-        print(labels)
-        labels = tf.one_hot(labels, 3)
-        print(labels)
+        tf.print(labels)
+        #print("Labels")
+        #labels = tf.one_hot(labels, 3, axis=-1)
+        #tf.print(labels)
         #print(labels.shape, "labels shape")
         #print(fake_pred.shape, "fake_pred shape")
 
@@ -909,7 +910,7 @@ class Dreamer(tools.Module):
 
         pred_class = self._sim_params_classifier( fake_pred).mean()
         #print(pred_class.shape, "pred_class shape")
-        classifier_obj = -tf.nn.softmax_cross_entropy_with_logits(labels, pred_class)
+        classifier_obj = -tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=pred_class)
         #print(classifier_obj, "classifier_obj shape")
 
         mask_shape = np.ones(len( data['real_world'].shape) + 1)
