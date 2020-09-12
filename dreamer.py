@@ -862,7 +862,7 @@ class Dreamer(tools.Module):
         likes.sim_params = tf.reduce_mean(sim_param_obj)
       elif self._c.outer_loop_version == 3:
         #dist_range = self.env.distribution_range
-        dist_range =   .3 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
+        dist_range = 10 * tf.constant(self.env.distribution_mean) #TODO: change range scaling
         #print(dist_range, "Dist range")
         sim_params = tf.convert_to_tensor(data['sim_params']) # B X L X num_params
         B, L, num_params  = sim_params.shape
