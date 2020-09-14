@@ -1797,7 +1797,7 @@ class MetaWorld:
 class DeepMindControl:
 
   def __init__(self, name, size=(64, 64), camera=None, real_world=False, sparse_reward=True, dr=None, use_state=False,
-                                     simple_randomization=False, dr_shape=None, outer_loop_type=0, dr_list=[],
+                                     simple_randomization=False, dr_shape=None, outer_loop_type=0, dr_list=[],  anneal_range_scale=0,
                mean_only=False, dataset_step=None):
 
     self.task = name
@@ -1816,6 +1816,7 @@ class DeepMindControl:
     self._camera = camera
     self.real_world = real_world
     self.sparse_reward = sparse_reward
+    self.anneal_range_scale = anneal_range_scale
     self.use_state = use_state
     self.dr = dr
     self.simple_randomization = simple_randomization
@@ -1824,6 +1825,7 @@ class DeepMindControl:
     self.dr_list = dr_list
     self.mean_only = mean_only
     self.min_reward = 0
+    self.cur_step_fraction = 0
     self.dataset_step = dataset_step
 
     self.apply_dr()
@@ -1838,7 +1840,11 @@ class DeepMindControl:
     if param_name in self.dr:
       if self.mean_only:
         mean = self.dr[param_name]
-        range = max(0.1 * mean, eps) #TODO: tune this?
+        range_scale = 0.1
+        if self.anneal_range_scale > 0:
+          range_scale = self.anneal_range_scale * (1-self.cur_step_fraction)
+          range_scale = max(range_scale, 0.1)
+        range = max(range_scale * mean, eps) #TODO: tune this?
       else:
         mean, range = self.dr[param_name]
         range = max(range, eps)
