@@ -2126,7 +2126,6 @@ if __name__ == '__main__':
       os.environ['MUJOCO_GL'] = 'glfw'
   except:
     print("GPUS found", tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None))
-    os.environ['MUJOCO_GL'] = ''
 
   if config.gpudevice is not None:
     print('Setting gpudevice to:', config.gpudevice)
